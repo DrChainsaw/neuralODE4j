@@ -17,6 +17,6 @@ public class ResNetReferenceModelTest {
     @Test
     public void create() {
         final ComputationGraph model = new ResNetReferenceModel().create();
-        model.output(Nd4j.randn(new long[] {1, 1, 28,28}));
+        model.output(Nd4j.randn(1, 28*28));
     }
 }

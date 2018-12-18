@@ -8,6 +8,7 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.ElementWiseVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
+import org.deeplearning4j.nn.conf.preprocessor.FeedForwardToCnnPreProcessor;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
@@ -15,8 +16,8 @@ import org.nd4j.linalg.activations.impl.ActivationReLU;
 import org.nd4j.linalg.activations.impl.ActivationSoftmax;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.impl.LossMCXENT;
+import org.nd4j.linalg.schedule.MapSchedule;
 import org.nd4j.linalg.schedule.ScheduleType;
-import org.nd4j.linalg.schedule.StepSchedule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,16 +35,23 @@ public class ResNetReferenceModel {
 
     @Parameter(names = "-nrofKernels", description = "Number of filter kernels in each convolution layer")
     private int nrofKernels = 64;
-    
+
     private final GraphBuilder builder;
 
     public ResNetReferenceModel() {
         builder = new NeuralNetConfiguration.Builder()
                 .weightInit(WeightInit.RELU)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-                .updater(new Nesterovs(new StepSchedule(ScheduleType.EPOCH, 0.1, 0.1, 60)))
+                .updater(new Nesterovs(
+                        new MapSchedule.Builder(ScheduleType.EPOCH)
+                                .add(0, 0.1)
+                                .add(60, 0.01)
+                                .add(100, 0.001)
+                                .add(140, 0.0001)
+                                .build()
+                ))
                 .graphBuilder()
-        .setInputTypes(InputType.convolutional(28,28,1));
+                .setInputTypes(InputType.feedForward(28 * 28));
     }
 
     ComputationGraph create() {
@@ -51,7 +59,7 @@ public class ResNetReferenceModel {
         log.info("Create model");
 
         String next = addStem();
-        for(int i = 0; i < nrofResBlocks; i++) {
+        for (int i = 0; i < nrofResBlocks; i++) {
             next = addResBlock(next, i);
         }
         addOutput(next);
@@ -63,6 +71,7 @@ public class ResNetReferenceModel {
     private String addStem() {
         builder
                 .addInputs("input")
+                .inputPreProcessor("firstConv", new FeedForwardToCnnPreProcessor(28, 28))
                 .addLayer("firstConv",
                         new Convolution2D.Builder(3, 3)
                                 .nOut(nrofKernels)
@@ -74,7 +83,7 @@ public class ResNetReferenceModel {
                                 .activation(new ActivationReLU()).build(), "firstConv")
                 .addLayer("secondConv",
                         new Convolution2D.Builder(4, 4)
-                                .stride(2,2)
+                                .stride(2, 2)
                                 .nOut(nrofKernels)
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same)
@@ -84,7 +93,7 @@ public class ResNetReferenceModel {
                                 .activation(new ActivationReLU()).build(), "secondConv")
                 .addLayer("thirdConv",
                         new Convolution2D.Builder(4, 4)
-                                .stride(2,2)
+                                .stride(2, 2)
                                 .nOut(nrofKernels)
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same)
