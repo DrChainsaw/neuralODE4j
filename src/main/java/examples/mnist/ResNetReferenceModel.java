@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 /**
  * ResNet reference model for comparison. Reimplementation of https://github.com/rtqichen/torchdiffeq/blob/master/examples/odenet_mnist.py
  *
- * @author Christian Skärby
+ * @author Christian Skarby
  */
 public class ResNetReferenceModel {
 

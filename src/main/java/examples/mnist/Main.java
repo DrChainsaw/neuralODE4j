@@ -61,7 +61,7 @@ class Main {
     void run() throws IOException {
         final DataSetIterator trainIter = new MnistDataSetIterator(trainBatchSize, true, 666);
         final DataSetIterator evalIter = new MnistDataSetIterator(evalBatchSize, false, 666);
-
+model.getLayers();
         for(int epoch = 0; epoch < nrofEpochs; epoch++) {
             log.info("Begin epoch " + epoch);
             model.fit(trainIter);
