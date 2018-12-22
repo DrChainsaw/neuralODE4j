@@ -66,7 +66,7 @@ public class OdeVertex extends GraphVertex {
     @Override
     public org.deeplearning4j.nn.graph.vertex.GraphVertex instantiate(ComputationGraph graph, String name, int idx, INDArray paramsView, boolean initializeParams) {
         final ComputationGraph innerGraph = new ComputationGraph(conf);
-        innerGraph.init();
+        innerGraph.init(paramsView, false);
         return new ode.impl.OdeVertex(graph, name, idx, null, null, innerGraph);
     }
 

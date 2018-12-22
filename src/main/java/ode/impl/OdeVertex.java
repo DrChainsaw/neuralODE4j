@@ -98,7 +98,7 @@ public class OdeVertex extends BaseGraphVertex {
         return fromDoubleVec(output, shape, workspaceMgr);
     }
 
-    private final INDArray fromDoubleVec(double[] vec, long[] shape, LayerWorkspaceMgr workspaceMgr) {
+    private INDArray fromDoubleVec(double[] vec, long[] shape, LayerWorkspaceMgr workspaceMgr) {
         final INDArray input = workspaceMgr.createUninitialized(ArrayType.ACTIVATIONS, 1, vec.length);
         for (int i = 0; i < vec.length; i++) {
             input.putScalar(i, vec[i]);
