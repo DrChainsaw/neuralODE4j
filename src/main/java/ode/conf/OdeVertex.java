@@ -65,9 +65,30 @@ public class OdeVertex extends GraphVertex {
 
     @Override
     public org.deeplearning4j.nn.graph.vertex.GraphVertex instantiate(ComputationGraph graph, String name, int idx, INDArray paramsView, boolean initializeParams) {
-        final ComputationGraph innerGraph = new ComputationGraph(conf);
-        innerGraph.init(paramsView, false);
-        return new ode.impl.OdeVertex(graph, name, idx, null, null, innerGraph);
+        final ComputationGraph innerGraph = new ComputationGraph(conf) {
+
+            @Override
+            public void init() {
+                boolean wasInit = super.initCalled;
+                super.init();
+                initCalled = wasInit;
+            }
+        };
+        if(initializeParams) {
+            innerGraph.init(); // This will init parameters using weight initialization
+            paramsView.assign(innerGraph.params());
+        }
+
+        innerGraph.init(paramsView, false); // This does not update any parameters, just sets them
+
+        return new ode.impl.OdeVertex(
+                graph,
+                name,
+                idx,
+                null,
+                null,
+                innerGraph,
+                new DefaultTrainingConfig(name,graph.getVertices()[1].getConfig().getUpdaterByParam("W").clone()));
     }
 
     @Override

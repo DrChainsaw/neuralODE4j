@@ -8,7 +8,6 @@ import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.api.MaskState;
 import org.deeplearning4j.nn.api.TrainingConfig;
-import org.deeplearning4j.nn.conf.misc.DummyConfig;
 import org.deeplearning4j.nn.gradient.DefaultGradient;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -24,10 +23,7 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.primitives.Pair;
 import org.nd4j.linalg.primitives.Triple;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Implementation of an ODE block.
@@ -36,8 +32,11 @@ import java.util.Map;
  */
 public class OdeVertex extends BaseGraphVertex {
 
+    private final static String parName = "params";
+
     private final ComputationGraph graph;
     private final FirstOrderIntegrator odeSolver;
+    private final TrainingConfig trainingConfig;
     private final INDArray time;
     private INDArray lastOutput; // z(tN) from paper?
 
@@ -46,9 +45,10 @@ public class OdeVertex extends BaseGraphVertex {
                      int vertexIndex,
                      VertexIndices[] inputVertices,
                      VertexIndices[] outputVertices,
-                     ComputationGraph innerGraph) {
+                     ComputationGraph innerGraph, TrainingConfig trainingConfig) {
         super(actualGraph, name, vertexIndex, inputVertices, outputVertices);
         this.graph = innerGraph;
+        this.trainingConfig = trainingConfig;
         odeSolver = new DormandPrince54Integrator(1e-8, 10d, 1e-9, 1e-7);
         time = Nd4j.create(new double[]{0, 1});
     }
@@ -74,8 +74,18 @@ public class OdeVertex extends BaseGraphVertex {
     }
 
     @Override
+    public INDArray params() {
+        return graph.params();
+    }
+
+    @Override
+    public Map<String, INDArray> paramTable(boolean backpropOnly) {
+        return Collections.synchronizedMap(Collections.singletonMap(parName, params()));
+    }
+
+    @Override
     public TrainingConfig getConfig() {
-        return new DummyConfig(getVertexName());
+        return trainingConfig;
     }
 
     @Override
@@ -197,7 +207,11 @@ public class OdeVertex extends BaseGraphVertex {
 
         final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(lastOutput, getEpsilon(), Nd4j.zeros(graph.numParams()), dL_dtN);
 
-        return backPropagate(getEpsilon(), tbptt, workspaceMgr);
+        final Pair<Gradient, INDArray[]> ret =  backPropagate(getEpsilon(), tbptt, workspaceMgr);
+        for(INDArray eps: ret.getRight()) {
+            workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD,eps);
+        }
+        return ret;
     }
 
     private void updateAugmentedDynamics(AugmentedDynamics augmentedDynamics, INDArray time, LayerWorkspaceMgr workspaceMgr) {
@@ -327,7 +341,7 @@ public class OdeVertex extends BaseGraphVertex {
                 totalGradient = Nd4j.hstack(totalGradient, grad);
             }
         }
-        gradient.setGradientFor(getVertexName(), totalGradient, order);
+        gradient.setGradientFor(parName, totalGradient.detach(), order);
 
         return new Pair<>(gradient, outputEpsilons.toArray(new INDArray[0]));
     }
