@@ -58,7 +58,7 @@ public class OdeVertexTest {
     public void fit() {
         final long nOut = 8;
         final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
-                .updater(new Sgd(1000))
+                .updater(new Sgd(0.1))
                 .graphBuilder()
                 .addInputs("input")
                 .setInputTypes(InputType.convolutional(9, 9, 1))

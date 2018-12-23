@@ -19,6 +19,7 @@ import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.Nullable;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.primitives.Pair;
 import org.nd4j.linalg.primitives.Triple;
@@ -49,7 +50,8 @@ public class OdeVertex extends BaseGraphVertex {
         super(actualGraph, name, vertexIndex, inputVertices, outputVertices);
         this.graph = innerGraph;
         this.trainingConfig = trainingConfig;
-        odeSolver = new DormandPrince54Integrator(1e-8, 10d, 1e-9, 1e-7);
+        //this.odeSolver = new AdamsBashforthIntegrator(10, 1e-20, 10d, 1e-1, 1e-1);
+        this.odeSolver = new DormandPrince54Integrator(1e-10, 10d, 1e-2, 1e-2);
         time = Nd4j.create(new double[]{0, 1});
     }
 
@@ -112,8 +114,10 @@ public class OdeVertex extends BaseGraphVertex {
             @Override
             public void computeDerivatives(double t, double[] y, double[] yDot) throws MaxCountExceededException, DimensionMismatchException {
                 if (!first) {
-                    setInputsFromFlat(fromDoubleVec(y, workspaceMgr), workspaceMgr);
+                    INDArray newInput = fromDoubleVec(workspaceMgr.createUninitialized(ArrayType.ACTIVATIONS, 1, y.length), y);
+                    setInputsFromFlat(newInput, workspaceMgr);
                 }
+
                 first = false;
                 final INDArray eval = Nd4j.toFlattened(evaluate(training, workspaceMgr));
                 System.arraycopy(eval.toDoubleVector(), 0, yDot, 0, yDot.length);
@@ -136,15 +140,15 @@ public class OdeVertex extends BaseGraphVertex {
     }
 
     private INDArray fromDoubleVec(double[] vec, long[] shape, LayerWorkspaceMgr workspaceMgr) {
-        return fromDoubleVec(vec, workspaceMgr).reshape(shape);
+        final INDArray input = workspaceMgr.createUninitialized(ArrayType.ACTIVATIONS, 1, vec.length);
+        return fromDoubleVec(input, vec).reshape(shape);
     }
 
-    private INDArray fromDoubleVec(double[] vec, LayerWorkspaceMgr workspaceMgr) {
-        final INDArray input = workspaceMgr.createUninitialized(ArrayType.ACTIVATIONS, 1, vec.length);
+    private INDArray fromDoubleVec(INDArray array, double[] vec) {
         for (int i = 0; i < vec.length; i++) {
-            input.putScalar(i, vec[i]);
+            array.putScalar(i, vec[i]);
         }
-        return input;
+        return array;
     }
 
     private void setInputsFromFlat(INDArray flatArray, LayerWorkspaceMgr workspaceMgr) {
@@ -205,21 +209,44 @@ public class OdeVertex extends BaseGraphVertex {
         // dL/dtN = dL / dz(tN) dot z(tN)
         final INDArray dL_dtN = Nd4j.toFlattened(getEpsilon()).mmul(Nd4j.toFlattened(lastOutput).transposei()).muli(-1);
 
-        final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(lastOutput, getEpsilon(), Nd4j.zeros(graph.numParams()), dL_dtN);
+        final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(lastOutput.dup(), getEpsilon().dup(), Nd4j.zeros(graph.numParams()), dL_dtN);
 
-        final Pair<Gradient, INDArray[]> ret =  backPropagate(getEpsilon(), tbptt, workspaceMgr);
-        for(INDArray eps: ret.getRight()) {
+        final FirstOrderDifferentialEquations equation = new FirstOrderDifferentialEquations() {
+
+           boolean first = true;
+
+            @Override
+            public int getDimension() {
+                return (int)augmentedDynamics.getNrofElements();
+            }
+
+            @Override
+            public void computeDerivatives(double t, double[] y, double[] yDot) throws MaxCountExceededException, DimensionMismatchException {
+                if(!first) {
+                    augmentedDynamics.update(y);
+                }
+
+                updateAugmentedDynamics(augmentedDynamics, Nd4j.create(new double[]{t}), tbptt, workspaceMgr);
+                augmentedDynamics.transferTo(yDot);
+            }
+        };
+
+        final double[] y = new double[(int)augmentedDynamics.getNrofElements()];
+        odeSolver.integrate(equation, time.getDouble(0), y, time.getDouble(1), y);
+
+        for(INDArray eps: augmentedDynamics.lastGrad.getRight()) {
             workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD,eps);
         }
-        return ret;
+        return augmentedDynamics.lastGrad;
     }
 
-    private void updateAugmentedDynamics(AugmentedDynamics augmentedDynamics, INDArray time, LayerWorkspaceMgr workspaceMgr) {
+    private void updateAugmentedDynamics(AugmentedDynamics augmentedDynamics, INDArray time, boolean tbptt, LayerWorkspaceMgr workspaceMgr) {
 
         // Set inputs before eval
         setInputsFromFlat(augmentedDynamics.z, workspaceMgr);
         final INDArray fEval = evaluate(true, workspaceMgr);
-
+        final Pair<Gradient, INDArray[]> ret = backPropagate(augmentedDynamics.zAdjoint.reshape(getEpsilon().shape()), tbptt, workspaceMgr);
+        augmentedDynamics.update(fEval, ret);
     }
 
     private static class AugmentedDynamics {
@@ -228,6 +255,8 @@ public class OdeVertex extends BaseGraphVertex {
         private final INDArray zAdjoint;
         private final INDArray paramAdjoint;
         private final INDArray tAdjoint;
+
+        private Pair<Gradient, INDArray[]> lastGrad;
 
         private AugmentedDynamics(double[] zAug, long nrofZ, long nrofParam, long nrofT) {
             this(Nd4j.create(zAug), nrofZ, nrofT, nrofParam);
@@ -243,13 +272,52 @@ public class OdeVertex extends BaseGraphVertex {
 
         private AugmentedDynamics(INDArray z, INDArray zAdjoint, INDArray paramAdjoint, INDArray tAdjoint) {
             this.z = z;
-            this.zAdjoint = zAdjoint;
+            this.zAdjoint = zAdjoint.reshape(1, zAdjoint.length());
             this.paramAdjoint = paramAdjoint;
             this.tAdjoint = tAdjoint;
         }
 
-        private void update(INDArray fEval, INDArray t) {
+        private long getNrofElements() {
+            return z.length() + zAdjoint.length() + paramAdjoint.length() +tAdjoint.length();
+        }
 
+        private void update(double[] zAug) {
+            int offset = updateArr(zAug, z, 0);
+            offset = updateArr(zAug, zAdjoint, offset);
+            offset = updateArr(zAug, paramAdjoint, offset);
+            updateArr(zAug, tAdjoint, offset);
+        }
+
+        private void transferTo(double[] zAug) {
+            int offset = updateVec(zAug, z, 0);
+            offset = updateVec(zAug, zAdjoint, offset);
+            offset = updateVec(zAug, paramAdjoint, offset);
+            updateArr(zAug, tAdjoint, offset);
+        }
+
+        private static int updateArr(double[] vec, INDArray arr, int offset) {
+            for(int i = 0; i < arr.length(); i++) {
+                arr.putScalar(i, vec[i+offset]);
+            }
+            return offset + (int)arr.length();
+        }
+
+        private static int updateVec(double[] vec, INDArray arr, int offset) {
+            for(int i = 0; i < arr.length(); i++) {
+                vec[i+offset] = arr.getDouble(i);
+            }
+            return offset + (int)arr.length();
+        }
+
+        private void update(INDArray fEval, final Pair<Gradient, INDArray[]> gradientPair) {
+            lastGrad = gradientPair;
+            z.assign(fEval);
+            long lastInd = 0;
+            for(INDArray eps: gradientPair.getSecond()) {
+                zAdjoint.put(new INDArrayIndex[] {NDArrayIndex.all(), NDArrayIndex.interval(lastInd, eps.length())}, Nd4j.toFlattened(eps));
+                lastInd += eps.length();
+            }
+            paramAdjoint.assign(gradientPair.getFirst().getGradientFor(parName));
         }
     }
 
