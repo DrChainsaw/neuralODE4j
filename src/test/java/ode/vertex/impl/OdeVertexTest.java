@@ -1,4 +1,4 @@
-package ode.impl;
+package ode.vertex.impl;
 
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -34,7 +34,7 @@ public class OdeVertexTest {
                         new Convolution2D.Builder(3, 3)
                                 .nOut(nOut)
                                 .convolutionMode(ConvolutionMode.Same).build(), "input")
-                .addVertex("1", new ode.conf.OdeVertex.Builder("ode0",
+                .addVertex("1", new ode.vertex.conf.OdeVertex.Builder("ode0",
                         new BatchNormalization.Builder().build())
                         .addLayer("ode1",
                                 new Convolution2D.Builder(3, 3)
@@ -70,7 +70,7 @@ public class OdeVertexTest {
                 .addLayer("bn",   new BatchNormalization.Builder()
                         .activation(new ActivationReLU())
                         .build(), "0")
-                .addVertex("1", new ode.conf.OdeVertex.Builder("ode0",
+                .addVertex("1", new ode.vertex.conf.OdeVertex.Builder("ode0",
                         new BatchNormalization.Builder()
                                 .activation(new ActivationReLU())
                                 .build())

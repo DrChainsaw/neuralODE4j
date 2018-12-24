@@ -1,4 +1,4 @@
-package ode.impl;
+package ode.vertex.impl;
 
 import org.apache.commons.math3.exception.DimensionMismatchException;
 import org.apache.commons.math3.exception.MaxCountExceededException;
@@ -22,9 +22,11 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.primitives.Pair;
-import org.nd4j.linalg.primitives.Triple;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Implementation of an ODE block.
@@ -50,7 +52,6 @@ public class OdeVertex extends BaseGraphVertex {
         super(actualGraph, name, vertexIndex, inputVertices, outputVertices);
         this.graph = innerGraph;
         this.trainingConfig = trainingConfig;
-        //this.odeSolver = new AdamsBashforthIntegrator(10, 1e-20, 10d, 1e-1, 1e-1);
         this.odeSolver = new DormandPrince54Integrator(1e-10, 10d, 1e-2, 1e-2);
         time = Nd4j.create(new double[]{0, 1});
     }
@@ -126,11 +127,11 @@ public class OdeVertex extends BaseGraphVertex {
 
         final double[] output = new double[dim];
         int offset = 0;
-        for(INDArray input: getInputs()) {
-            for(int i = 0; i < input.length(); i++) {
+        for (INDArray input : getInputs()) {
+            for (int i = 0; i < input.length(); i++) {
                 output[i + offset] = input.getDouble(i);
             }
-            offset = (int)input.length();
+            offset = (int) input.length();
         }
 
         odeSolver.integrate(equation, time.getDouble(0), output, time.getDouble(1), output);
@@ -221,16 +222,16 @@ public class OdeVertex extends BaseGraphVertex {
 
         final FirstOrderDifferentialEquations equation = new FirstOrderDifferentialEquations() {
 
-           boolean first = true;
+            boolean first = true;
 
             @Override
             public int getDimension() {
-                return (int)augmentedDynamics.getNrofElements();
+                return (int) augmentedDynamics.getNrofElements();
             }
 
             @Override
             public void computeDerivatives(double t, double[] y, double[] yDot) throws MaxCountExceededException, DimensionMismatchException {
-                if(!first) {
+                if (!first) {
                     augmentedDynamics.update(y);
                 }
                 updateAugmentedDynamics(augmentedDynamics, Nd4j.create(new double[]{t}), tbptt, workspaceMgr);
@@ -238,12 +239,12 @@ public class OdeVertex extends BaseGraphVertex {
             }
         };
 
-        final double[] y = new double[(int)augmentedDynamics.getNrofElements()];
+        final double[] y = new double[(int) augmentedDynamics.getNrofElements()];
         augmentedDynamics.transferTo(y);
         odeSolver.integrate(equation, time.getDouble(1), y, time.getDouble(0), y);
 
-        for(INDArray eps: augmentedDynamics.lastGrad.getRight()) {
-            workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD,eps);
+        for (INDArray eps : augmentedDynamics.lastGrad.getRight()) {
+            workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, eps);
         }
         return augmentedDynamics.lastGrad;
     }
@@ -286,7 +287,7 @@ public class OdeVertex extends BaseGraphVertex {
         }
 
         private long getNrofElements() {
-            return z.length() + zAdjoint.length() + paramAdjoint.length() +tAdjoint.length();
+            return z.length() + zAdjoint.length() + paramAdjoint.length() + tAdjoint.length();
         }
 
         private void update(double[] zAug) {
@@ -304,25 +305,25 @@ public class OdeVertex extends BaseGraphVertex {
         }
 
         private static int updateArr(double[] vec, INDArray arr, int offset) {
-            for(int i = 0; i < arr.length(); i++) {
-                arr.putScalar(i, vec[i+offset]);
+            for (int i = 0; i < arr.length(); i++) {
+                arr.putScalar(i, vec[i + offset]);
             }
-            return offset + (int)arr.length();
+            return offset + (int) arr.length();
         }
 
         private static int updateVec(double[] vec, INDArray arr, int offset) {
-            for(int i = 0; i < arr.length(); i++) {
-                vec[i+offset] = arr.getDouble(i);
+            for (int i = 0; i < arr.length(); i++) {
+                vec[i + offset] = arr.getDouble(i);
             }
-            return offset + (int)arr.length();
+            return offset + (int) arr.length();
         }
 
         private void update(INDArray fEval, final Pair<Gradient, INDArray[]> gradientPair) {
             lastGrad = gradientPair;
             z.assign(fEval);
             long lastInd = 0;
-            for(INDArray eps: gradientPair.getSecond()) {
-                zAdjoint.put(new INDArrayIndex[] {NDArrayIndex.all(), NDArrayIndex.interval(lastInd, eps.length())}, Nd4j.toFlattened(eps));
+            for (INDArray eps : gradientPair.getSecond()) {
+                zAdjoint.put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(lastInd, eps.length())}, Nd4j.toFlattened(eps));
                 lastInd += eps.length();
             }
             paramAdjoint.assign(gradientPair.getFirst().getGradientFor(parName));
@@ -336,22 +337,19 @@ public class OdeVertex extends BaseGraphVertex {
 
         List<INDArray> outputEpsilons = new ArrayList<>();
 
-        LinkedList<Triple<String, INDArray, Character>> gradients = new LinkedList<>();
         boolean[] setVertexEpsilon = new boolean[topologicalOrder.length]; //If true: already set epsilon for this vertex; later epsilons should be *added* to the existing one, not set
         for (int i = topologicalOrder.length - 1; i >= 0; i--) {
             GraphVertex current = vertices[topologicalOrder[i]];
-            int vIdx = current.getVertexIndex();
-            String vertexName = current.getVertexName();
 
             if (current.isOutputVertex()) {
-                for(VertexIndices vertexIndices: current.getInputVertices()) {
+                for (VertexIndices vertexIndices : current.getInputVertices()) {
                     final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();
                     graph.getVertex(inputName).setEpsilon(epsilon);
                 }
                 continue;
             }
 
-            if(current.isInputVertex()) {
+            if (current.isInputVertex()) {
                 continue;
             }
 
@@ -360,9 +358,9 @@ public class OdeVertex extends BaseGraphVertex {
             pair = current.doBackward(truncatedBPTT, workspaceMgr);
             epsilons = pair.getSecond();
 
-            for(VertexIndices vertexIndices: current.getInputVertices()) {
+            for (VertexIndices vertexIndices : current.getInputVertices()) {
                 final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();
-                if(graph.getConfiguration().getNetworkInputs().contains(
+                if (graph.getConfiguration().getNetworkInputs().contains(
                         inputName)) {
                     outputEpsilons.add(graph.getConfiguration().getNetworkInputs().indexOf(inputName),
                             epsilons[vertexIndices.getVertexEdgeNumber()]);
@@ -387,38 +385,11 @@ public class OdeVertex extends BaseGraphVertex {
                     setVertexEpsilon[gv.getVertexIndex()] = true;
                 }
             }
-
-            if (pair.getFirst() != null) {
-                Gradient g = pair.getFirst();
-                Map<String, INDArray> map = g.gradientForVariable();
-                LinkedList<Triple<String, INDArray, Character>> tempList = new LinkedList<>();
-                for (Map.Entry<String, INDArray> entry : map.entrySet()) {
-                    String origName = entry.getKey();
-                    String newName = current.getVertexName() + "_" + origName;
-                    tempList.addFirst(new Triple<>(newName, entry.getValue(),
-                            g.flatteningOrderForVariable(origName)));
-                }
-                for (Triple<String, INDArray, Character> t : tempList)
-                    gradients.addFirst(t);
-            }
         }
 
         //Now, add the gradients in the order we need them in for flattening (same as params order)
         Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
-        INDArray totalGradient = null;
-        Character order = null;
-        for (Triple<String, INDArray, Character> t : gradients) {
-            if(totalGradient == null) {
-                totalGradient = t.getSecond().reshape(1, t.getSecond().length());
-                order = t.getThird();
-            } else {
-                final INDArray grad = t.getSecond().reshape(1, t.getSecond().length());
-                grad.setOrder(totalGradient.ordering());
-                totalGradient = Nd4j.hstack(totalGradient, grad);
-            }
-        }
-        gradient.setGradientFor(parName, totalGradient.detach(), order);
-
+        gradient.setGradientFor(parName, graph.getFlattenedGradients());
         return new Pair<>(gradient, outputEpsilons.toArray(new INDArray[0]));
     }
 

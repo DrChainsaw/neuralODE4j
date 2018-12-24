@@ -1,4 +1,4 @@
-package ode.conf;
+package ode.vertex.conf;
 
 import org.deeplearning4j.nn.api.TrainingConfig;
 import org.deeplearning4j.nn.conf.GradientNormalization;

@@ -1,7 +1,7 @@
 package examples.mnist;
 
 import com.beust.jcommander.Parameter;
-import ode.conf.OdeVertex;
+import ode.vertex.conf.OdeVertex;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
