@@ -125,6 +125,14 @@ public class OdeVertex extends BaseGraphVertex {
         };
 
         final double[] output = new double[dim];
+        int offset = 0;
+        for(INDArray input: getInputs()) {
+            for(int i = 0; i < input.length(); i++) {
+                output[i + offset] = input.getDouble(i);
+            }
+            offset = (int)input.length();
+        }
+
         odeSolver.integrate(equation, time.getDouble(0), output, time.getDouble(1), output);
 
         lastOutput = fromDoubleVec(output, shape, workspaceMgr);
@@ -225,14 +233,14 @@ public class OdeVertex extends BaseGraphVertex {
                 if(!first) {
                     augmentedDynamics.update(y);
                 }
-
                 updateAugmentedDynamics(augmentedDynamics, Nd4j.create(new double[]{t}), tbptt, workspaceMgr);
                 augmentedDynamics.transferTo(yDot);
             }
         };
 
         final double[] y = new double[(int)augmentedDynamics.getNrofElements()];
-        odeSolver.integrate(equation, time.getDouble(0), y, time.getDouble(1), y);
+        augmentedDynamics.transferTo(y);
+        odeSolver.integrate(equation, time.getDouble(1), y, time.getDouble(0), y);
 
         for(INDArray eps: augmentedDynamics.lastGrad.getRight()) {
             workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD,eps);
