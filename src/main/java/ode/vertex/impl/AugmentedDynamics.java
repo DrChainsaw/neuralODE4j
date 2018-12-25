@@ -97,12 +97,14 @@ class AugmentedDynamics {
 
     void updateZAdjoint(final List<INDArray> epsilons) {
         long lastInd = 0;
-        for (INDArray eps : epsilons) {
+        lastEpsilons = new INDArray[epsilons.size()];
+        for (int i = 0; i < epsilons.size(); i++) {
+            final INDArray eps = epsilons.get(i);
             // Note: This is a view of epsilon so this will update epsilon too
             zAdjoint.put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(lastInd, eps.length())}, Nd4j.toFlattened(eps));
             lastInd += eps.length();
+            lastEpsilons[i] = eps.detach();
         }
-        lastEpsilons = epsilons.toArray(new INDArray[0]);
     }
 
     void updateParamAdjoint(INDArray gradient) {

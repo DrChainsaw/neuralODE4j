@@ -2,7 +2,6 @@ package ode.vertex.conf;
 
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
-import org.deeplearning4j.nn.conf.WorkspaceMode;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
@@ -114,8 +113,8 @@ public class OdeVertex extends GraphVertex {
         private final String outputName = this.toString() + "_output";
         private final ComputationGraphConfiguration.GraphBuilder graphBuilder = new NeuralNetConfiguration.Builder()
                 // Will mess with outer graphs workspace
-                .trainingWorkspaceMode(WorkspaceMode.NONE)
-                .inferenceWorkspaceMode(WorkspaceMode.NONE)
+               // .trainingWorkspaceMode(WorkspaceMode.NONE)
+               // .inferenceWorkspaceMode(WorkspaceMode.NONE)
                 .graphBuilder();
 
         private String first = null;

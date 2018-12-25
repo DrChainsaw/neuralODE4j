@@ -32,7 +32,7 @@ class CircleODE implements FirstOrderEquation, FirstOrderDifferentialEquations {
     }
 
     @Override
-    public INDArray calculateDerivate(INDArray y, INDArray t, INDArray fy) {
+    public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
         fy.putScalar(0, omega * (c[1] - y.getDouble(1)));
         fy.putScalar(1, omega * (y.getDouble(0) - c[0]));
         return fy;

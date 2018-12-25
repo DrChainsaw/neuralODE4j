@@ -5,9 +5,11 @@ import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.graph.vertex.VertexIndices;
+import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.primitives.Pair;
+import org.nd4j.linalg.workspace.WorkspacesCloseable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,15 +40,20 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
         this.augmentedDynamics = augmentedDynamics;
         this.forwardPass = forwardPass;
         this.truncatedBPTT = truncatedBPTT;
+
     }
 
     @Override
-    public INDArray calculateDerivate(INDArray zAug, INDArray t, INDArray fzAug) {
+    public INDArray calculateDerivative(INDArray zAug, INDArray t, INDArray fzAug) {
         augmentedDynamics.updateFrom(zAug);
 
-        forwardPass.calculateDerivate(augmentedDynamics.getZ(), t, augmentedDynamics.getZ());
-        final List<INDArray> ret = backPropagate(augmentedDynamics.getEpsilon());
-        augmentedDynamics.updateZAdjoint(ret);
+        forwardPass.calculateDerivative(augmentedDynamics.getZ(), t, augmentedDynamics.getZ());
+
+         try (WorkspacesCloseable ws = workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.INPUT, ArrayType.ACTIVATION_GRAD)) {
+             final List<INDArray> ret = backPropagate(augmentedDynamics.getEpsilon());
+             augmentedDynamics.updateZAdjoint(ret);
+         }
+
         augmentedDynamics.updateParamAdjoint(graph.getFlattenedGradients());
 
         augmentedDynamics.transferTo(fzAug);
@@ -54,6 +61,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
     }
 
     private List<INDArray> backPropagate(INDArray epsilon) {
+
         //Do backprop, in reverse topological order
         final int[] topologicalOrder = graph.topologicalSortOrder();
         final GraphVertex[] vertices = graph.getVertices();
@@ -86,7 +94,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
                 if (graph.getConfiguration().getNetworkInputs().contains(
                         inputName)) {
                     outputEpsilons.add(graph.getConfiguration().getNetworkInputs().indexOf(inputName),
-                            epsilons[vertexIndices.getVertexEdgeNumber()]);
+                            epsilons[vertexIndices.getVertexEdgeNumber()].migrate(true));
                 }
             }
 

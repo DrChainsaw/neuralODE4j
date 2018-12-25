@@ -17,5 +17,5 @@ public interface FirstOrderEquation {
      * @param fy Value of <code>F(Y(t))</code> above given <code>t</code> and <code>Y(t)</code>
      * @return fy, same instance as input param.
      */
-    INDArray calculateDerivate(INDArray y, INDArray t, INDArray fy);
+    INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy);
 }

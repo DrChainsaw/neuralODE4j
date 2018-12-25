@@ -32,7 +32,7 @@ public class FirstOrderEquationAdapter implements FirstOrderDifferentialEquation
     @Override
     public void computeDerivatives(double t, double[] y, double[] yDot) throws MaxCountExceededException, DimensionMismatchException {
         this.t.putScalar(0, t);
-        wrappedEquation.calculateDerivate(fromDoubleVec(y, lastResult.shape()), this.t, lastResult);
+        wrappedEquation.calculateDerivative(fromDoubleVec(y, lastResult.shape()), this.t, lastResult);
         for(int i = 0; i < yDot.length; i++) {
             yDot[i] = lastResult.getDouble(i);
         }

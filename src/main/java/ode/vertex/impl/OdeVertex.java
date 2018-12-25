@@ -14,6 +14,8 @@ import org.deeplearning4j.nn.graph.vertex.BaseGraphVertex;
 import org.deeplearning4j.nn.graph.vertex.VertexIndices;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
+import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
+import org.nd4j.linalg.api.memory.enums.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.primitives.Pair;
@@ -35,6 +37,7 @@ public class OdeVertex extends BaseGraphVertex {
     private final TrainingConfig trainingConfig;
     private final INDArray time;
     private INDArray lastOutput; // z(tN) from paper?
+    private final LayerWorkspaceMgr workspaceMgr;
 
     public OdeVertex(ComputationGraph actualGraph,
                      String name,
@@ -48,6 +51,38 @@ public class OdeVertex extends BaseGraphVertex {
         this.odeSolver = new FirstOrderSolverAdapter(
                 new DormandPrince54Integrator(1e-10, 10d, 1e-2, 1e-2));
         time = Nd4j.create(new double[]{0, 1});
+
+        workspaceMgr = LayerWorkspaceMgr.builder()
+                .with(ArrayType.ACTIVATION_GRAD, "WS_ODE_VERTEX_ALL_LAYERS_GRAD", WorkspaceConfiguration.builder()
+                        .initialSize(0)
+                        .overallocationLimit(0.02)
+                        .policyLearning(LearningPolicy.OVER_TIME)
+                        .cyclesBeforeInitialization(graph.getVertices().length)
+                        .policyReset(ResetPolicy.BLOCK_LEFT)
+                        .policySpill(SpillPolicy.REALLOCATE)
+                        .policyAllocation(AllocationPolicy.OVERALLOCATE)
+                        .build())
+                .with(ArrayType.ACTIVATIONS, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WorkspaceConfiguration.builder()
+                        .initialSize(0)
+                        .overallocationLimit(0.02)
+                        .policyLearning(LearningPolicy.OVER_TIME)
+                        .cyclesBeforeInitialization(2 * graph.getVertices().length)
+                        .policyReset(ResetPolicy.BLOCK_LEFT)
+                        .policySpill(SpillPolicy.REALLOCATE)
+                        .policyMirroring(MirroringPolicy.HOST_ONLY)
+                        .policyAllocation(AllocationPolicy.OVERALLOCATE)
+                        .build())
+                .with(ArrayType.INPUT, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WorkspaceConfiguration.builder()
+                        .initialSize(0)
+                        .overallocationLimit(0.02)
+                        .policyLearning(LearningPolicy.OVER_TIME)
+                        .cyclesBeforeInitialization(2 * graph.getVertices().length)
+                        .policyReset(ResetPolicy.BLOCK_LEFT)
+                        .policySpill(SpillPolicy.REALLOCATE)
+                        .policyMirroring(MirroringPolicy.HOST_ONLY)
+                        .policyAllocation(AllocationPolicy.OVERALLOCATE)
+                        .build())
+                .build();
     }
 
     @Override
@@ -85,16 +120,34 @@ public class OdeVertex extends BaseGraphVertex {
         return trainingConfig;
     }
 
-    @Override
-    public INDArray doForward(boolean training, LayerWorkspaceMgr workspaceMgr) {
+    private void validateForward() {
         if (!canDoForward())
             throw new IllegalStateException("Cannot do forward pass: inputs not set");
 
         if (getInputs().length != 1) {
             throw new IllegalStateException("More than one input not supported!");
         }
+    }
 
-        final ForwardPass equation = new ForwardPass(graph, workspaceMgr, training, getInputs());
+    private void validateBackprop() {
+        if (!canDoBackward()) {
+            if (inputs == null || inputs[0] == null) {
+                throw new IllegalStateException("Cannot do backward pass: inputs not set. Layer: \"" + vertexName
+                        + "\" (idx " + vertexIndex + "), numInputs: " + getNumInputArrays());
+            } else {
+                throw new IllegalStateException("Cannot do backward pass: all epsilons not set. Layer \"" + vertexName
+                        + "\" (idx " + vertexIndex + "), numInputs :" + getNumInputArrays() + "; numOutputs: "
+                        + getNumOutputConnections());
+            }
+        }
+    }
+
+
+    @Override
+    public INDArray doForward(boolean training, LayerWorkspaceMgr workspaceMgr) {
+        validateForward();
+
+        final ForwardPass equation = new ForwardPass(graph, this.workspaceMgr, training, getInputs());
         final INDArray flatInputs = Nd4j.create(1, getNrofInputElements());
         lastOutput = Nd4j.create(1, getNrofInputElements()).detach(); // nrof outputs must be same as number of inputs due to resblock
         final NDArrayIndexAccumulator accumulator = new NDArrayIndexAccumulator(flatInputs);
@@ -103,7 +156,8 @@ public class OdeVertex extends BaseGraphVertex {
         }
 
         odeSolver.integrate(equation, time, flatInputs, lastOutput);
-        if(equation.getLastOutputs().size() > 1) {
+
+        if (equation.getLastOutputs().size() > 1) {
             throw new UnsupportedOperationException("More than one output not supported!");
         }
         return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, equation.getLastOutputs().get(0));
@@ -119,6 +173,7 @@ public class OdeVertex extends BaseGraphVertex {
 
     @Override
     public Pair<Gradient, INDArray[]> doBackward(boolean tbptt, LayerWorkspaceMgr workspaceMgr) {
+        validateBackprop();
 
         // epsilon = dL / dz(tN) = dL / dlastOutput
         // dL/dtN = dL / dz(tN) dot z(tN)
@@ -140,25 +195,28 @@ public class OdeVertex extends BaseGraphVertex {
 
         final FirstOrderEquation equation = new BackpropagateAdjoint(
                 graph,
-                workspaceMgr,
+                this.workspaceMgr,
                 augmentedDynamics,
                 new ForwardPass(graph,
-                        workspaceMgr,
+                        this.workspaceMgr,
                         false,
                         getInputs()),
                 tbptt
         );
 
-        odeSolver.integrate(equation, time, zAug, zAug.dup());
+        odeSolver.integrate(equation, Nd4j.reverse(time), zAug, zAug.dup());
+
+        if (augmentedDynamics.getLastEpsilons().length > 1) {
+            throw new UnsupportedOperationException("More the one input not supported!!");
+        }
 
         for (INDArray eps : augmentedDynamics.getLastEpsilons()) {
-            workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, eps);
+            workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, eps.addi(getEpsilon()));
         }
         final Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
         gradient.setGradientFor(parName, graph.getFlattenedGradients());
         return new Pair<>(gradient, augmentedDynamics.getLastEpsilons());
     }
-
 
     @Override
     public void setBackpropGradientsViewArray(INDArray backpropGradientsViewArray) {

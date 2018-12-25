@@ -4,11 +4,13 @@ import ode.solve.api.FirstOrderEquation;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.graph.vertex.VertexIndices;
+import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.Nullable;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.nd4j.linalg.workspace.WorkspacesCloseable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,19 +28,24 @@ public class ForwardPass implements FirstOrderEquation {
     private final boolean training;
     private final INDArray[] inputs;
 
-    private List<INDArray> lastOutputs;
+    private final List<INDArray> lastOutputs;
 
     public ForwardPass(ComputationGraph graph, LayerWorkspaceMgr workspaceMgr, boolean training, INDArray[] startInputs) {
         this.graph = graph;
         this.workspaceMgr = workspaceMgr;
         this.training = training;
         this.inputs = startInputs;
+        this.lastOutputs = new ArrayList<>();
     }
 
+
     @Override
-    public INDArray calculateDerivate(INDArray y, INDArray t, INDArray fy) {
-        setInputsFromFlat(y);
-        lastOutputs = evaluate(inputs, fy);
+    public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
+            try (WorkspacesCloseable wsCloseable = workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.INPUT)) {
+                setInputsFromFlat(y);
+                evaluate(inputs, fy);
+            }
+
         return fy;
     }
 
@@ -57,16 +64,15 @@ public class ForwardPass implements FirstOrderEquation {
     }
 
     @Nullable
-    private List<INDArray> evaluate(INDArray[] inputs, INDArray output) {
+    private void evaluate(INDArray[] inputs, INDArray output) {
         //TODO: Might want to have internal workspace handling to conserve memory
         final int[] topologicalOrder = graph.topologicalSortOrder();
         final NDArrayIndexAccumulator outputAccum = new NDArrayIndexAccumulator(output);
-        final List<INDArray> outputs = new ArrayList<>();
 
+        int outputCnt = 0;
         //Do forward pass according to the topological ordering of the network
         for (int i = 0; i <= graph.getVertices().length - 1; i++) {
             GraphVertex current = graph.getVertices()[topologicalOrder[i]];
-            String vName = current.getVertexName();
             int vIdx = current.getVertexIndex();
 
             VertexIndices[] inputsTo = current.getOutputVertices();
@@ -77,7 +83,12 @@ public class ForwardPass implements FirstOrderEquation {
             } else if (current.isOutputVertex()) {
                 for (INDArray outArr : current.getInputs()) {
                     outputAccum.increment(Nd4j.toFlattened(outArr));
-                    outputs.add(outArr);
+                    if (lastOutputs.size() < outputCnt + 1) {
+                        lastOutputs.add(outArr.detach());
+                    } else {
+                        lastOutputs.get(outputCnt).assign(outArr);
+                    }
+                    outputCnt++;
                 }
             } else {
                 //Standard feed-forward case
@@ -94,7 +105,6 @@ public class ForwardPass implements FirstOrderEquation {
                 }
             }
         }
-        return outputs;
     }
 
 }
