@@ -9,6 +9,10 @@ import org.deeplearning4j.nn.conf.layers.CnnLossLayer;
 import org.deeplearning4j.nn.conf.layers.Layer;
 import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.deeplearning4j.nn.workspace.ArrayType;
+import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
+import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
+import org.nd4j.linalg.api.memory.enums.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 /**
@@ -21,11 +25,23 @@ public class OdeVertex extends GraphVertex {
     private final ComputationGraphConfiguration conf;
     private final String firstVertex;
     private final String lastVertex;
+    private final WorkspaceConfiguration workspaceConfiguration;
 
     public OdeVertex(ComputationGraphConfiguration conf, String firstVertex, String lastVertex) {
         this.conf = conf;
         this.firstVertex = firstVertex;
         this.lastVertex = lastVertex;
+        this.workspaceConfiguration = WorkspaceConfiguration.builder()
+                .initialSize(0)
+                .overallocationLimit(0.02)
+                .policyLearning(LearningPolicy.OVER_TIME)
+                .cyclesBeforeInitialization(2 * conf.getVertices().size())
+                .policyReset(ResetPolicy.BLOCK_LEFT)
+                .policySpill(SpillPolicy.REALLOCATE)
+                .policyMirroring(MirroringPolicy.HOST_ONLY)
+                .policyAllocation(AllocationPolicy.OVERALLOCATE)
+                .build();
+
     }
 
     @Override
@@ -35,7 +51,7 @@ public class OdeVertex extends GraphVertex {
 
     @Override
     public boolean equals(Object o) {
-        if(!(o instanceof OdeVertex)) {
+        if (!(o instanceof OdeVertex)) {
             return false;
         }
         return conf.equals(((OdeVertex) o).conf);
@@ -64,8 +80,24 @@ public class OdeVertex extends GraphVertex {
     }
 
     @Override
-    public org.deeplearning4j.nn.graph.vertex.GraphVertex instantiate(ComputationGraph graph, String name, int idx, INDArray paramsView, boolean initializeParams) {
+    public org.deeplearning4j.nn.graph.vertex.GraphVertex instantiate(
+            ComputationGraph graph,
+            String name,
+            int idx,
+            INDArray paramsView,
+            boolean initializeParams) {
+
+        final LayerWorkspaceMgr.Builder wsBuilder = LayerWorkspaceMgr.builder();
         final ComputationGraph innerGraph = new ComputationGraph(conf) {
+
+            public ComputationGraph spyWsConfigs() {
+                wsBuilder
+                        .with(ArrayType.INPUT, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WS_ALL_LAYERS_ACT_CONFIG)
+                        .with(ArrayType.ACTIVATIONS, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WS_ALL_LAYERS_ACT_CONFIG)
+                        .with(ArrayType.ACTIVATION_GRAD, "WS_ODE_VERTEX_ALL_LAYERS_GRAD", WS_ALL_LAYERS_ACT_CONFIG)
+                        .build();
+                return this;
+            }
 
             @Override
             public void init() {
@@ -79,8 +111,9 @@ public class OdeVertex extends GraphVertex {
                 flattenedGradients = gradient;
                 super.setBackpropGradientsViewArray(gradient);
             }
-        };
-        if(initializeParams) {
+        }.spyWsConfigs();
+
+        if (initializeParams) {
             innerGraph.init(); // This will init parameters using weight initialization
             paramsView.assign(innerGraph.params());
         }
@@ -91,10 +124,9 @@ public class OdeVertex extends GraphVertex {
                 graph,
                 name,
                 idx,
-                null,
-                null,
                 innerGraph,
-                new DefaultTrainingConfig(name,graph.getVertices()[1].getConfig().getUpdaterByParam("W").clone()));
+                new DefaultTrainingConfig(name, graph.getVertices()[1].getConfig().getUpdaterByParam("W").clone()),
+                wsBuilder.build());
     }
 
     @Override
@@ -113,8 +145,8 @@ public class OdeVertex extends GraphVertex {
         private final String outputName = this.toString() + "_output";
         private final ComputationGraphConfiguration.GraphBuilder graphBuilder = new NeuralNetConfiguration.Builder()
                 // Will mess with outer graphs workspace
-               // .trainingWorkspaceMode(WorkspaceMode.NONE)
-               // .inferenceWorkspaceMode(WorkspaceMode.NONE)
+                // .trainingWorkspaceMode(WorkspaceMode.NONE)
+                // .inferenceWorkspaceMode(WorkspaceMode.NONE)
                 .graphBuilder();
 
         private String first = null;
@@ -148,13 +180,14 @@ public class OdeVertex extends GraphVertex {
         }
 
         private void checkFirst(String name) {
-            if(first == null) {
+            if (first == null) {
                 first = name;
             }
         }
 
         /**
          * Build a new OdeVertex
+         *
          * @return a new OdeVertex
          */
         public OdeVertex build() {

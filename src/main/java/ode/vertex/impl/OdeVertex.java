@@ -11,11 +11,8 @@ import org.deeplearning4j.nn.gradient.DefaultGradient;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.BaseGraphVertex;
-import org.deeplearning4j.nn.graph.vertex.VertexIndices;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
-import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
-import org.nd4j.linalg.api.memory.enums.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.primitives.Pair;
@@ -42,47 +39,16 @@ public class OdeVertex extends BaseGraphVertex {
     public OdeVertex(ComputationGraph actualGraph,
                      String name,
                      int vertexIndex,
-                     VertexIndices[] inputVertices,
-                     VertexIndices[] outputVertices,
-                     ComputationGraph innerGraph, TrainingConfig trainingConfig) {
-        super(actualGraph, name, vertexIndex, inputVertices, outputVertices);
+                     ComputationGraph innerGraph,
+                     TrainingConfig trainingConfig,
+                     LayerWorkspaceMgr workspaceMgr) {
+        super(actualGraph, name, vertexIndex, null, null);
         this.graph = innerGraph;
         this.trainingConfig = trainingConfig;
         this.odeSolver = new FirstOrderSolverAdapter(
                 new DormandPrince54Integrator(1e-10, 10d, 1e-2, 1e-2));
         time = Nd4j.create(new double[]{0, 1});
-
-        workspaceMgr = LayerWorkspaceMgr.builder()
-                .with(ArrayType.ACTIVATION_GRAD, "WS_ODE_VERTEX_ALL_LAYERS_GRAD", WorkspaceConfiguration.builder()
-                        .initialSize(0)
-                        .overallocationLimit(0.02)
-                        .policyLearning(LearningPolicy.OVER_TIME)
-                        .cyclesBeforeInitialization(graph.getVertices().length)
-                        .policyReset(ResetPolicy.BLOCK_LEFT)
-                        .policySpill(SpillPolicy.REALLOCATE)
-                        .policyAllocation(AllocationPolicy.OVERALLOCATE)
-                        .build())
-                .with(ArrayType.ACTIVATIONS, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WorkspaceConfiguration.builder()
-                        .initialSize(0)
-                        .overallocationLimit(0.02)
-                        .policyLearning(LearningPolicy.OVER_TIME)
-                        .cyclesBeforeInitialization(2 * graph.getVertices().length)
-                        .policyReset(ResetPolicy.BLOCK_LEFT)
-                        .policySpill(SpillPolicy.REALLOCATE)
-                        .policyMirroring(MirroringPolicy.HOST_ONLY)
-                        .policyAllocation(AllocationPolicy.OVERALLOCATE)
-                        .build())
-                .with(ArrayType.INPUT, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WorkspaceConfiguration.builder()
-                        .initialSize(0)
-                        .overallocationLimit(0.02)
-                        .policyLearning(LearningPolicy.OVER_TIME)
-                        .cyclesBeforeInitialization(2 * graph.getVertices().length)
-                        .policyReset(ResetPolicy.BLOCK_LEFT)
-                        .policySpill(SpillPolicy.REALLOCATE)
-                        .policyMirroring(MirroringPolicy.HOST_ONLY)
-                        .policyAllocation(AllocationPolicy.OVERALLOCATE)
-                        .build())
-                .build();
+        this.workspaceMgr = workspaceMgr;
     }
 
     @Override
