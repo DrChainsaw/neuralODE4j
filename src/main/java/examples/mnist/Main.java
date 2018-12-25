@@ -2,6 +2,7 @@ package examples.mnist;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import ode.solve.impl.DummyIteration;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
@@ -46,7 +47,8 @@ class Main {
                 .build()
                 .parse(args);
 
-        main.init(odeModel.create());
+        main.init(odeModel.create(new DummyIteration(() -> 2)));
+       // main.init(referenceModel.create());
         main.addListeners();
         main.run();
     }

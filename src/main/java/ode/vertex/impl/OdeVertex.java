@@ -2,8 +2,6 @@ package ode.vertex.impl;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
-import ode.solve.commons.FirstOrderSolverAdapter;
-import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.api.MaskState;
 import org.deeplearning4j.nn.api.TrainingConfig;
@@ -40,13 +38,13 @@ public class OdeVertex extends BaseGraphVertex {
                      String name,
                      int vertexIndex,
                      ComputationGraph innerGraph,
+                     FirstOrderSolver odeSolver,
                      TrainingConfig trainingConfig,
                      LayerWorkspaceMgr workspaceMgr) {
         super(actualGraph, name, vertexIndex, null, null);
         this.graph = innerGraph;
         this.trainingConfig = trainingConfig;
-        this.odeSolver = new FirstOrderSolverAdapter(
-                new DormandPrince54Integrator(1e-10, 10d, 1e-2, 1e-2));
+        this.odeSolver = odeSolver;
         time = Nd4j.create(new double[]{0, 1});
         this.workspaceMgr = workspaceMgr;
     }

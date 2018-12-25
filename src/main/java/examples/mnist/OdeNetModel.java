@@ -1,7 +1,10 @@
 package examples.mnist;
 
 import com.beust.jcommander.Parameter;
+import ode.solve.api.FirstOrderSolver;
+import ode.solve.commons.FirstOrderSolverAdapter;
 import ode.vertex.conf.OdeVertex;
+import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
@@ -28,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 public class OdeNetModel {
 
-    private static final Logger log = LoggerFactory.getLogger(ResNetReferenceModel.class);
+    private static final Logger log = LoggerFactory.getLogger(OdeNetModel.class);
 
     @Parameter(names = "-nrofKernels", description = "Number of filter kernels in each convolution layer")
     private int nrofKernels = 64;
@@ -51,12 +54,16 @@ public class OdeNetModel {
                 .setInputTypes(InputType.feedForward(28 * 28));
     }
 
-    ComputationGraph create() {
+    ComputationGraph create() { return create(new FirstOrderSolverAdapter(new DormandPrince54Integrator(
+                1e-10, 10d, 1e-2, 1e-2)));
+    }
+
+    ComputationGraph create(FirstOrderSolver solver) {
 
         log.info("Create model");
 
         String next = addStem();
-        next = addOdeBlock(next);
+        next = addOdeBlock(next, solver);
         addOutput(next);
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
@@ -97,7 +104,7 @@ public class OdeNetModel {
         return "thirdConv";
     }
 
-    private String addOdeBlock(String prev) {
+    private String addOdeBlock(String prev, FirstOrderSolver solver) {
         builder
                 .addVertex("odeBlock", new OdeVertex.Builder("normFirst_",
                         new BatchNormalization.Builder()
@@ -119,6 +126,7 @@ public class OdeNetModel {
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same)
                                 .build(), "normSecond_")
+                        .odeSolver(solver)
                         .build(), prev);
         return "odeBlock";
     }

@@ -1,5 +1,8 @@
 package ode.vertex.conf;
 
+import ode.solve.api.FirstOrderSolver;
+import ode.solve.commons.FirstOrderSolverAdapter;
+import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
@@ -11,8 +14,6 @@ import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
-import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
-import org.nd4j.linalg.api.memory.enums.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 /**
@@ -25,28 +26,19 @@ public class OdeVertex extends GraphVertex {
     private final ComputationGraphConfiguration conf;
     private final String firstVertex;
     private final String lastVertex;
-    private final WorkspaceConfiguration workspaceConfiguration;
+    private final FirstOrderSolver odeSolver;
 
-    public OdeVertex(ComputationGraphConfiguration conf, String firstVertex, String lastVertex) {
+    public OdeVertex(ComputationGraphConfiguration conf, String firstVertex, String lastVertex, FirstOrderSolver odeSolver) {
         this.conf = conf;
         this.firstVertex = firstVertex;
         this.lastVertex = lastVertex;
-        this.workspaceConfiguration = WorkspaceConfiguration.builder()
-                .initialSize(0)
-                .overallocationLimit(0.02)
-                .policyLearning(LearningPolicy.OVER_TIME)
-                .cyclesBeforeInitialization(2 * conf.getVertices().size())
-                .policyReset(ResetPolicy.BLOCK_LEFT)
-                .policySpill(SpillPolicy.REALLOCATE)
-                .policyMirroring(MirroringPolicy.HOST_ONLY)
-                .policyAllocation(AllocationPolicy.OVERALLOCATE)
-                .build();
-
+        this.odeSolver = odeSolver;
     }
 
     @Override
     public GraphVertex clone() {
-        return new OdeVertex(conf.clone(), firstVertex, lastVertex);
+        // TODO: Make odeSolver cloneable
+        return new OdeVertex(conf.clone(), firstVertex, lastVertex, odeSolver);
     }
 
     @Override
@@ -125,6 +117,7 @@ public class OdeVertex extends GraphVertex {
                 name,
                 idx,
                 innerGraph,
+                odeSolver,
                 new DefaultTrainingConfig(name, graph.getVertices()[1].getConfig().getUpdaterByParam("W").clone()),
                 wsBuilder.build());
     }
@@ -144,14 +137,13 @@ public class OdeVertex extends GraphVertex {
         private final String inputName = this.toString() + "_input";
         private final String outputName = this.toString() + "_output";
         private final ComputationGraphConfiguration.GraphBuilder graphBuilder = new NeuralNetConfiguration.Builder()
-                // Will mess with outer graphs workspace
-                // .trainingWorkspaceMode(WorkspaceMode.NONE)
-                // .inferenceWorkspaceMode(WorkspaceMode.NONE)
                 .graphBuilder();
 
         private String first = null;
         private String last;
 
+        private FirstOrderSolver odeSolver = new FirstOrderSolverAdapter(new DormandPrince54Integrator(
+                1e-10, 10d, 1e-2, 1e-2));
 
         public Builder(String name, Layer layer) {
             graphBuilder
@@ -179,6 +171,16 @@ public class OdeVertex extends GraphVertex {
             return this;
         }
 
+        /**
+         * Sets the {@link FirstOrderSolver} to use
+         * @param odeSolver solver instance
+         * @return the Builder for fluent API
+         */
+        public Builder odeSolver(FirstOrderSolver odeSolver) {
+            this.odeSolver = odeSolver;
+            return this;
+        }
+
         private void checkFirst(String name) {
             if (first == null) {
                 first = name;
@@ -194,7 +196,7 @@ public class OdeVertex extends GraphVertex {
             return new OdeVertex(graphBuilder
                     .setOutputs(outputName)
                     .addLayer(outputName, new CnnLossLayer(), last)
-                    .build(), first, last);
+                    .build(), first, last, odeSolver);
         }
 
     }
