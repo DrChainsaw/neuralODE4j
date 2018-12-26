@@ -19,31 +19,28 @@ class AugmentedDynamics {
     private final INDArray paramAdjoint;
     private final INDArray tAdjoint;
 
-    private final INDArray epsilon;
-    private INDArray[] lastEpsilons;
 
-    AugmentedDynamics(double[] zAug, long nrofZ, long nrofParam, long nrofT, long[] epsShape) {
-        this(Nd4j.create(zAug), nrofZ, nrofT, nrofParam, epsShape);
-    }
-
-    AugmentedDynamics(INDArray zAug, long nrofZ, long nrofParam, long nrofT, long[] epsShape) {
+    AugmentedDynamics(INDArray zAug, long[] zShape, long[] paramShape, long[] tShape) {
         this(
-                zAug.get(NDArrayIndex.interval(0, nrofZ)),
-                zAug.get(NDArrayIndex.interval(nrofZ, 2 * nrofZ)).reshape(epsShape),
-                zAug.get(NDArrayIndex.interval(2 * nrofZ, 2 * nrofZ + nrofParam)),
-                zAug.get(NDArrayIndex.interval(2 * nrofZ + nrofParam, 2 * nrofZ + nrofParam + nrofT)));
+                zAug.get(NDArrayIndex.interval(0, length(zShape))).reshape(zShape),
+                zAug.get(NDArrayIndex.interval(length(zShape), 2 * length(zShape))).reshape(zShape),
+                zAug.get(NDArrayIndex.interval(2 * length(zShape), 2 * length(zShape) + length(paramShape))).reshape(paramShape),
+                zAug.get(NDArrayIndex.interval(2 * length(zShape) + length(paramShape), 2 * length(zShape) + length(paramShape) + length(tShape))).reshape(tShape));
     }
 
     AugmentedDynamics(INDArray z, INDArray zAdjoint, INDArray paramAdjoint, INDArray tAdjoint) {
         this.z = z;
-        this.epsilon = zAdjoint;
-        this.zAdjoint = zAdjoint.reshape(1, zAdjoint.length());
+        this.zAdjoint = zAdjoint;
         this.paramAdjoint = paramAdjoint;
         this.tAdjoint = tAdjoint;
     }
 
-    long getNrofElements() {
-        return z.length() + zAdjoint.length() + paramAdjoint.length() + tAdjoint.length();
+    private static long length(long[] shape) {
+        long length = 1;
+        for(long dimElems: shape) {
+            length *= dimElems;
+        }
+        return length;
     }
 
     void updateFrom(INDArray zAug) {
@@ -55,55 +52,23 @@ class AugmentedDynamics {
 
     void transferTo(INDArray zAug) {
         final NDArrayIndexAccumulator accumulator = new NDArrayIndexAccumulator(zAug);
-        accumulator.increment(z)
-                .increment(zAdjoint)
-                .increment(paramAdjoint)
-                .increment(tAdjoint);
+        accumulator.increment(Nd4j.toFlattened(z))
+                .increment(Nd4j.toFlattened(zAdjoint))
+                .increment(Nd4j.toFlattened(paramAdjoint))
+                .increment(Nd4j.toFlattened(tAdjoint));
     }
 
     private static long updateSubsetArr(INDArray subsetArr, INDArray arr, long offset) {
-        subsetArr.assign(arr.get(NDArrayIndex.interval(offset, subsetArr.length() + offset)));
+        subsetArr.reshape(1, subsetArr.length()).assign(arr.get(NDArrayIndex.interval(offset, subsetArr.length() + offset)));
         return offset + subsetArr.length();
-    }
-
-
-    void update(double[] zAug) {
-        int offset = updateArr(zAug, z, 0);
-        offset = updateArr(zAug, zAdjoint, offset);
-        offset = updateArr(zAug, paramAdjoint, offset);
-        updateArr(zAug, tAdjoint, offset);
-    }
-
-    void transferTo(double[] zAug) {
-        int offset = updateVec(zAug, z, 0);
-        offset = updateVec(zAug, zAdjoint, offset);
-        offset = updateVec(zAug, paramAdjoint, offset);
-        updateArr(zAug, tAdjoint, offset);
-    }
-
-    private static int updateArr(double[] vec, INDArray arr, int offset) {
-        for (int i = 0; i < arr.length(); i++) {
-            arr.putScalar(i, vec[i + offset]);
-        }
-        return offset + (int) arr.length();
-    }
-
-    private static int updateVec(double[] vec, INDArray arr, int offset) {
-        for (int i = 0; i < arr.length(); i++) {
-            vec[i + offset] = arr.getDouble(i);
-        }
-        return offset + (int) arr.length();
     }
 
     void updateZAdjoint(final List<INDArray> epsilons) {
         long lastInd = 0;
-        lastEpsilons = new INDArray[epsilons.size()];
         for (int i = 0; i < epsilons.size(); i++) {
             final INDArray eps = epsilons.get(i);
-            // Note: This is a view of epsilon so this will update epsilon too
-            zAdjoint.put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(lastInd, eps.length())}, Nd4j.toFlattened(eps));
+            zAdjoint.reshape(1 ,zAdjoint.length()).put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(lastInd, eps.length())}, Nd4j.toFlattened(eps));
             lastInd += eps.length();
-            lastEpsilons[i] = eps.detach();
         }
     }
 
@@ -111,15 +76,19 @@ class AugmentedDynamics {
         paramAdjoint.assign(gradient);
     }
 
-    INDArray[] getLastEpsilons() {
-        return lastEpsilons;
-    }
-
-    public INDArray getEpsilon() {
-        return epsilon;
+    public INDArray getZFlat() {
+        return z.reshape(1, z.length());
     }
 
     public INDArray getZ() {
         return z;
+    }
+
+    public INDArray getZAdjoint() {
+        return zAdjoint;
+    }
+
+    public INDArray getParamAdjoint() {
+        return paramAdjoint;
     }
 }

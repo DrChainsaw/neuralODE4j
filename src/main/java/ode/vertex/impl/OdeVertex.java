@@ -89,7 +89,7 @@ public class OdeVertex extends BaseGraphVertex {
             throw new IllegalStateException("Cannot do forward pass: inputs not set");
 
         if (getInputs().length != 1) {
-            throw new IllegalStateException("More than one input not supported!");
+            throw new IllegalStateException("Only one input supported!");
         }
     }
 
@@ -112,19 +112,11 @@ public class OdeVertex extends BaseGraphVertex {
         validateForward();
 
         final ForwardPass equation = new ForwardPass(graph, this.workspaceMgr, training, getInputs());
-        final INDArray flatInputs = Nd4j.create(1, getNrofInputElements());
-        lastOutput = Nd4j.create(1, getNrofInputElements()).detach(); // nrof outputs must be same as number of inputs due to resblock
-        final NDArrayIndexAccumulator accumulator = new NDArrayIndexAccumulator(flatInputs);
-        for (INDArray input : getInputs()) {
-            accumulator.increment(Nd4j.toFlattened(input));
-        }
+        lastOutput = Nd4j.createUninitialized(getInputs()[0].shape()).detach(); // nrof outputs must be same as number of inputs due to resblock
 
-        odeSolver.integrate(equation, time, flatInputs, lastOutput);
+        odeSolver.integrate(equation, time, getInputs()[0], lastOutput);
 
-        if (equation.getLastOutputs().size() > 1) {
-            throw new UnsupportedOperationException("More than one output not supported!");
-        }
-        return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, equation.getLastOutputs().get(0));
+        return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, lastOutput);
     }
 
     private int getNrofInputElements() {
@@ -143,19 +135,11 @@ public class OdeVertex extends BaseGraphVertex {
         // dL/dtN = dL / dz(tN) dot z(tN)
         final INDArray dL_dtN = Nd4j.toFlattened(getEpsilon()).mmul(Nd4j.toFlattened(lastOutput).transposei()).muli(-1);
 
-        final INDArray zAug = Nd4j.create(1, lastOutput.length() + getEpsilon().length() + graph.numParams() + dL_dtN.length());
-        new NDArrayIndexAccumulator(zAug)
-                .increment(lastOutput)
-                .increment(Nd4j.toFlattened(getEpsilon()))
-                .increment(Nd4j.zeros(1, graph.numParams()))
-                .increment(dL_dtN);
-
         final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(
-                zAug,
-                lastOutput.length(),
-                graph.numParams(),
-                dL_dtN.length(),
-                getEpsilon().shape());
+                lastOutput.dup(),
+                getEpsilon().dup(),
+                Nd4j.zeros(graph.params().shape()),
+                dL_dtN);
 
         final FirstOrderEquation equation = new BackpropagateAdjoint(
                 graph,
@@ -168,18 +152,19 @@ public class OdeVertex extends BaseGraphVertex {
                 tbptt
         );
 
-        odeSolver.integrate(equation, Nd4j.reverse(time), zAug, zAug.dup());
+        final INDArray zAug = Nd4j.create(1, lastOutput.length() + getEpsilon().length() + graph.numParams() + dL_dtN.length());
+        augmentedDynamics.transferTo(zAug);
+        INDArray augAns = odeSolver.integrate(equation, Nd4j.reverse(time), zAug, zAug.dup());
 
-        if (augmentedDynamics.getLastEpsilons().length > 1) {
-            throw new UnsupportedOperationException("More the one input not supported!!");
-        }
+        augmentedDynamics.updateFrom(augAns);
 
-        for (INDArray eps : augmentedDynamics.getLastEpsilons()) {
-            workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, eps.addi(getEpsilon()));
-        }
+        final INDArray epsilonOut = workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, augmentedDynamics.getZAdjoint().addi(getEpsilon()));
+
+        graph.getFlattenedGradients().assign(augmentedDynamics.getParamAdjoint());
         final Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
         gradient.setGradientFor(parName, graph.getFlattenedGradients());
-        return new Pair<>(gradient, augmentedDynamics.getLastEpsilons());
+
+        return new Pair<>(gradient, new INDArray[] {epsilonOut});
     }
 
     @Override

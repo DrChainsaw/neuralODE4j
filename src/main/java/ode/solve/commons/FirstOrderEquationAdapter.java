@@ -36,7 +36,7 @@ public class FirstOrderEquationAdapter implements FirstOrderDifferentialEquation
         try(MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(this.getClass().getSimpleName())) {
             final INDArray yArr = Nd4j.create(y).reshape(lastResult.shape());
             wrappedEquation.calculateDerivative(yArr, this.t, lastResult);
-            System.arraycopy(lastResult.toDoubleVector(), 0, yDot, 0, yDot.length);
+            System.arraycopy(lastResult.reshape(1 ,lastResult.length()).toDoubleVector(), 0, yDot, 0, yDot.length);
         }
     }
 }

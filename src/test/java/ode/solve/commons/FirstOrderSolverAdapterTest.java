@@ -1,5 +1,6 @@
 package ode.solve.commons;
 
+import ode.solve.CircleODE;
 import org.apache.commons.math3.ode.FirstOrderIntegrator;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.junit.Test;

@@ -24,7 +24,7 @@ public class DummyIteration implements FirstOrderSolver {
         final int nrofIters = nrofIterations.getAsInt();
         INDArray next = y0;
         for(int i = 0; i < nrofIters; i++) {
-            next = equation.calculateDerivative(next, t.getColumn(0), yOut);
+            next = equation.calculateDerivative(next.dup(), t.getColumn(0), yOut);
         }
         return yOut;
     }

@@ -1,4 +1,4 @@
-package ode.solve.commons;
+package ode.solve;
 
 import ode.solve.api.FirstOrderEquation;
 import org.apache.commons.math3.ode.FirstOrderDifferentialEquations;
@@ -9,12 +9,12 @@ import org.nd4j.linalg.api.ndarray.INDArray;
  *
  * @author Christian Skarby
  */
-class CircleODE implements FirstOrderEquation, FirstOrderDifferentialEquations {
+public class CircleODE implements FirstOrderEquation, FirstOrderDifferentialEquations {
 
     private double[] c;
     private double omega;
 
-    CircleODE(double[] c, double omega) {
+    public CircleODE(double[] c, double omega) {
         this.c     = c;
         this.omega = omega;
     }

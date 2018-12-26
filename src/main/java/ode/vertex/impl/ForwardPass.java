@@ -8,12 +8,8 @@ import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.Nullable;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.workspace.WorkspacesCloseable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Models forward pass through a undefined number of residual blocks as a first order differential equation.
@@ -28,14 +24,11 @@ public class ForwardPass implements FirstOrderEquation {
     private final boolean training;
     private final INDArray[] inputs;
 
-    private final List<INDArray> lastOutputs;
-
     public ForwardPass(ComputationGraph graph, LayerWorkspaceMgr workspaceMgr, boolean training, INDArray[] startInputs) {
         this.graph = graph;
         this.workspaceMgr = workspaceMgr;
         this.training = training;
         this.inputs = startInputs;
-        this.lastOutputs = new ArrayList<>();
     }
 
 
@@ -47,10 +40,6 @@ public class ForwardPass implements FirstOrderEquation {
             }
 
         return fy;
-    }
-
-    List<INDArray> getLastOutputs() {
-        return lastOutputs;
     }
 
     private void setInputsFromFlat(INDArray flatArray) {
@@ -82,12 +71,7 @@ public class ForwardPass implements FirstOrderEquation {
                 out = inputs[vIdx];
             } else if (current.isOutputVertex()) {
                 for (INDArray outArr : current.getInputs()) {
-                    outputAccum.increment(Nd4j.toFlattened(outArr));
-                    if (lastOutputs.size() < outputCnt + 1) {
-                        lastOutputs.add(outArr.detach());
-                    } else {
-                        lastOutputs.get(outputCnt).assign(outArr);
-                    }
+                    outputAccum.increment(outArr);
                     outputCnt++;
                 }
             } else {

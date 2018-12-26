@@ -1,5 +1,6 @@
 package examples.mnist;
 
+import ode.solve.impl.DummyIteration;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.junit.Test;
 import org.nd4j.linalg.dataset.DataSet;
@@ -17,7 +18,7 @@ public class OdeNetModelTest {
      */
     @Test
     public void fit() {
-        final ComputationGraph model = new OdeNetModel().create();
+        final ComputationGraph model = new OdeNetModel().create(new DummyIteration(() -> 3));
         model.fit(new DataSet(Nd4j.randn(1, 28*28), Nd4j.randn(1,10)));
         model.fit(new DataSet(Nd4j.randn(1, 28*28), Nd4j.randn(1,10)));
     }

@@ -2,7 +2,6 @@ package examples.mnist;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-import ode.solve.impl.DummyIteration;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
@@ -35,6 +34,7 @@ class Main {
     private ComputationGraph model;
 
     public static void main(String[] args) throws IOException {
+
         final ResNetReferenceModel referenceModel = new ResNetReferenceModel();
         final OdeNetModel odeModel = new OdeNetModel();
         final Main main = new Main();
@@ -47,7 +47,7 @@ class Main {
                 .build()
                 .parse(args);
 
-        main.init(odeModel.create(new DummyIteration(() -> 2)));
+        main.init(odeModel.create());
        // main.init(referenceModel.create());
         main.addListeners();
         main.run();
@@ -65,7 +65,8 @@ class Main {
                         .keepLast(1)
                         .deleteExisting(true)
                         .saveEveryNIterations(1000)
-                        .build());
+                        .build(),
+                new NanScoreWatcher(() -> {throw new IllegalStateException("NaN score!");}));
     }
 
     void run() throws IOException {

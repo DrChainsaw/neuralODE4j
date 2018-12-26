@@ -1,5 +1,6 @@
 package ode.solve.commons;
 
+import ode.solve.CircleODE;
 import org.junit.Test;
 import org.nd4j.linalg.factory.Nd4j;
 

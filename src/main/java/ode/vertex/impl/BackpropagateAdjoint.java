@@ -50,7 +50,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
         forwardPass.calculateDerivative(augmentedDynamics.getZ(), t, augmentedDynamics.getZ());
 
          try (WorkspacesCloseable ws = workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.INPUT, ArrayType.ACTIVATION_GRAD)) {
-             final List<INDArray> ret = backPropagate(augmentedDynamics.getEpsilon());
+             final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint());
              augmentedDynamics.updateZAdjoint(ret);
          }
 

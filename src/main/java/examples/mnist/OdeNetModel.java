@@ -44,7 +44,7 @@ public class OdeNetModel {
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(new Nesterovs(
                         new MapSchedule.Builder(ScheduleType.EPOCH)
-                                .add(0, 0.1)
+                                .add(0, 0.01)
                                 .add(60, 0.01)
                                 .add(100, 0.001)
                                 .add(140, 0.0001)
@@ -54,8 +54,10 @@ public class OdeNetModel {
                 .setInputTypes(InputType.feedForward(28 * 28));
     }
 
-    ComputationGraph create() { return create(new FirstOrderSolverAdapter(new DormandPrince54Integrator(
-                1e-10, 10d, 1e-2, 1e-2)));
+    ComputationGraph create() {
+        //return create(new FirstOrderSolverAdapter(new ClassicalRungeKuttaIntegrator(0.5)));
+        return create(new FirstOrderSolverAdapter(new DormandPrince54Integrator(
+                1e-20, 10d, 1e-1, 1e-2)));
     }
 
     ComputationGraph create(FirstOrderSolver solver) {
