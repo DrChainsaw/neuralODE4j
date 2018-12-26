@@ -4,6 +4,7 @@ import ode.solve.api.FirstOrderEquation;
 import org.apache.commons.math3.exception.DimensionMismatchException;
 import org.apache.commons.math3.exception.MaxCountExceededException;
 import org.apache.commons.math3.ode.FirstOrderDifferentialEquations;
+import org.nd4j.linalg.api.memory.MemoryWorkspace;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -32,21 +33,10 @@ public class FirstOrderEquationAdapter implements FirstOrderDifferentialEquation
     @Override
     public void computeDerivatives(double t, double[] y, double[] yDot) throws MaxCountExceededException, DimensionMismatchException {
         this.t.putScalar(0, t);
-        wrappedEquation.calculateDerivative(fromDoubleVec(y, lastResult.shape()), this.t, lastResult);
-        for(int i = 0; i < yDot.length; i++) {
-            yDot[i] = lastResult.getDouble(i);
+        try(MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(this.getClass().getSimpleName())) {
+            final INDArray yArr = Nd4j.create(y).reshape(lastResult.shape());
+            wrappedEquation.calculateDerivative(yArr, this.t, lastResult);
+            System.arraycopy(lastResult.toDoubleVector(), 0, yDot, 0, yDot.length);
         }
-    }
-
-    private static INDArray fromDoubleVec(double[] vec, long[] shape) {
-        final INDArray input = Nd4j.create(1, vec.length);
-        return fromDoubleVec(input, vec).reshape(shape);
-    }
-
-    private static INDArray fromDoubleVec(INDArray array, double[] vec) {
-        for (int i = 0; i < vec.length; i++) {
-            array.putScalar(i, vec[i]);
-        }
-        return array;
     }
 }
