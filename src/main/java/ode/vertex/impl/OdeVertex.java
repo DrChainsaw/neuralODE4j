@@ -9,6 +9,7 @@ import org.deeplearning4j.nn.gradient.DefaultGradient;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.BaseGraphVertex;
+import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -32,7 +33,7 @@ public class OdeVertex extends BaseGraphVertex {
     private final TrainingConfig trainingConfig;
     private final INDArray time;
     private INDArray lastOutput; // z(tN) from paper?
-    private final LayerWorkspaceMgr workspaceMgr;
+    private final LayerWorkspaceMgr innerWorkspaceMgr;
 
     public OdeVertex(ComputationGraph actualGraph,
                      String name,
@@ -40,13 +41,13 @@ public class OdeVertex extends BaseGraphVertex {
                      ComputationGraph innerGraph,
                      FirstOrderSolver odeSolver,
                      TrainingConfig trainingConfig,
-                     LayerWorkspaceMgr workspaceMgr) {
+                     LayerWorkspaceMgr innerWorkspaceMgr) {
         super(actualGraph, name, vertexIndex, null, null);
         this.graph = innerGraph;
         this.trainingConfig = trainingConfig;
         this.odeSolver = odeSolver;
         time = Nd4j.create(new double[]{0, 1});
-        this.workspaceMgr = workspaceMgr;
+        this.innerWorkspaceMgr = innerWorkspaceMgr;
     }
 
     @Override
@@ -72,6 +73,12 @@ public class OdeVertex extends BaseGraphVertex {
     @Override
     public INDArray params() {
         return graph.params();
+    }
+
+    @Override
+    public void clear() {
+        super.clear();
+        graph.clearLayersStates();
     }
 
     @Override
@@ -110,27 +117,26 @@ public class OdeVertex extends BaseGraphVertex {
     @Override
     public INDArray doForward(boolean training, LayerWorkspaceMgr workspaceMgr) {
         validateForward();
-
-        final ForwardPass equation = new ForwardPass(graph, this.workspaceMgr, training, getInputs());
+        System.out.println("do forward!");
+        final ForwardPass equation = new ForwardPass(graph, this.innerWorkspaceMgr, training, getInputs());
         lastOutput = Nd4j.createUninitialized(getInputs()[0].shape()).detach(); // nrof outputs must be same as number of inputs due to resblock
 
         odeSolver.integrate(equation, time, getInputs()[0], lastOutput);
 
-        return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, lastOutput);
-    }
-
-    private int getNrofInputElements() {
-        int dimcnt = 0;
-        for (INDArray input : getInputs()) {
-            dimcnt += input.length();
+        for(GraphVertex vertex: graph.getVertices()) {
+            final INDArray[] inputs = vertex.getInputs();
+            for(int i = 0; i < inputs.length; i++) {
+                vertex.setInput(i, workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, inputs[i]), workspaceMgr);
+            }
         }
-        return dimcnt;
+
+        return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, lastOutput);
     }
 
     @Override
     public Pair<Gradient, INDArray[]> doBackward(boolean tbptt, LayerWorkspaceMgr workspaceMgr) {
         validateBackprop();
-
+        System.out.println("do backward!");
         // epsilon = dL / dz(tN) = dL / dlastOutput
         // dL/dtN = dL / dz(tN) dot z(tN)
         final INDArray dL_dtN = Nd4j.toFlattened(getEpsilon()).mmul(Nd4j.toFlattened(lastOutput).transposei()).muli(-1);
@@ -143,22 +149,23 @@ public class OdeVertex extends BaseGraphVertex {
 
         final FirstOrderEquation equation = new BackpropagateAdjoint(
                 graph,
-                this.workspaceMgr,
+                this.innerWorkspaceMgr,
                 augmentedDynamics,
                 new ForwardPass(graph,
-                        this.workspaceMgr,
-                        false,
+                        this.innerWorkspaceMgr,
+                        true,
                         getInputs()),
                 tbptt
         );
 
         final INDArray zAug = Nd4j.create(1, lastOutput.length() + getEpsilon().length() + graph.numParams() + dL_dtN.length());
         augmentedDynamics.transferTo(zAug);
-        INDArray augAns = odeSolver.integrate(equation, Nd4j.reverse(time), zAug, zAug.dup());
+
+        INDArray augAns = odeSolver.integrate(equation, Nd4j.reverse(time.dup()), zAug, zAug.dup());
 
         augmentedDynamics.updateFrom(augAns);
 
-        final INDArray epsilonOut = workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, augmentedDynamics.getZAdjoint().addi(getEpsilon()));
+        final INDArray epsilonOut = workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, augmentedDynamics.getZAdjoint());
 
         graph.getFlattenedGradients().assign(augmentedDynamics.getParamAdjoint());
         final Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
@@ -176,4 +183,4 @@ public class OdeVertex extends BaseGraphVertex {
     public Pair<INDArray, MaskState> feedForwardMaskArrays(INDArray[] maskArrays, MaskState currentMaskState, int minibatchSize) {
         return null;
     }
-}
+    }

@@ -10,6 +10,8 @@ import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.primitives.Pair;
 import org.nd4j.linalg.workspace.WorkspacesCloseable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +24,8 @@ import java.util.List;
  * @author Christian Skarby
  */
 public class BackpropagateAdjoint implements FirstOrderEquation {
+
+    private static final Logger log = LoggerFactory.getLogger(BackpropagateAdjoint.class);
 
     private final ComputationGraph graph;
     private final LayerWorkspaceMgr workspaceMgr;
@@ -40,7 +44,6 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
         this.augmentedDynamics = augmentedDynamics;
         this.forwardPass = forwardPass;
         this.truncatedBPTT = truncatedBPTT;
-
     }
 
     @Override
@@ -50,11 +53,18 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
         forwardPass.calculateDerivative(augmentedDynamics.getZ(), t, augmentedDynamics.getZ());
 
          try (WorkspacesCloseable ws = workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.INPUT, ArrayType.ACTIVATION_GRAD)) {
-             final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint());
-             augmentedDynamics.updateZAdjoint(ret);
-         }
 
-        augmentedDynamics.updateParamAdjoint(graph.getFlattenedGradients());
+
+             final INDArray prevFlattenedGrads = graph.getFlattenedGradients().dup();
+
+             final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint().neg());
+
+             augmentedDynamics.updateZAdjoint(ret);
+             augmentedDynamics.updateParamAdjoint(graph.getFlattenedGradients());
+
+             graph.getFlattenedGradients().assign(prevFlattenedGrads);
+
+         }
 
         augmentedDynamics.transferTo(fzAug);
         return fzAug;
@@ -88,6 +98,13 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             INDArray[] epsilons;
             pair = current.doBackward(truncatedBPTT, workspaceMgr);
             epsilons = pair.getSecond();
+
+            if(log.isWarnEnabled()) {
+                final double max = pair.getFirst().gradient().maxNumber().doubleValue();
+                if (max > 50) {
+                    log.warn(current.getVertexName() + " large gradient found: " + max);
+                }
+            }
 
             for (VertexIndices vertexIndices : current.getInputVertices()) {
                 final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();

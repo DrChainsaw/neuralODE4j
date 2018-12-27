@@ -34,8 +34,13 @@ public class FirstOrderEquationAdapter implements FirstOrderDifferentialEquation
     public void computeDerivatives(double t, double[] y, double[] yDot) throws MaxCountExceededException, DimensionMismatchException {
         this.t.putScalar(0, t);
         try(MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(this.getClass().getSimpleName())) {
+            // Transfer double[] y to an INDArray
             final INDArray yArr = Nd4j.create(y).reshape(lastResult.shape());
+
+            // Perform desired operation
             wrappedEquation.calculateDerivative(yArr, this.t, lastResult);
+
+            // Transfer result in INDArray lastResult to double[] yOut
             System.arraycopy(lastResult.reshape(1 ,lastResult.length()).toDoubleVector(), 0, yDot, 0, yDot.length);
         }
     }

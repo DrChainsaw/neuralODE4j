@@ -3,6 +3,7 @@ package examples.mnist;
 import com.beust.jcommander.Parameter;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.commons.FirstOrderSolverAdapter;
+import ode.solve.impl.NanWatchSolver;
 import ode.vertex.conf.OdeVertex;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
@@ -36,15 +37,19 @@ public class OdeNetModel {
     @Parameter(names = "-nrofKernels", description = "Number of filter kernels in each convolution layer")
     private int nrofKernels = 64;
 
+    @Parameter(names = "-seed", description = "Random seed")
+    private long seed = 666;
+
     private final GraphBuilder builder;
 
     public OdeNetModel() {
         builder = new NeuralNetConfiguration.Builder()
-                .weightInit(WeightInit.RELU)
+                .seed(seed)
+                .weightInit(WeightInit.UNIFORM)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(new Nesterovs(
                         new MapSchedule.Builder(ScheduleType.EPOCH)
-                                .add(0, 0.01)
+                                .add(0, 0.1)
                                 .add(60, 0.01)
                                 .add(100, 0.001)
                                 .add(140, 0.0001)
@@ -55,9 +60,12 @@ public class OdeNetModel {
     }
 
     ComputationGraph create() {
-        //return create(new FirstOrderSolverAdapter(new ClassicalRungeKuttaIntegrator(0.5)));
-        return create(new FirstOrderSolverAdapter(new DormandPrince54Integrator(
-                1e-20, 10d, 1e-1, 1e-2)));
+        //return create(new FirstOrderSolverAdapter(new ClassicalRungeKuttaIntegrator(0.1)));
+        return create(
+                new NanWatchSolver(
+                        new FirstOrderSolverAdapter(
+                                new DormandPrince54Integrator(
+                                        1e-20, 100d, 1e-3, 1e-3))));
     }
 
     ComputationGraph create(FirstOrderSolver solver) {
@@ -81,6 +89,7 @@ public class OdeNetModel {
                                 .nOut(nrofKernels)
                                 .convolutionMode(ConvolutionMode.Same)
                                 .activation(new ActivationIdentity())
+                                .hasBias(false)
                                 .build(), "input")
                 .addLayer("firstNorm",
                         new BatchNormalization.Builder()
@@ -91,6 +100,7 @@ public class OdeNetModel {
                                 .nOut(nrofKernels)
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same)
+                                .hasBias(false)
                                 .build(), "firstNorm")
                 .addLayer("secondNorm",
                         new BatchNormalization.Builder()
@@ -101,6 +111,7 @@ public class OdeNetModel {
                                 .nOut(nrofKernels)
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same)
+                                .hasBias(false)
                                 .build(), "secondNorm");
 
         return "thirdConv";
@@ -108,26 +119,37 @@ public class OdeNetModel {
 
     private String addOdeBlock(String prev, FirstOrderSolver solver) {
         builder
-                .addVertex("odeBlock", new OdeVertex.Builder("normFirst_",
+                .addVertex("odeBlock", new OdeVertex.Builder("normFirst",
                         new BatchNormalization.Builder()
+                                .weightInit(WeightInit.UNIFORM)
                                 .nOut(nrofKernels)
                                 .activation(new ActivationReLU()).build())
-                .addLayer("convFirst_",
-                        new Convolution2D.Builder(3, 3)
-                                .nOut(nrofKernels)
-                                .activation(new ActivationIdentity())
-                                .convolutionMode(ConvolutionMode.Same)
-                                .build(), "normFirst_")
-                .addLayer("normSecond_",
-                        new BatchNormalization.Builder()
-                                .nOut(nrofKernels)
-                                .activation(new ActivationIdentity()).build(), "convFirst_")
-                .addLayer("convSecond_",
-                        new Convolution2D.Builder(3, 3)
-                                .nOut(nrofKernels)
-                                .activation(new ActivationIdentity())
-                                .convolutionMode(ConvolutionMode.Same)
-                                .build(), "normSecond_")
+                        .addLayer("convFirst",
+                                new Convolution2D.Builder(3, 3)
+                                        .weightInit(WeightInit.UNIFORM)
+                                        .nOut(nrofKernels)
+                                        .activation(new ActivationIdentity())
+                                        .convolutionMode(ConvolutionMode.Same)
+                                        .hasBias(false)
+                                        .build(), "normFirst")
+                        .addLayer("normSecond",
+                                new BatchNormalization.Builder()
+                                        .weightInit(WeightInit.UNIFORM)
+                                        .nOut(nrofKernels)
+                                        .activation(new ActivationReLU()).build(), "convFirst")
+                        .addLayer("convSecond",
+                                new Convolution2D.Builder(3, 3)
+                                        .weightInit(WeightInit.UNIFORM)
+                                        .nOut(nrofKernels)
+                                        .activation(new ActivationIdentity())
+                                        .convolutionMode(ConvolutionMode.Same)
+                                        .hasBias(false)
+                                        .build(), "normSecond")
+                        .addLayer("normThird",
+                                new BatchNormalization.Builder()
+                                        .weightInit(WeightInit.UNIFORM)
+                                        .nOut(nrofKernels)
+                                        .activation(new ActivationIdentity()).build(), "convSecond")
                         .odeSolver(solver)
                         .build(), prev);
         return "odeBlock";

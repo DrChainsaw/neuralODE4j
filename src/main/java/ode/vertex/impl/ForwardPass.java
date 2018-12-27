@@ -20,13 +20,16 @@ import org.nd4j.linalg.workspace.WorkspacesCloseable;
 public class ForwardPass implements FirstOrderEquation {
 
     private final ComputationGraph graph;
-    private final LayerWorkspaceMgr workspaceMgr;
+    private final LayerWorkspaceMgr innerWorkspaceMgr;
     private final boolean training;
     private final INDArray[] inputs;
 
-    public ForwardPass(ComputationGraph graph, LayerWorkspaceMgr workspaceMgr, boolean training, INDArray[] startInputs) {
+    public ForwardPass(ComputationGraph graph,
+                       LayerWorkspaceMgr innerWorkspaceMgr,
+                       boolean training,
+                       INDArray[] startInputs) {
         this.graph = graph;
-        this.workspaceMgr = workspaceMgr;
+        this.innerWorkspaceMgr = innerWorkspaceMgr;
         this.training = training;
         this.inputs = startInputs;
     }
@@ -34,7 +37,7 @@ public class ForwardPass implements FirstOrderEquation {
 
     @Override
     public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
-            try (WorkspacesCloseable wsCloseable = workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.INPUT)) {
+            try (WorkspacesCloseable wsCloseable = innerWorkspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.INPUT)) {
                 setInputsFromFlat(y);
                 evaluate(inputs, fy);
             }
@@ -76,7 +79,7 @@ public class ForwardPass implements FirstOrderEquation {
                 }
             } else {
                 //Standard feed-forward case
-                out = current.doForward(training, workspaceMgr);
+                out = current.doForward(training, innerWorkspaceMgr);
             }
 
             if (inputsTo != null) {  //Output vertices may not input to any other vertices
@@ -85,7 +88,7 @@ public class ForwardPass implements FirstOrderEquation {
                     // this method
                     int inputToIndex = v.getVertexIndex();
                     int vIdxEdge = v.getVertexEdgeNumber();
-                    graph.getVertices()[inputToIndex].setInput(vIdxEdge, out, workspaceMgr);
+                    graph.getVertices()[inputToIndex].setInput(vIdxEdge, out.detach(), innerWorkspaceMgr);
                 }
             }
         }

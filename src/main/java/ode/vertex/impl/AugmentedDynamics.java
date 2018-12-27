@@ -76,10 +76,6 @@ class AugmentedDynamics {
         paramAdjoint.assign(gradient);
     }
 
-    public INDArray getZFlat() {
-        return z.reshape(1, z.length());
-    }
-
     public INDArray getZ() {
         return z;
     }
