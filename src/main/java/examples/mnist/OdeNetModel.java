@@ -11,15 +11,13 @@ import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
-import org.deeplearning4j.nn.conf.layers.*;
-import org.deeplearning4j.nn.conf.preprocessor.FeedForwardToCnnPreProcessor;
+import org.deeplearning4j.nn.conf.layers.BatchNormalization;
+import org.deeplearning4j.nn.conf.layers.Convolution2D;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
-import org.nd4j.linalg.activations.impl.ActivationSoftmax;
 import org.nd4j.linalg.learning.config.Nesterovs;
-import org.nd4j.linalg.lossfunctions.impl.LossMCXENT;
 import org.nd4j.linalg.schedule.MapSchedule;
 import org.nd4j.linalg.schedule.ScheduleType;
 import org.slf4j.Logger;
@@ -30,7 +28,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Christian Skarby
  */
-public class OdeNetModel {
+public class OdeNetModel implements ModelFactory {
 
     private static final Logger log = LoggerFactory.getLogger(OdeNetModel.class);
 
@@ -59,8 +57,8 @@ public class OdeNetModel {
                 .setInputTypes(InputType.feedForward(28 * 28));
     }
 
-    ComputationGraph create() {
-        //return create(new FirstOrderSolverAdapter(new ClassicalRungeKuttaIntegrator(0.1)));
+    @Override
+    public ComputationGraph create() {
         return create(
                 new NanWatchSolver(
                         new FirstOrderSolverAdapter(
@@ -72,49 +70,12 @@ public class OdeNetModel {
 
         log.info("Create model");
 
-        String next = addStem();
+        String next = new ConvStem(nrofKernels).add(null, builder);
         next = addOdeBlock(next, solver);
-        addOutput(next);
+        new Output(nrofKernels).add(next, builder);
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
         return graph;
-    }
-
-    private String addStem() {
-        builder
-                .addInputs("input")
-                .inputPreProcessor("firstConv", new FeedForwardToCnnPreProcessor(28, 28))
-                .addLayer("firstConv",
-                        new Convolution2D.Builder(3, 3)
-                                .nOut(nrofKernels)
-                                .convolutionMode(ConvolutionMode.Same)
-                                .activation(new ActivationIdentity())
-                                .hasBias(false)
-                                .build(), "input")
-                .addLayer("firstNorm",
-                        new BatchNormalization.Builder()
-                                .activation(new ActivationReLU()).build(), "firstConv")
-                .addLayer("secondConv",
-                        new Convolution2D.Builder(4, 4)
-                                .stride(2, 2)
-                                .nOut(nrofKernels)
-                                .activation(new ActivationIdentity())
-                                .convolutionMode(ConvolutionMode.Same)
-                                .hasBias(false)
-                                .build(), "firstNorm")
-                .addLayer("secondNorm",
-                        new BatchNormalization.Builder()
-                                .activation(new ActivationReLU()).build(), "secondConv")
-                .addLayer("thirdConv",
-                        new Convolution2D.Builder(4, 4)
-                                .stride(2, 2)
-                                .nOut(nrofKernels)
-                                .activation(new ActivationIdentity())
-                                .convolutionMode(ConvolutionMode.Same)
-                                .hasBias(false)
-                                .build(), "secondNorm");
-
-        return "thirdConv";
     }
 
     private String addOdeBlock(String prev, FirstOrderSolver solver) {
@@ -154,19 +115,4 @@ public class OdeNetModel {
                         .build(), prev);
         return "odeBlock";
     }
-
-    private void addOutput(String prev) {
-        builder
-                .addLayer("normOutput",
-                        new BatchNormalization.Builder()
-                                .nOut(nrofKernels)
-                                .activation(new ActivationReLU()).build(), prev)
-                .addLayer("globPool", new GlobalPoolingLayer.Builder().poolingType(PoolingType.AVG).build(), "normOutput")
-                .addLayer("output", new OutputLayer.Builder()
-                        .nOut(10)
-                        .lossFunction(new LossMCXENT())
-                        .activation(new ActivationSoftmax()).build(), "globPool")
-                .setOutputs("output");
-    }
-
 }

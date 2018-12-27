@@ -2,6 +2,7 @@ package examples.mnist;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import org.deeplearning4j.datasets.fetchers.MnistDataFetcher;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
@@ -12,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Main class for MNIST example. Reimplementation of https://github.com/rtqichen/torchdiffeq/blob/master/examples/odenet_mnist.py
@@ -31,47 +34,63 @@ class Main {
     @Parameter(names = "-nrofEpochs", description = "Number of epochs to train over")
     private int nrofEpochs = 200;
 
+    @Parameter(names = "-nrofTrainExamples", description = "Number of examples to use for training")
+    private int nrofTrainExamples = MnistDataFetcher.NUM_EXAMPLES;
+
+    @Parameter(names = "-nrofTestExamples", description = "Number of examples to use for validation")
+    private int nrofTestExamples = MnistDataFetcher.NUM_EXAMPLES_TEST;
+
     private ComputationGraph model;
 
     public static void main(String[] args) throws IOException {
-
-        final ResNetReferenceModel referenceModel = new ResNetReferenceModel();
-        final OdeNetModel odeModel = new OdeNetModel();
         final Main main = new Main();
-        JCommander.newBuilder()
-                .addObject(new Object[]{
-                        referenceModel,
-                        main})
-                .addCommand("resnet", referenceModel)
-                .addCommand("odenet", odeModel)
-                .build()
-                .parse(args);
 
-        main.init(odeModel.create());
-       // main.init(referenceModel.create());
+        final ModelFactory modelFactory = parseArgs(args, main);
+
+        main.init(modelFactory.create());
         main.addListeners();
         main.run();
     }
 
-    void init(ComputationGraph model) {
+    private static ModelFactory parseArgs(String[] args, Main main) {
+        final Map<String, ModelFactory> modelCommands = new HashMap<>();
+        modelCommands.put("resnet", new ResNetReferenceModel());
+        modelCommands.put("odenet", new OdeNetModel());
+
+        JCommander.Builder parbuilder = JCommander.newBuilder()
+                .addObject(main);
+
+        for (Map.Entry<String, ModelFactory> command : modelCommands.entrySet()) {
+            parbuilder.addCommand(command.getKey(), command.getValue());
+        }
+
+        JCommander jCommander = parbuilder.build();
+        jCommander.parse(args);
+
+        return modelCommands.get(jCommander.getParsedCommand());
+    }
+
+    private void init(ComputationGraph model) {
         this.model = model;
         log.info("Nrof parameters in model: " + model.numParams());
     }
 
-    void addListeners() {
+    private void addListeners() {
         model.addListeners(
-                new PerformanceListener(1, true),
+                new PerformanceListener(20, true),
                 new CheckpointListener.Builder("")
                         .keepLast(1)
                         .deleteExisting(true)
                         .saveEveryNIterations(1000)
                         .build(),
-                new NanScoreWatcher(() -> {throw new IllegalStateException("NaN score!");}));
+                new NanScoreWatcher(() -> {
+                    throw new IllegalStateException("NaN score!");
+                }));
     }
 
-    void run() throws IOException {
-        final DataSetIterator trainIter = new MnistDataSetIterator(trainBatchSize, true, 666);
-        final DataSetIterator evalIter = new MnistDataSetIterator(evalBatchSize, false, 666);
+    private void run() throws IOException {
+        final DataSetIterator trainIter = new MnistDataSetIterator(trainBatchSize, nrofTrainExamples, false, true, true, 666);
+        final DataSetIterator evalIter = new MnistDataSetIterator(evalBatchSize, nrofTestExamples, false, false, true, 666);
         model.getLayers();
         for (int epoch = 0; epoch < nrofEpochs; epoch++) {
             log.info("Begin epoch " + epoch);

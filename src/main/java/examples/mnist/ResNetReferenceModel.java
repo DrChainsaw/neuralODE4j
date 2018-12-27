@@ -8,7 +8,6 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.ElementWiseVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
-import org.deeplearning4j.nn.conf.preprocessor.FeedForwardToCnnPreProcessor;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
@@ -26,7 +25,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Christian Skarby
  */
-public class ResNetReferenceModel {
+public class ResNetReferenceModel implements ModelFactory {
 
     private static final Logger log = LoggerFactory.getLogger(ResNetReferenceModel.class);
 
@@ -58,53 +57,21 @@ public class ResNetReferenceModel {
                 .setInputTypes(InputType.feedForward(28 * 28));
     }
 
-    ComputationGraph create() {
+    @Override
+    public ComputationGraph create() {
 
         log.info("Create model");
 
-        String next = addStem();
+        String next = new ConvStem(nrofKernels).add(null, builder);
         for (int i = 0; i < nrofResBlocks; i++) {
             next = addResBlock(next, i);
         }
-        addOutput(next);
+        new Output(nrofKernels).add(next, builder);
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
         return graph;
     }
 
-    private String addStem() {
-        builder
-                .addInputs("input")
-                .inputPreProcessor("firstConv", new FeedForwardToCnnPreProcessor(28, 28))
-                .addLayer("firstConv",
-                        new Convolution2D.Builder(3, 3)
-                                .nOut(nrofKernels)
-                                .convolutionMode(ConvolutionMode.Same)
-                                .activation(new ActivationIdentity())
-                                .build(), "input")
-                .addLayer("firstNorm",
-                        new BatchNormalization.Builder()
-                                .activation(new ActivationReLU()).build(), "firstConv")
-                .addLayer("secondConv",
-                        new Convolution2D.Builder(4, 4)
-                                .stride(2, 2)
-                                .nOut(nrofKernels)
-                                .activation(new ActivationIdentity())
-                                .convolutionMode(ConvolutionMode.Same)
-                                .build(), "firstNorm")
-                .addLayer("secondNorm",
-                        new BatchNormalization.Builder()
-                                .activation(new ActivationReLU()).build(), "secondConv")
-                .addLayer("thirdConv",
-                        new Convolution2D.Builder(4, 4)
-                                .stride(2, 2)
-                                .nOut(nrofKernels)
-                                .activation(new ActivationIdentity())
-                                .convolutionMode(ConvolutionMode.Same)
-                                .build(), "secondNorm");
-
-        return "thirdConv";
-    }
 
     private String addResBlock(String prev, int cnt) {
         builder

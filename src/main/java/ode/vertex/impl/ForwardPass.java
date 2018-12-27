@@ -12,7 +12,7 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.workspace.WorkspacesCloseable;
 
 /**
- * Models forward pass through a undefined number of residual blocks as a first order differential equation.
+ * Models forward pass through an undefined number of residual blocks as a first order differential equation.
  * See https://arxiv.org/pdf/1806.07366.pdf
  *
  * @author Christian Skarby
@@ -41,7 +41,6 @@ public class ForwardPass implements FirstOrderEquation {
                 setInputsFromFlat(y);
                 evaluate(inputs, fy);
             }
-
         return fy;
     }
 
@@ -61,7 +60,6 @@ public class ForwardPass implements FirstOrderEquation {
         final int[] topologicalOrder = graph.topologicalSortOrder();
         final NDArrayIndexAccumulator outputAccum = new NDArrayIndexAccumulator(output);
 
-        int outputCnt = 0;
         //Do forward pass according to the topological ordering of the network
         for (int i = 0; i <= graph.getVertices().length - 1; i++) {
             GraphVertex current = graph.getVertices()[topologicalOrder[i]];
@@ -75,7 +73,7 @@ public class ForwardPass implements FirstOrderEquation {
             } else if (current.isOutputVertex()) {
                 for (INDArray outArr : current.getInputs()) {
                     outputAccum.increment(outArr);
-                    outputCnt++;
+
                 }
             } else {
                 //Standard feed-forward case
