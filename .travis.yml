@@ -2,7 +2,7 @@ language: java
 sudo: false
 env:
   global:
-    - CC_TEST_REPORTER_ID=e35562b8a6ef581798be079625fa963012327fc15a4707ec8ee2d2f28d580558
+    - CC_TEST_REPORTER_ID=4f8ca20d8902d31d79440270a86eaf198592fad701ef869007002561f579f43c
     - BACKEND_PRIORITY_CPU="100000"
 before_script:
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
