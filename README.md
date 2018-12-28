@@ -2,8 +2,9 @@
 
 Implementation of neural ordinary differential equations built for deeplearning4j.
 
-[Arxiv] (https://arxiv.org/abs/1806.07366)
-[Pytorch repo by paper authors] (https://github.com/rtqichen/torchdiffeq)
+[[Arxiv](https://arxiv.org/abs/1806.07366)]
+
+[[Pytorch repo by paper authors](https://github.com/rtqichen/torchdiffeq)]
 
 NOTE: This is very much a work in progress and given that I haven't touched a differential equation since school chances
 are that there are conceptual misunderstandings.
@@ -22,11 +23,11 @@ cd neuralODE4j
 mvn install
 ```
 
-Currently only the MNIST toy experiment from the paper is implemented [link] (examples)
+Currently only the MNIST toy experiment from the paper is implemented [[link]](./examples)
 
 ### Prerequisites
 
-Maven and GIT. Project uses ND4Js CUDA 10 backend as default which requires [CUDA 10] (https://deeplearning4j.org/docs/latest/deeplearning4j-config-cudnn).
+Maven and GIT. Project uses ND4Js CUDA 10 backend as default which requires [CUDA 10](https://deeplearning4j.org/docs/latest/deeplearning4j-config-cudnn).
 To use CPU backend instead, set the maven property backend-CPU (e.g. through the -P flag when running from command line).
 
 ## Contributing
