@@ -7,9 +7,9 @@ import org.deeplearning4j.nn.graph.vertex.VertexIndices;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.Nullable;
+import org.nd4j.linalg.api.memory.MemoryWorkspace;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.NDArrayIndex;
-import org.nd4j.linalg.workspace.WorkspacesCloseable;
 
 /**
  * Models forward pass through an undefined number of residual blocks as a first order differential equation.
@@ -37,10 +37,10 @@ public class ForwardPass implements FirstOrderEquation {
 
     @Override
     public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
-            try (WorkspacesCloseable wsCloseable = innerWorkspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.INPUT)) {
-                setInputsFromFlat(y);
-                evaluate(inputs, fy);
-            }
+        try (MemoryWorkspace ws = innerWorkspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS)) {
+            setInputsFromFlat(y);
+            evaluate(inputs, fy);
+        }
         return fy;
     }
 

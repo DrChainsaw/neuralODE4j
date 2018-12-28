@@ -84,7 +84,9 @@ public class OdeVertex extends GraphVertex {
 
             public ComputationGraph spyWsConfigs() {
                 wsBuilder
-                        .with(ArrayType.INPUT, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WS_ALL_LAYERS_ACT_CONFIG)
+                        // This needs to be the same as the workspace used by the real computation graph as layers
+                        // assume this workspace is open during both forward and backward
+                        .with(ArrayType.INPUT, WS_ALL_LAYERS_ACT, WS_ALL_LAYERS_ACT_CONFIG)
                         .with(ArrayType.ACTIVATIONS, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WS_ALL_LAYERS_ACT_CONFIG)
                         .with(ArrayType.ACTIVATION_GRAD, "WS_ODE_VERTEX_ALL_LAYERS_GRAD", WS_ALL_LAYERS_ACT_CONFIG)
                         .build();

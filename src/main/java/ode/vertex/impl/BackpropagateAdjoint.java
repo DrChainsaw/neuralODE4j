@@ -52,19 +52,17 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
         forwardPass.calculateDerivative(augmentedDynamics.getZ(), t, augmentedDynamics.getZ());
 
-         try (WorkspacesCloseable ws = workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.INPUT, ArrayType.ACTIVATION_GRAD)) {
+        try (WorkspacesCloseable ws = workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.ACTIVATION_GRAD)) {
 
+            final INDArray prevFlattenedGrads = graph.getFlattenedGradients().dup();
 
-             final INDArray prevFlattenedGrads = graph.getFlattenedGradients().dup();
+            final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint().neg());
 
-             final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint().neg());
+            augmentedDynamics.updateZAdjoint(ret);
+            augmentedDynamics.updateParamAdjoint(graph.getFlattenedGradients());
 
-             augmentedDynamics.updateZAdjoint(ret);
-             augmentedDynamics.updateParamAdjoint(graph.getFlattenedGradients());
-
-             graph.getFlattenedGradients().assign(prevFlattenedGrads);
-
-         }
+            graph.getFlattenedGradients().assign(prevFlattenedGrads);
+        }
 
         augmentedDynamics.transferTo(fzAug);
         return fzAug;
@@ -99,7 +97,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             pair = current.doBackward(truncatedBPTT, workspaceMgr);
             epsilons = pair.getSecond();
 
-            if(log.isWarnEnabled()) {
+            if (log.isWarnEnabled()) {
                 final double max = pair.getFirst().gradient().maxNumber().doubleValue();
                 if (max > 50) {
                     log.warn(current.getVertexName() + " large gradient found: " + max);

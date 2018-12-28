@@ -123,7 +123,8 @@ public class OdeVertex extends BaseGraphVertex {
 
             final ForwardPass equation = new ForwardPass(
                     graph,
-                    training ? this.innerWorkspaceMgr: workspaceMgr,
+                    // Not sure if needed. Only use innerWorkspaceMgr even for eval?
+                    training ? this.innerWorkspaceMgr : workspaceMgr,
                     training,
                     getInputs());
             lastOutput = Nd4j.createUninitialized(getInputs()[0].shape()).detach(); // nrof outputs must be same as number of inputs due to resblock
@@ -145,12 +146,11 @@ public class OdeVertex extends BaseGraphVertex {
     public Pair<Gradient, INDArray[]> doBackward(boolean tbptt, LayerWorkspaceMgr workspaceMgr) {
         validateBackprop();
 
-        // epsilon = dL / dz(tN) = dL / dlastOutput
-        // dL/dtN = dL / dz(tN) dot z(tN)
         final AugmentedDynamics augmentedDynamics;
         try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().scopeOutOfWorkspaces()) {
 
-
+            // epsilon = dL / dz(tN) = dL / dlastOutput
+            // dL/dtN = dL / dz(tN) dot z(tN)
             final INDArray dL_dtN = Nd4j.toFlattened(getEpsilon()).mmul(Nd4j.toFlattened(lastOutput).transposei()).muli(-1);
 
             augmentedDynamics = new AugmentedDynamics(
