@@ -7,14 +7,13 @@ import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.ElementWiseVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
-import org.deeplearning4j.nn.conf.layers.*;
+import org.deeplearning4j.nn.conf.layers.BatchNormalization;
+import org.deeplearning4j.nn.conf.layers.Convolution2D;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
-import org.nd4j.linalg.activations.impl.ActivationSoftmax;
 import org.nd4j.linalg.learning.config.Nesterovs;
-import org.nd4j.linalg.lossfunctions.impl.LossMCXENT;
 import org.nd4j.linalg.schedule.MapSchedule;
 import org.nd4j.linalg.schedule.ScheduleType;
 import org.slf4j.Logger;
@@ -98,19 +97,4 @@ public class ResNetReferenceModel implements ModelFactory {
                 .addVertex("add_" + cnt, new ElementWiseVertex(ElementWiseVertex.Op.Add), prev, "convSecond_" + cnt);
         return "add_" + cnt;
     }
-
-    private void addOutput(String prev) {
-        builder
-                .addLayer("normOutput",
-                        new BatchNormalization.Builder()
-                                .nOut(nrofKernels)
-                                .activation(new ActivationReLU()).build(), prev)
-                .addLayer("globPool", new GlobalPoolingLayer.Builder().poolingType(PoolingType.AVG).build(), "normOutput")
-                .addLayer("output", new OutputLayer.Builder()
-                        .nOut(10)
-                        .lossFunction(new LossMCXENT())
-                        .activation(new ActivationSoftmax()).build(), "globPool")
-                .setOutputs("output");
-    }
-
 }
