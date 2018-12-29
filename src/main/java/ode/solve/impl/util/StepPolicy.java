@@ -15,4 +15,20 @@ public interface StepPolicy {
      * @return first integration step
      */
     INDArray initializeStep(FirstOrderEquationWithState equation, INDArray t);
+
+    /**
+     * Filter the integration step in forward direction.
+     *
+     * @param step           signed step
+     * @return a bounded integration step (scaled step if no bound is reach, or a bounded value)
+     */
+    INDArray filterStepForward(INDArray step, INDArray error);
+
+    /**
+     * Filter the integration step in forward direction.
+     *
+     * @param step           signed step
+     * @return a bounded integration step (scaled step if no bound is reach, or a bounded value)
+     */
+    INDArray filterStepBackward(INDArray step, INDArray error);
 }

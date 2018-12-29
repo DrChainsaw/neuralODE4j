@@ -20,10 +20,10 @@ public class SolverConfig {
             double relativeTolerance,
             double minStep,
             double maxStep) {
-        this.absTol = Nd4j.create(new double[] {absoluteTolerance});
-        this.relTol = Nd4j.create(new double[] {relativeTolerance});
-        this.minStep = Nd4j.create(new double[] {minStep});
-        this.maxStep = Nd4j.create(new double[] {maxStep});
+        this.absTol = Nd4j.create(1).assign(absoluteTolerance);
+        this.relTol = Nd4j.create(1).assign(relativeTolerance);
+        this.minStep = Nd4j.create(1).assign(minStep);
+        this.maxStep = Nd4j.create(1).assign(maxStep);
     }
 
 }

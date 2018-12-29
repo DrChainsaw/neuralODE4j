@@ -2,6 +2,7 @@ package ode.solve.impl;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
+import ode.solve.impl.util.AdaptiveRungeKuttaStepPolicy;
 import ode.solve.impl.util.ButcherTableu;
 import ode.solve.impl.util.SolverConfig;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -18,7 +19,7 @@ import static org.nd4j.linalg.ops.transforms.Transforms.*;
  */
 public class DormandPrince54Solver implements FirstOrderSolver {
 
-    private static final ButcherTableu butcherTableu =
+    public static final ButcherTableu butcherTableu =
             new ButcherTableu(
                     // a
                     new INDArray[]{
@@ -87,7 +88,11 @@ public class DormandPrince54Solver implements FirstOrderSolver {
     }
 
     public DormandPrince54Solver(SolverConfig config) {
-        solver = new AdaptiveRungeKuttaSolver(config, butcherTableu, 5, new DormandPrince54Mse(config));
+        solver = new AdaptiveRungeKuttaSolver(
+                config,
+                butcherTableu,
+                new AdaptiveRungeKuttaStepPolicy(config, 5),
+                new DormandPrince54Mse(config));
     }
 
     @Override

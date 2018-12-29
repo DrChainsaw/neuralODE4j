@@ -10,16 +10,73 @@ import static org.nd4j.linalg.ops.transforms.Transforms.*;
  *
  * @author Christian Skarby
  */
-public class AdaptiveRungeKuttaStepPolicy implements StepPolicy{
+public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
 
-    private final static INDArray MIN_H = Nd4j.create(new double[]{1e-6});
+    private final static INDArray MIN_H = Nd4j.create(1).putScalar(0, 1e-6);
 
     private final SolverConfig config;
-    private final int order;
+    private final StepConfig stepConfig;
+    private final double exp;
+
+    public static class StepConfig {
+        private final INDArray maxGrowth;
+        private final INDArray minReduction;
+        private final INDArray safety;
+        private final int order;
+
+        public static Builder builder(int order) {
+            return new Builder(order);
+        }
+
+        public StepConfig(final double maxGrowth,
+                          final double minReduction,
+                          final double safety,
+                          final int order) {
+            this.maxGrowth = Nd4j.create(1).assign(maxGrowth);
+            this.minReduction = Nd4j.create(1).assign(minReduction);
+            this.safety = Nd4j.create(1).assign(safety);
+            this.order = order;
+        }
+        
+        public static class Builder {
+
+            private double maxGrowth = 10;
+            private double minReduction = 0.2;
+            private double safety = 0.9;
+            private final int order;
+
+            private Builder(int order) {
+                this.order = order;
+            }
+            
+            public Builder setMaxGrowth(double maxGrowth) {
+                this.maxGrowth = maxGrowth; return this;
+            }
+
+            public Builder setMinReduction(double minReduction) {
+                this.minReduction = minReduction; return this;
+            }
+
+            public Builder setSafety(double safety) {
+                this.safety = safety; return this;
+            }
+
+            public StepConfig build() {
+                return new StepConfig(maxGrowth, minReduction, safety, order);
+            }
+        }
+    }
 
     public AdaptiveRungeKuttaStepPolicy(SolverConfig config, int order) {
         this.config = config;
-        this.order = order;
+        this.stepConfig = StepConfig.builder(order).build();
+        this.exp = -1.0 / stepConfig.order;
+    }
+
+    public AdaptiveRungeKuttaStepPolicy(SolverConfig config, StepConfig stepConfig) {
+        this.config = config;
+        this.stepConfig = stepConfig;
+        this.exp = -1.0 / stepConfig.order;
     }
 
     @Override
@@ -28,11 +85,12 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy{
         equation.calculateDerivative(0);
 
         final INDArray scal = abs(equation.getCurrentState()).mul(config.getRelTol()).add(config.getAbsTol());
-        final INDArray ratio = equation.getCurrentState().div(scal);
+        INDArray ratio = equation.getCurrentState().div(scal);
         final INDArray yOnScale2 = ratio.muli(ratio).sum();
 
         // Reuse ratio variable
-        ratio.assign(equation.getStateDot(0).div(scal));
+        ratio.assign(equation.getStateDot(0));
+        ratio.divi(scal);
         final INDArray yDotOnScale2 = ratio.muli(ratio).sum();
 
         final INDArray h = ((yOnScale2.getDouble(0) < 1.0e-10) || (yDotOnScale2.getDouble(0) < 1.0e-10)) ?
@@ -47,7 +105,8 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy{
         equation.calculateDerivative(1);
 
         // Reuse ratio variable
-        ratio.assign(equation.getStateDot(1).sub(equation.getStateDot(0)).divi(scal));
+        ratio.assign(equation.getStateDot(1));
+        ratio.subi(equation.getStateDot(0)).divi(scal);
         ratio.muli(ratio);
         final INDArray yDDotOnScale = sqrt(ratio.sum()).divi(h);
 
@@ -56,7 +115,7 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy{
         final INDArray maxInv2 = max(sqrt(yDotOnScale2), yDDotOnScale);
         final INDArray h1 = maxInv2.getDouble(0) < 1e-15 ?
                 max(MIN_H, abs(h).muli(0.001)) :
-                pow(maxInv2.rdivi(0.01), 1d / order);
+                pow(maxInv2.rdivi(0.01), 1d / stepConfig.order);
 
         h.assign(min(abs(h).muli(100), h1));
         h.assign(max(h, abs(t.getColumn(0)).muli(1e-12)));
@@ -71,4 +130,21 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy{
         return h;
     }
 
+    @Override
+    public INDArray filterStepForward(INDArray step, INDArray error) {
+        return bound(stepFactor(error).muli(step), config.getMaxStep(), config.getMinStep());
+    }
+
+    @Override
+    public INDArray filterStepBackward(INDArray step, INDArray error) {
+        return bound(stepFactor(error).muli(step), config.getMaxStep().neg(), config.getMinStep().neg());
+    }
+
+    private INDArray stepFactor(INDArray error) {
+        return bound(stepConfig.safety.mul(pow(error, exp)), stepConfig.maxGrowth, stepConfig.minReduction);
+    }
+
+    private static INDArray bound(INDArray var, INDArray upper, INDArray lower) {
+        return min(upper, max(lower, var));
+    }
 }

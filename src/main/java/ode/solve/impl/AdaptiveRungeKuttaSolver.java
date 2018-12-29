@@ -2,7 +2,10 @@ package ode.solve.impl;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
-import ode.solve.impl.util.*;
+import ode.solve.impl.util.ButcherTableu;
+import ode.solve.impl.util.FirstOrderEquationWithState;
+import ode.solve.impl.util.SolverConfig;
+import ode.solve.impl.util.StepPolicy;
 import org.nd4j.linalg.api.memory.MemoryWorkspace;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -14,17 +17,15 @@ import org.nd4j.linalg.factory.Nd4j;
  */
 public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
-    private final static INDArray MIN_H = Nd4j.create(new double[]{1e-6});
-
     private final SolverConfig config;
     private final ButcherTableu tableu;
-    private final int order;
+    private final StepPolicy stepPolicy;
     private final MseComputation mseComputation;
 
-    public AdaptiveRungeKuttaSolver(SolverConfig config, ButcherTableu tableu, int order, MseComputation mseComputation) {
+    public AdaptiveRungeKuttaSolver(SolverConfig config, ButcherTableu tableu, StepPolicy stepPolicy, MseComputation mseComputation) {
         this.config = config;
         this.tableu = tableu;
-        this.order = order;
+        this.stepPolicy = stepPolicy;
         this.mseComputation = mseComputation;
     }
 
@@ -36,11 +37,11 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
         /**
          * Estimate mean square error from the given state
          *
-         * @param yDotK
-         * @param y0
-         * @param y1
-         * @param h
-         * @return the (scalar) mean square error
+         * @param yDotK derivatives computed during the first stages
+         * @param y0    estimate of the step at the start of the step
+         * @param y1    estimate of the step at the end of the step
+         * @param h     current step
+         * @return error ratio, greater than 1 if step should be rejected
          */
         INDArray estimateMse(
                 final INDArray yDotK,
@@ -62,7 +63,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
                     equation,
                     t.getScalar(0).dup(),
                     y0,
-                    order);
+                    tableu.c.length() + 1);
 
             solve(equationState, t);
 
@@ -74,67 +75,56 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
         boolean isLastStep = false;
         equation.calculateDerivative(0);
-        final StepPolicy stepPolicy = new AdaptiveRungeKuttaStepPolicy(config, order);
 
+        // Alg variable used for new steps
         final INDArray hNew = stepPolicy.initializeStep(equation, t);
+        final INDArray stepSize = hNew.dup();
+        // Alg variable for where next step starts
+        final boolean forward = t.argMax().getInt(0) == 1;
+
+        final long stages = tableu.c.length();
 
 
 //        // main integration loop
-//        do {
+        do {
 //
 //            // interpolator.shift();
 //
 //            // iterate over step size, ensuring local normalized error is smaller than 1
-//            double error = 10;
-//            while (error >= 1.0) {
+            INDArray error = Nd4j.create(1).putScalar(0, 10);
+            while (error.getDouble(0) >= 1.0) {
 //
 //
-//                stepSize = hNew;
-//                if (forward) {
-//                    if (stepStart + stepSize >= t) {
-//                        stepSize = t - stepStart;
-//                    }
-//                } else {
-//                    if (stepStart + stepSize <= t) {
-//                        stepSize = t - stepStart;
-//                    }
-//                }
-//
-//                // next stages
-//                for (int k = 1; k < stages; ++k) {
-//
-//                    for (int j = 0; j < y0.length; ++j) {
-//                        double sum = a[k - 1][0] * yDotK[0][j];
-//                        for (int l = 1; l < k; ++l) {
-//                            sum += a[k - 1][l] * yDotK[l][j];
-//                        }
-//                        yTmp[j] = y[j] + stepSize * sum;
-//                    }
-//
-//                    computeDerivatives(stepStart + c[k - 1] * stepSize, yTmp, yDotK[k]);
-//
-//                }
-//
-//                // estimate the state at the end of the step
-//                for (int j = 0; j < y0.length; ++j) {
-//                    double sum = b[0] * yDotK[0][j];
-//                    for (int l = 1; l < stages; ++l) {
-//                        sum += b[l] * yDotK[l][j];
-//                    }
-//                    yTmp[j] = y[j] + stepSize * sum;
-//                }
-//
+                stepSize.assign(hNew);
+                if (forward) {
+                    if (equation.time().add(stepSize).getDouble(0) >= t.getDouble(1)) {
+                        stepSize.assign(t.getScalar(1).sub(equation.time()));
+                    }
+                } else {
+                    if (equation.time().add(stepSize).getDouble(0) <= t.getDouble(1)) {
+                        stepSize.assign(t.getScalar(1).sub(equation.time()));
+                    }
+                }
+                // next stages
+                for (long k = 1; k < stages; ++k) {
+                    equation.stepAccum(tableu.a[(int) k - 1], stepSize, k);
+                    equation.calculateDerivative(k);
+                }
+
+                // estimate the state at the end of the step
+                equation.stepAccum(tableu.b, stepSize, stages);
+
 //                // estimate the error at the end of the step
-//                error = estimateError(yDotK, y, yTmp, stepSize);
-//                if (error >= 1.0) {
+                error.assign(equation.estimateError(mseComputation));
+                if (error.getDouble(0) >= 1.0) {
 //                    // reject the step and attempt to reduce error by stepsize control
 //                    final double factor =
 //                            FastMath.min(maxGrowth,
 //                                    FastMath.max(minReduction, safety * FastMath.pow(error, exp)));
 //                    hNew = filterStep(stepSize * factor, forward, false);
-//                }
+                }
 //
-//            }
+            }
 //
 //            // local error is small enough: accept the step, trigger events and step handlers
 //            interpolator.storeTime(stepStart + stepSize);
@@ -166,10 +156,9 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 //                if (filteredNextIsLast) {
 //                    hNew = t - stepStart;
 //                }
-//
 //            }
 //
-//        } while (!isLastStep);
+        } while (!isLastStep);
     }
 
 }

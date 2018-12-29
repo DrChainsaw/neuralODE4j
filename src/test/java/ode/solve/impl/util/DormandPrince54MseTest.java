@@ -30,6 +30,7 @@ public class DormandPrince54MseTest {
         final double maxStep = 1e-20;
         final double absTol = 2.34e-3;
         final double relTol = 3.45e-5;
+
         final double expected = new DormandPrince54Integrator(minStep, maxStep, absTol, relTol) {
 
             double estError(final double[][] yDotK,
