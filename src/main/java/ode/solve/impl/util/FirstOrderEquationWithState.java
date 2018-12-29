@@ -2,14 +2,9 @@ package ode.solve.impl.util;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.impl.AdaptiveRungeKuttaSolver;
-import ode.solve.impl.DormandPrince54Solver;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
-
-import java.util.Arrays;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Combines a {@link FirstOrderEquation} with the state needed to evaluate it
@@ -80,10 +75,6 @@ public class FirstOrderEquationWithState {
                 state.getStateDot(stage));
     }
 
-    public INDArray getFullStateDot() {
-        return state.yDotK;
-    }
-
     public INDArray getStateDot(long stage) {
         return state.getStateDot(stage);
     }
@@ -112,56 +103,5 @@ public class FirstOrderEquationWithState {
 
     public void stepAccum(INDArray stepCoeffPerStage, INDArray step, long startStage) {
         state.stepAccum(stepCoeffPerStage, step, startStage);
-    }
-
-
-
-
-    public static void main(String[] args) {
-        final INDArray yDotKIa = Nd4j.randn(new long[]{7, 4});
-        final INDArray y0Ia = Nd4j.randn(new long[]{1, 4});
-        final INDArray yTmpIa = y0Ia.dup();
-        final INDArray[] aIa = DormandPrince54Solver.butcherTableu.a;
-        final INDArray stepSizeIa = Nd4j.create(1).putScalar(0, 0.123);
-
-        final double[][] yDotK = yDotKIa.toDoubleMatrix();
-        final double[] y0 = y0Ia.toDoubleVector();
-        final double[] yTmp = yTmpIa.toDoubleVector();
-        final double[][] a = Stream.of(aIa).map(INDArray::toDoubleVector).collect(Collectors.toList()).toArray(new double[0][0]);
-        final double stepSize = stepSizeIa.getDouble(0);
-
-        for (int k = 1; k < 7; ++k) {
-            for (int j = 0; j < y0.length; ++j) {
-                double sum = a[k - 1][0] * yDotK[0][j];
-                for (int l = 1; l < k; ++l) {
-                    sum += a[k - 1][l] * yDotK[l][j];
-                }
-                yTmp[j] = y0[j] + stepSize * sum;
-            }
-            System.out.println("Ref1: " + Arrays.toString(yTmp));
-
-
-            for (int j = 0; j < y0.length; ++j) {
-                double sum = 0;
-                for (int l = 0; l < k; ++l) {
-                    sum += a[k - 1][l] * yDotK[l][j];
-                }
-                yTmp[j] = y0[j] + stepSize * sum;
-            }
-            System.out.println("Ref2: " + Arrays.toString(yTmp));
-
-            final INDArray sum = Nd4j.zeros(y0Ia.shape());
-            for (int l = 0; l < k; ++l) {
-                sum.addi(yDotKIa.getRow(l).mul(aIa[k - 1].getScalar(l)));
-            }
-            yTmpIa.assign(y0Ia.add(sum.mul(stepSizeIa)));
-            System.out.println("act1: " + Arrays.toString(yTmpIa.toDoubleVector()));
-
-            yTmpIa.assign(y0Ia.add((aIa[k - 1].mul(stepSizeIa)).mmul(yDotKIa.get(NDArrayIndex.interval(0, k), NDArrayIndex.all()))));
-            System.out.println("act2: " + Arrays.toString(yTmpIa.toDoubleVector()));
-
-
-            System.out.println("*******************************************************************************");
-        }
     }
 }
