@@ -20,6 +20,10 @@ public class SolverConfig {
             double relativeTolerance,
             double minStep,
             double maxStep) {
+        if(minStep >= maxStep) {
+            throw new IllegalArgumentException("Max step smaller than min step! Swapped arguments? max: " + maxStep + " min " + minStep );
+        }
+
         this.absTol = Nd4j.create(1).assign(absoluteTolerance);
         this.relTol = Nd4j.create(1).assign(relativeTolerance);
         this.minStep = Nd4j.create(1).assign(minStep);

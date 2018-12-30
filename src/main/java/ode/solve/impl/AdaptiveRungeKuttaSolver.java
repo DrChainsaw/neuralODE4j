@@ -73,52 +73,51 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
     private void solve(FirstOrderEquationWithState equation, INDArray t) {
 
-        boolean isLastStep = false;
         equation.calculateDerivative(0);
 
         // Alg variable used for new steps
-        final INDArray hNew = stepPolicy.initializeStep(equation, t);
-        final INDArray stepSize = hNew.dup();
+        final INDArray stepNew = stepPolicy.initializeStep(equation, t);
+        final INDArray step = stepNew.dup();
         // Alg variable for where next step starts
         final boolean forward = t.argMax().getInt(0) == 1;
 
-        final long stages = tableu.c.length();
+        final long stages = tableu.c.length()+1;
 
 
         // main integration loop
+        boolean isLastStep;
         do {
 
-//           // interpolator.shift(); Not sure if needed later...
             // iterate over step size, ensuring local normalized error is smaller than 1
             INDArray error = Nd4j.create(1).putScalar(0, 10);
             while (error.getDouble(0) >= 1.0) {
 
-                stepSize.assign(hNew);
+                step.assign(stepNew);
                 if (forward) {
-                    if (equation.time().add(stepSize).getDouble(0) >= t.getDouble(1)) {
-                        stepSize.assign(t.getScalar(1).sub(equation.time()));
+                    if (equation.time().add(step).getDouble(0) >= t.getDouble(1)) {
+                        step.assign(t.getScalar(1).sub(equation.time()));
                     }
                 } else {
-                    if (equation.time().add(stepSize).getDouble(0) <= t.getDouble(1)) {
-                        stepSize.assign(t.getScalar(1).sub(equation.time()));
+                    if (equation.time().add(step).getDouble(0) <= t.getDouble(1)) {
+                        step.assign(t.getScalar(1).sub(equation.time()));
                     }
                 }
                 // next stages
                 for (long k = 1; k < stages; ++k) {
-                    equation.step(tableu.a[(int) k - 1], stepSize);
+                    equation.step(tableu.a[(int) k - 1], step);
                     equation.calculateDerivative(k);
                 }
 
                 // estimate the state at the end of the step
-                equation.step(tableu.b, stepSize);
+                equation.step(tableu.b, step);
 
                 // estimate the error at the end of the step
                 error.assign(equation.estimateError(mseComputation));
                 if (error.getDouble(0) >= 1.0) {
                     if(forward) {
-                        hNew.assign(stepPolicy.stepForward(stepSize, error));
+                        stepNew.assign(stepPolicy.stepForward(step, error));
                     } else {
-                        hNew.assign(stepPolicy.stepBackward(stepSize, error));
+                        stepNew.assign(stepPolicy.stepBackward(step, error));
                     }
                 }
 
@@ -126,32 +125,16 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
             // local error is small enough: accept the step,
             equation.update();
+            isLastStep = equation.time().equalsWithEps(t.getScalar(1), config.getMinStep().getDouble(0) / 1e2);
 
-//            if (!isLastStep) {
-//
-//                // prepare next step
-//                interpolator.storeTime(stepStart);
-//
-//                if (fsal) {
-//                    // save the last evaluation for the next step
-//                    System.arraycopy(yDotTmp, 0, yDotK[0], 0, y0.length);
-//                }
-//
-//                // stepsize control for next step
-//                final double factor =
-//                        FastMath.min(maxGrowth, FastMath.max(minReduction, safety * FastMath.pow(error, exp)));
-//                final double scaledH = stepSize * factor;
-//                final double nextT = stepStart + scaledH;
-//                final boolean nextIsLast = forward ? (nextT >= t) : (nextT <= t);
-//                hNew = filterStep(scaledH, forward, nextIsLast);
-//
-//                final double filteredNextT = stepStart + hNew;
-//                final boolean filteredNextIsLast = forward ? (filteredNextT >= t) : (filteredNextT <= t);
-//                if (filteredNextIsLast) {
-//                    hNew = t - stepStart;
-//                }
-//            }
-//
+            if (!isLastStep) {
+                // Take a new step
+                if(forward) {
+                    stepNew.assign(stepPolicy.stepForward(step, error));
+                } else {
+                    stepNew.assign(stepPolicy.stepBackward(step, error));
+                }
+            }
         } while (!isLastStep);
     }
 

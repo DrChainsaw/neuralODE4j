@@ -83,7 +83,7 @@ public class DormandPrince54Solver implements FirstOrderSolver {
             final INDArray tol = yScale.muli(config.getRelTol()).addi(config.getAbsTol());
             final INDArray ratio = errSum.divi(tol);
             final INDArray error = ratio.muli(ratio);
-            return sqrt(error.mean()).muli(h).detach();
+            return sqrt(error.mean()).muli(h);
         }
     }
 

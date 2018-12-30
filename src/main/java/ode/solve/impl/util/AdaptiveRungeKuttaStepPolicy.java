@@ -100,41 +100,41 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
         ratio.divi(scal);
         final INDArray yDotOnScale2 = ratio.muli(ratio).sum();
 
-        final INDArray h = ((yOnScale2.getDouble(0) < 1.0e-10) || (yDotOnScale2.getDouble(0) < 1.0e-10)) ?
+        final INDArray step = ((yOnScale2.getDouble(0) < 1.0e-10) || (yDotOnScale2.getDouble(0) < 1.0e-10)) ?
                 MIN_H : sqrt(yOnScale2.divi(yDotOnScale2)).muli(0.01);
 
         final boolean backward = t.argMax().getInt(0) == 0;
         if (backward) {
-            h.negi();
+            step.negi();
         }
 
-        equation.step(Nd4j.ones(1), h);
+        equation.step(Nd4j.ones(1), step);
         equation.calculateDerivative(1);
 
         // Reuse ratio variable
         ratio.assign(equation.getStateDot(1));
         ratio.subi(equation.getStateDot(0)).divi(scal);
         ratio.muli(ratio);
-        final INDArray yDDotOnScale = sqrt(ratio.sum()).divi(h);
+        final INDArray yDDotOnScale = sqrt(ratio.sum()).divi(step);
 
         // step size is computed such that
-        // h^order * max (||y'/tol||, ||y''/tol||) = 0.01
+        // step^order * max (||y'/tol||, ||y''/tol||) = 0.01
         final INDArray maxInv2 = max(sqrt(yDotOnScale2), yDDotOnScale);
-        final INDArray h1 = maxInv2.getDouble(0) < 1e-15 ?
-                max(MIN_H, abs(h).muli(0.001)) :
+        final INDArray step1 = maxInv2.getDouble(0) < 1e-15 ?
+                max(MIN_H, abs(step).muli(0.001)) :
                 pow(maxInv2.rdivi(0.01), 1d / stepConfig.order);
 
-        h.assign(min(abs(h).muli(100), h1));
-        h.assign(max(h, abs(t.getColumn(0)).muli(1e-12)));
+        step.assign(min(abs(step).muli(100), step1));
+        step.assign(max(step, abs(t.getColumn(0)).muli(1e-12)));
 
-        h.assign(max(config.getMinStep(), h));
-        h.assign(min(config.getMaxStep(), h));
+        step.assign(max(config.getMinStep(), step));
+        step.assign(min(config.getMaxStep(), step));
 
         if (backward) {
-            h.negi();
+            step.negi();
         }
 
-        return h;
+        return step;
     }
 
     @Override
