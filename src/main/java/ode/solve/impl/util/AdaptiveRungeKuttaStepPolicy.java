@@ -144,7 +144,7 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
 
     @Override
     public INDArray stepBackward(INDArray step, INDArray error) {
-        return bound(stepFactor(error).muli(step), config.getMaxStep().neg(), config.getMinStep().neg());
+        return bound(stepFactor(error).muli(step).negi(), config.getMaxStep(), config.getMinStep()).negi();
     }
 
     private INDArray stepFactor(INDArray error) {

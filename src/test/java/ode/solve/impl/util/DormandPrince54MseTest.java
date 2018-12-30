@@ -19,15 +19,28 @@ public class DormandPrince54MseTest {
      * Test MSE estimation
      */
     @Test
-    public void estimateMse() {
+    public void estimateMseForward() {
+        final INDArray h = Nd4j.create(new double[]{1.23});
+        testEstimateError(h);
+    }
+
+    /**
+     * Test MSE estimation
+     */
+    @Test
+    public void estimateMseBackward() {
+        final INDArray h = Nd4j.create(new double[]{-1.23});
+        testEstimateError(h);
+    }
+
+    private void testEstimateError(INDArray h) {
         final long dim = 100;
         final INDArray yDotK = Nd4j.linspace(-10, 10, 7 * dim).reshape(new long[]{7, dim});
         final INDArray y0 = Nd4j.linspace(-2.34, 3.45, dim);
         final INDArray y1 = Nd4j.reverse(Nd4j.linspace(-3.45, 4.56, dim));
-        final INDArray h = Nd4j.create(new double[]{1.23});
 
         final double minStep = 1e-10;
-        final double maxStep = 1e-20;
+        final double maxStep = 1e20;
         final double absTol = 2.34e-3;
         final double relTol = 3.45e-5;
 

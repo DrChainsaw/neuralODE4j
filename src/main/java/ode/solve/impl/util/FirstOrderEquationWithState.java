@@ -36,7 +36,7 @@ public class FirstOrderEquationWithState {
             yWorking.assign(
                     y.add((stepCoeffPerStage.mul(step)).mmul(
                                     yDotK.get(NDArrayIndex.interval(0, stepCoeffPerStage.length()), NDArrayIndex.all())
-                            )));
+                            ).reshape(y.shape())));
         }
 
         INDArray getStateDot(long stage) {
@@ -121,6 +121,6 @@ public class FirstOrderEquationWithState {
     public void update() {
         time.addi(state.timeOffset);
         state.y.assign(state.yWorking);
-        state.yDotK.putRow(0, state.yDotK.getRow(1));
+        state.yDotK.putRow(0, state.yDotK.getRow(state.yDotK.rows()-1));
     }
 }

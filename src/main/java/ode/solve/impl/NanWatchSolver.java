@@ -2,6 +2,7 @@ package ode.solve.impl;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
+import ode.solve.impl.listen.StepListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.conditions.Condition;
 import org.nd4j.linalg.indexing.conditions.IsNaN;
@@ -53,6 +54,16 @@ public class NanWatchSolver implements FirstOrderSolver {
             }
             return equation.calculateDerivative(y, t, fy);
         }
+    }
+
+    @Override
+    public void addListener(StepListener... listeners) {
+        solver.addListener(listeners);
+    }
+
+    @Override
+    public void clearListeners(StepListener... listeners) {
+        solver.clearListeners(listeners);
     }
 }
 

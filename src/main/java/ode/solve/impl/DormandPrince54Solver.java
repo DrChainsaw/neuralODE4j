@@ -2,6 +2,7 @@ package ode.solve.impl;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
+import ode.solve.impl.listen.StepListener;
 import ode.solve.impl.util.AdaptiveRungeKuttaStepPolicy;
 import ode.solve.impl.util.ButcherTableu;
 import ode.solve.impl.util.SolverConfig;
@@ -19,35 +20,25 @@ import static org.nd4j.linalg.ops.transforms.Transforms.*;
  */
 public class DormandPrince54Solver implements FirstOrderSolver {
 
-    public static final ButcherTableu butcherTableu =
-            new ButcherTableu(
-                    // a
-                    new INDArray[]{
-                            Nd4j.create(new double[]
-                                    {1.0 / 5.0}),
-                            Nd4j.create(new double[]
-                                    {3.0 / 40.0, 9.0 / 40.0}),
-                            Nd4j.create(new double[]
-                                    {44.0 / 45.0, -56.0 / 15.0, 32.0 / 9.0}),
-                            Nd4j.create(new double[]
-                                    {19372.0 / 6561.0, -25360.0 / 2187.0, 64448.0 / 6561.0, -212.0 / 729.0}),
-                            Nd4j.create(new double[]
-                                    {9017.0 / 3168.0, -355.0 / 33.0, 46732.0 / 5247.0, 49.0 / 176.0, -5103.0 / 18656.0}),
-                            Nd4j.create(new double[]
-                                    {35.0 / 384.0, 0.0, 500.0 / 1113.0, 125.0 / 192.0, -2187.0 / 6784.0, 11.0 / 84.0})
-                    },
-                    // first b
-                    Nd4j.create(new double[]{
+    private static final ButcherTableu.Builder butcherTableuBuilder =
+            new ButcherTableu.Builder()
+            .a(new double[][] {
+                                    {1.0 / 5.0},
+                                    {3.0 / 40.0, 9.0 / 40.0},
+                                    {44.0 / 45.0, -56.0 / 15.0, 32.0 / 9.0},
+                                    {19372.0 / 6561.0, -25360.0 / 2187.0, 64448.0 / 6561.0, -212.0 / 729.0},
+                                    {9017.0 / 3168.0, -355.0 / 33.0, 46732.0 / 5247.0, 49.0 / 176.0, -5103.0 / 18656.0},
+                                    {35.0 / 384.0, 0.0, 500.0 / 1113.0, 125.0 / 192.0, -2187.0 / 6784.0, 11.0 / 84.0}
+                    })
+                    .b(new double[]{
                             35.0 / 384.0, 0.0, 500.0 / 1113.0, 125.0 / 192.0, -2187.0 / 6784.0, 11.0 / 84.0, 0.0
-                    }),
-                    // second b (for error estimation)
-                    Nd4j.create(new double[]{
+                    })
+                    .bStar(new double[]{
                             71.0 / 57600.0, 0.0, -71.0 / 16695.0, 71.0 / 1920.0, -17253.0 / 339200.0, 22.0 / 525.0, -1.0 / 40.0
-                    }),
-                    // c
-                    Nd4j.create(new double[]{
+                    })
+                    .c(new double[]{
                             1.0 / 5.0, 3.0 / 10.0, 4.0 / 5.0, 8.0 / 9.0, 1.0, 1.0
-                    }));
+                    });
 
     private final AdaptiveRungeKuttaSolver solver;
 
@@ -62,7 +53,7 @@ public class DormandPrince54Solver implements FirstOrderSolver {
         private final INDArray errorCoeffs;
 
         public DormandPrince54Mse(SolverConfig config) {
-            this(config, butcherTableu.bStar);
+            this(config, butcherTableuBuilder.build().bStar);
         }
 
         public DormandPrince54Mse(SolverConfig config, INDArray errorCoeffs) {
@@ -79,25 +70,34 @@ public class DormandPrince54Solver implements FirstOrderSolver {
         ) {
             // TODO: Test remove zero row from bStar and yDotK and see if there are net gains
             final INDArray errSum = errorCoeffs.mmul(yDotK);
-            final INDArray yScale = max(abs(y0), abs(y1));
+            final INDArray yScale = Nd4j.toFlattened(max(abs(y0), abs(y1)));
             final INDArray tol = yScale.muli(config.getRelTol()).addi(config.getAbsTol());
-            final INDArray ratio = errSum.divi(tol);
+            final INDArray ratio = errSum.divi(tol).muli(h);
             final INDArray error = ratio.muli(ratio);
-            return sqrt(error.mean()).muli(h);
+            return sqrt(error.mean());
         }
     }
 
     public DormandPrince54Solver(SolverConfig config) {
         solver = new AdaptiveRungeKuttaSolver(
-                config,
-                butcherTableu,
+                butcherTableuBuilder.build(),
                 new AdaptiveRungeKuttaStepPolicy(config, 5),
                 new DormandPrince54Mse(config));
     }
 
     @Override
     public INDArray integrate(FirstOrderEquation equation, INDArray t, INDArray y0, INDArray yOut) {
-        return solver.integrate(equation, t, y0, yOut);
+        INDArray ret = solver.integrate(equation, t, y0, yOut);
+        return ret;
     }
 
+    @Override
+    public void addListener(StepListener... listeners) {
+        solver.addListener(listeners);
+    }
+
+    @Override
+    public void clearListeners(StepListener... listeners) {
+        solver.clearListeners(listeners);
+    }
 }

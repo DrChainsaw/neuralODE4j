@@ -2,10 +2,10 @@ package examples.mnist;
 
 import com.beust.jcommander.Parameter;
 import ode.solve.api.FirstOrderSolver;
-import ode.solve.commons.FirstOrderSolverAdapter;
+import ode.solve.impl.DormandPrince54Solver;
 import ode.solve.impl.NanWatchSolver;
+import ode.solve.impl.util.SolverConfig;
 import ode.vertex.conf.OdeVertex;
-import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
@@ -61,9 +61,10 @@ public class OdeNetModel implements ModelFactory {
     public ComputationGraph create() {
         return create(
                 new NanWatchSolver(
-                        new FirstOrderSolverAdapter(
-                                new DormandPrince54Integrator(
-                                        1e-20, 100d, 1e-3, 1e-3))));
+                        new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 1e-20, 100))));
+                       // new FirstOrderSolverAdapter(
+                       //         new DormandPrince54Integrator(
+                      //                  1e-20, 100d, 1e-3, 1e-3))));
     }
 
     ComputationGraph create(FirstOrderSolver solver) {
