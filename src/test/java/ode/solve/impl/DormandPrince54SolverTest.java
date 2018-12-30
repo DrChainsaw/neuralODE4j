@@ -80,7 +80,7 @@ public class DormandPrince54SolverTest {
         final INDArray y0 = Nd4j.create(new double[]{3, -5});
         final INDArray y = Nd4j.create(1, 2);
 
-        assertEquals("Incorrect solution!", reference.integrate(equation, ts, y0, y), test.integrate(equation, ts, y0, y));
+        assertEquals("Incorrect solution!", reference.integrate(equation, ts, y0, y.dup()), test.integrate(equation, ts, y0, y.dup()));
 
         assertEquals("Incorrect number of steps", refCounter.times.size(), testCounter.times.size());
 

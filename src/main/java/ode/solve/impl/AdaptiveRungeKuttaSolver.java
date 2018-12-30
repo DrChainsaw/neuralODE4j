@@ -67,7 +67,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             final FirstOrderEquationWithState equationState = new FirstOrderEquationWithState(
                     equation,
                     t.getScalar(0).dup(),
-                    y0,
+                    yOut.assign(y0),
                     tableu.c.length() + 1);
 
             for(StepListener listener: listeners) {
