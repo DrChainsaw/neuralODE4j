@@ -84,7 +84,7 @@ public class AdaptiveRungeKuttaStepPolicyTest {
         final INDArray actual = new AdaptiveRungeKuttaStepPolicy(
                 new SolverConfig(1e-20, 1e-20, 1e-20, 1e20),
                 5)
-                .filterStepForward(step, error);
+                .stepForward(step, error);
 
         assertEquals("Incorrect filtered step!", expected, actual.getDouble(0), 1e-6);
         assertEquals("Step shall not change!", 1.23, step.getDouble(0), 1e-6);

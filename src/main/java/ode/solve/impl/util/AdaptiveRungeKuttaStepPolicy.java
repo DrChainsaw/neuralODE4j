@@ -48,15 +48,24 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
             private Builder(int order) {
                 this.order = order;
             }
-            
+
+            /** Set the maximal growth factor for stepsize control.
+             * @param maxGrowth maximal growth factor
+             */
             public Builder setMaxGrowth(double maxGrowth) {
                 this.maxGrowth = maxGrowth; return this;
             }
 
+            /** Set the minimal reduction factor for stepsize control.
+             * @param minReduction minimal reduction factor
+             */
             public Builder setMinReduction(double minReduction) {
                 this.minReduction = minReduction; return this;
             }
 
+            /** Set the safety factor for stepsize control.
+             * @param safety safety factor
+             */
             public Builder setSafety(double safety) {
                 this.safety = safety; return this;
             }
@@ -68,9 +77,7 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
     }
 
     public AdaptiveRungeKuttaStepPolicy(SolverConfig config, int order) {
-        this.config = config;
-        this.stepConfig = StepConfig.builder(order).build();
-        this.exp = -1.0 / stepConfig.order;
+        this(config, StepConfig.builder(order).build());
     }
 
     public AdaptiveRungeKuttaStepPolicy(SolverConfig config, StepConfig stepConfig) {
@@ -101,7 +108,7 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
             h.negi();
         }
 
-        equation.step(h, 0);
+        equation.step(Nd4j.ones(1), h);
         equation.calculateDerivative(1);
 
         // Reuse ratio variable
@@ -131,12 +138,12 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
     }
 
     @Override
-    public INDArray filterStepForward(INDArray step, INDArray error) {
+    public INDArray stepForward(INDArray step, INDArray error) {
         return bound(stepFactor(error).muli(step), config.getMaxStep(), config.getMinStep());
     }
 
     @Override
-    public INDArray filterStepBackward(INDArray step, INDArray error) {
+    public INDArray stepBackward(INDArray step, INDArray error) {
         return bound(stepFactor(error).muli(step), config.getMaxStep().neg(), config.getMinStep().neg());
     }
 

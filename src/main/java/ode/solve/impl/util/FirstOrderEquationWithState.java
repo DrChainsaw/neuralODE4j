@@ -30,21 +30,16 @@ public class FirstOrderEquationWithState {
             this.timeOffset = Nd4j.zeros(1);
         }
 
-        void step(INDArray step, long stage) {
-            timeOffset.assign(step);
-            yWorking.assign(y.add(getStateDot(stage).mul(step)));
-        }
-
-        void stepAccum(INDArray stepCoeffPerStage, INDArray step, long startStage) {
+        void step(INDArray stepCoeffPerStage, INDArray step) {
             // yWorking = y + (stepCoeffPerStage*step) . yDot[0:startState, :]) where . is dot product
             timeOffset.assign(step);
             yWorking.assign(
                     y.add((stepCoeffPerStage.mul(step)).mmul(
-                                    yDotK.get(NDArrayIndex.interval(0, startStage), NDArrayIndex.all())
+                                    yDotK.get(NDArrayIndex.interval(0, stepCoeffPerStage.length()), NDArrayIndex.all())
                             )));
         }
 
-        public INDArray getStateDot(long stage) {
+        INDArray getStateDot(long stage) {
             return yDotK.getRow(stage).reshape(y.shape());
         }
     }
@@ -72,36 +67,60 @@ public class FirstOrderEquationWithState {
         equation.calculateDerivative(
                 state.yWorking,
                 time.add(state.timeOffset),
-                state.getStateDot(stage));
+                state.getStateDot(stage)); // Note, stateDot of the given stage will be updated by this operation
     }
 
+    /**
+     * Return the given stage of the derivative of the state
+     * @param stage wanted stage of derivative
+     * @return The derivative of the given stage
+     */
     public INDArray getStateDot(long stage) {
         return state.getStateDot(stage);
     }
 
+    /**
+     * Return the current state
+     * @return the current state
+     */
     public INDArray getCurrentState() {
         return state.y;
     }
 
+    /**
+     * Estimate the error using the given {@link AdaptiveRungeKuttaSolver.MseComputation}
+     * @param mseComputation Strategy for computing the error
+     * @return the computed error
+     */
     public INDArray estimateError(AdaptiveRungeKuttaSolver.MseComputation mseComputation) {
         return mseComputation.estimateMse(state.yDotK, state.y, state.yWorking, state.timeOffset);
     }
 
+    /**
+     * Return the current time state
+     * @return
+     */
     public INDArray time() {
         return time;
     }
 
     /**
-     * Updates the working state by taking the given step along the given stage of the derivative from the current state
-     *
-     * @param step  Step to take
-     * @param stage Which stage to use to take the step
+     * Update the working state by taking a step accumulated over all stages up the the given stage. The base step is
+     * weighted with the given coefficients for each stage.
+     * @param stepCoeffPerStage Weights for each stage (must be of shape [1, nrofStages]
+     * @param step Base step. Must be a scalar
      */
-    public void step(INDArray step, long stage) {
-        state.step(step, stage);
+    public void step(INDArray stepCoeffPerStage, INDArray step) {
+        state.step(stepCoeffPerStage, step);
     }
 
-    public void stepAccum(INDArray stepCoeffPerStage, INDArray step, long startStage) {
-        state.stepAccum(stepCoeffPerStage, step, startStage);
+    /**
+     * Update the current state to the working state. This also includes shifting the derivative so that previous
+     * stage 1 becomes new stage 0.
+     */
+    public void update() {
+        time.addi(state.timeOffset);
+        state.y.assign(state.yWorking);
+        state.yDotK.putRow(0, state.yDotK.getRow(1));
     }
 }

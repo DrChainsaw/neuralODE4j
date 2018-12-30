@@ -85,16 +85,14 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
         final long stages = tableu.c.length();
 
 
-//        // main integration loop
+        // main integration loop
         do {
-//
-//            // interpolator.shift();
-//
-//            // iterate over step size, ensuring local normalized error is smaller than 1
+
+//           // interpolator.shift(); Not sure if needed later...
+            // iterate over step size, ensuring local normalized error is smaller than 1
             INDArray error = Nd4j.create(1).putScalar(0, 10);
             while (error.getDouble(0) >= 1.0) {
-//
-//
+
                 stepSize.assign(hNew);
                 if (forward) {
                     if (equation.time().add(stepSize).getDouble(0) >= t.getDouble(1)) {
@@ -107,32 +105,28 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
                 }
                 // next stages
                 for (long k = 1; k < stages; ++k) {
-                    equation.stepAccum(tableu.a[(int) k - 1], stepSize, k);
+                    equation.step(tableu.a[(int) k - 1], stepSize);
                     equation.calculateDerivative(k);
                 }
 
                 // estimate the state at the end of the step
-                equation.stepAccum(tableu.b, stepSize, stages);
+                equation.step(tableu.b, stepSize);
 
-//                // estimate the error at the end of the step
+                // estimate the error at the end of the step
                 error.assign(equation.estimateError(mseComputation));
                 if (error.getDouble(0) >= 1.0) {
-//                    // reject the step and attempt to reduce error by stepsize control
-//                    final double factor =
-//                            FastMath.min(maxGrowth,
-//                                    FastMath.max(minReduction, safety * FastMath.pow(error, exp)));
-//                    hNew = filterStep(stepSize * factor, forward, false);
+                    if(forward) {
+                        hNew.assign(stepPolicy.stepForward(stepSize, error));
+                    } else {
+                        hNew.assign(stepPolicy.stepBackward(stepSize, error));
+                    }
                 }
-//
+
             }
-//
-//            // local error is small enough: accept the step, trigger events and step handlers
-//            interpolator.storeTime(stepStart + stepSize);
-//            System.arraycopy(yTmp, 0, y, 0, y0.length);
-//            System.arraycopy(yDotK[stages - 1], 0, yDotTmp, 0, y0.length);
-//            stepStart = acceptStep(interpolator, y, yDotTmp, t);
-//            System.arraycopy(y, 0, yTmp, 0, y.length);
-//
+
+            // local error is small enough: accept the step,
+            equation.update();
+
 //            if (!isLastStep) {
 //
 //                // prepare next step
