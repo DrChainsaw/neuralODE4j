@@ -70,13 +70,13 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
                     yOut.assign(y0),
                     tableu.c.length() + 1);
 
-            for(StepListener listener: listeners) {
+            for (StepListener listener : listeners) {
                 listener.begin(t, y0);
             }
 
             solve(equationState, t);
 
-            for(StepListener listener: listeners) {
+            for (StepListener listener : listeners) {
                 listener.done();
             }
 
@@ -89,8 +89,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
         equation.calculateDerivative(0);
 
         // Alg variable used for new steps
-        final INDArray stepNew = stepPolicy.initializeStep(equation, t);
-        final INDArray step = stepNew.dup();
+        final INDArray step = stepPolicy.initializeStep(equation, t);
         // Alg variable for where next step starts
         final boolean forward = t.argMax().getInt(0) == 1;
 
@@ -98,61 +97,53 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
         // main integration loop
         boolean isLastStep = false;
+        final INDArray error = Nd4j.create(1);
         do {
 
             // iterate over step size, ensuring local normalized error is smaller than 1
-            INDArray error = Nd4j.create(1).putScalar(0, 10);
-            while (error.getDouble(0) >= 1.0) {
-
-                step.assign(stepNew);
-                if (forward) {
-                    if (equation.time().add(step).getDouble(0) >= t.getDouble(1)) {
-                        step.assign(t.getScalar(1).sub(equation.time()));
-                        isLastStep = true;
-                    }
-                } else {
-                    if (equation.time().add(step).getDouble(0) <= t.getDouble(1)) {
-                        step.assign(t.getScalar(1).sub(equation.time()));
-                        isLastStep = true;
-                    }
+            if (forward) {
+                if (equation.time().add(step).getDouble(0) >= t.getDouble(1)) {
+                    step.assign(t.getScalar(1).sub(equation.time()));
+                    isLastStep = true;
                 }
-
-                // next stages
-                for (long k = 1; k < stages; ++k) {
-                    equation.step(tableu.a[(int) k - 1], step);
-                    equation.calculateDerivative(k);
-                }
-
-                // estimate the state at the end of the step
-                equation.step(tableu.b, step);
-
-                // estimate the error at the end of the step
-                error.assign(equation.estimateError(mseComputation));
-                if (error.getDouble(0) >= 1.0) {
-                    if (forward) {
-                        stepNew.assign(stepPolicy.stepForward(step, error));
-                    } else {
-                        stepNew.assign(stepPolicy.stepBackward(step, error));
-                    }
-                    isLastStep = false;
+            } else {
+                if (equation.time().add(step).getDouble(0) <= t.getDouble(1)) {
+                    step.assign(t.getScalar(1).sub(equation.time()));
+                    isLastStep = true;
                 }
             }
 
-            // local error is small enough: accept the step,
-            equation.update();
-
-            for (StepListener listener : listeners) {
-                listener.step(equation.time(), step, error, equation.getCurrentState());
+            // next stages
+            for (long k = 1; k < stages; ++k) {
+                equation.step(tableu.a[(int) k - 1], step);
+                equation.calculateDerivative(k);
             }
 
-            if (!isLastStep) {
-                // Take a new step
-                if (forward) {
-                    stepNew.assign(stepPolicy.stepForward(step, error));
-                } else {
-                    stepNew.assign(stepPolicy.stepBackward(step, error));
+            // estimate the state at the end of the step
+            equation.step(tableu.b, step);
+
+            // estimate the error at the end of the step
+            error.assign(equation.estimateError(mseComputation));
+
+            if (error.getDouble(0) < 1.0) {
+                // local error is small enough: accept the step,
+                equation.update();
+
+                for (StepListener listener : listeners) {
+                    listener.step(equation.time(), step, error, equation.getCurrentState());
                 }
+            } else {
+                // Else, just make sure we don't exit
+                isLastStep = false;
             }
+
+            // Take a new step
+            if (forward) {
+                step.assign(stepPolicy.stepForward(step, error));
+            } else {
+                step.assign(stepPolicy.stepBackward(step, error));
+            }
+
 
         } while (!isLastStep);
     }
