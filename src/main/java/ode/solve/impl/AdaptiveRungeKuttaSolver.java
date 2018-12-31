@@ -56,6 +56,50 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
         );
     }
 
+    private interface TimeLimit {
+        boolean isLastStep(INDArray step);
+    }
+
+    private static class TimeLimitForwards implements TimeLimit {
+
+        private final double tLast;
+        private final INDArray t;
+
+        private TimeLimitForwards(double tLast, INDArray t) {
+            this.tLast = tLast;
+            this.t = t;
+        }
+
+        @Override
+        public boolean isLastStep(INDArray step) {
+            if(t.add(step).getDouble(0) >= tLast) {
+                step.assign(tLast - t.getDouble(0));
+                return true;
+            }
+            return false;
+        }
+    }
+
+    private static class TimeLimitBackwards implements TimeLimit {
+
+        private final double tLast;
+        private final INDArray t;
+
+        private TimeLimitBackwards(double tLast, INDArray t) {
+            this.tLast = tLast;
+            this.t = t;
+        }
+
+        @Override
+        public boolean isLastStep(INDArray step) {
+            if(t.add(step).getDouble(0) <= tLast) {
+                step.assign(tLast - t.getDouble(0));
+                return true;
+            }
+            return false;
+        }
+    }
+
     @Override
     public INDArray integrate(FirstOrderEquation equation, INDArray t, INDArray y0, INDArray yOut) {
         if (t.length() != 2) {
@@ -88,30 +132,22 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
         equation.calculateDerivative(0);
 
+        // Alg variable used for error
+        final INDArray error = Nd4j.create(1);
         // Alg variable used for new steps
         final INDArray step = stepPolicy.initializeStep(equation, t);
         // Alg variable for where next step starts
-        final boolean forward = t.argMax().getInt(0) == 1;
+        final TimeLimit timeLimit = t.argMax().getInt(0) == 1 ?
+                new TimeLimitForwards(t.getDouble(1), equation.time()) :
+                new TimeLimitBackwards(t.getDouble(1), equation.time());
 
         final long stages = tableu.c.length() + 1;
 
         // main integration loop
-        boolean isLastStep = false;
-        final INDArray error = Nd4j.create(1);
+        boolean isLastStep;
         do {
 
-            // iterate over step size, ensuring local normalized error is smaller than 1
-            if (forward) {
-                if (equation.time().add(step).getDouble(0) >= t.getDouble(1)) {
-                    step.assign(t.getScalar(1).sub(equation.time()));
-                    isLastStep = true;
-                }
-            } else {
-                if (equation.time().add(step).getDouble(0) <= t.getDouble(1)) {
-                    step.assign(t.getScalar(1).sub(equation.time()));
-                    isLastStep = true;
-                }
-            }
+            isLastStep = timeLimit.isLastStep(step);
 
             // next stages
             for (long k = 1; k < stages; ++k) {
@@ -125,22 +161,25 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             // estimate the error at the end of the step
             error.assign(equation.estimateError(mseComputation));
 
-            if (error.getDouble(0) < 1.0) {
-                // local error is small enough: accept the step,
-                equation.update();
+            isLastStep &= acceptStep(equation, step, error);
 
-                for (StepListener listener : listeners) {
-                    listener.step(equation.time(), step, error, equation.getCurrentState());
-                }
-            } else {
-                // Else, just make sure we don't exit
-                isLastStep = false;
-            }
-
-            // Take a new step
+            // Take a new step. Note: Redundand operation if isLastStep is true
             step.assign(stepPolicy.step(step, error));
 
         } while (!isLastStep);
+    }
+
+    private boolean acceptStep(FirstOrderEquationWithState equation, INDArray step, INDArray error) {
+        if (error.getDouble(0) < 1.0) {
+            // local error is small enough: accept the step,
+            equation.update();
+
+            for (StepListener listener : listeners) {
+                listener.step(equation.time(), step, error, equation.getCurrentState());
+            }
+            return true;
+        }
+        return false;
     }
 
     @Override
