@@ -17,18 +17,10 @@ public interface StepPolicy {
     INDArray initializeStep(FirstOrderEquationWithState equation, INDArray t);
 
     /**
-     * Make an integration step in forward direction.
+     * Make an integration step.
      *
      * @param step           signed step
      * @return a bounded integration step (scaled step if no bound is reach, or a bounded value)
      */
-    INDArray stepForward(INDArray step, INDArray error);
-
-    /**
-     * Make an integration step in forward direction.
-     *
-     * @param step           signed step
-     * @return a bounded integration step (scaled step if no bound is reach, or a bounded value)
-     */
-    INDArray stepBackward(INDArray step, INDArray error);
+    INDArray step(INDArray step, INDArray error);
 }

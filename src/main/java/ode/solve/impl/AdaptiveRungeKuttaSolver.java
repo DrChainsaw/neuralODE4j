@@ -138,12 +138,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             }
 
             // Take a new step
-            if (forward) {
-                step.assign(stepPolicy.stepForward(step, error));
-            } else {
-                step.assign(stepPolicy.stepBackward(step, error));
-            }
-
+            step.assign(stepPolicy.step(step, error));
 
         } while (!isLastStep);
     }

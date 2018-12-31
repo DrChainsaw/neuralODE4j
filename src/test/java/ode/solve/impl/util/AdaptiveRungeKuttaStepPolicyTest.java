@@ -66,57 +66,78 @@ public class AdaptiveRungeKuttaStepPolicyTest {
      * Test step filtering versus reference implementation in {@link DormandPrince54Integrator}
      */
     @Test
-    public void filterStepForward() {
+    public void stepForward() {
         final INDArray step = Nd4j.create(1).assign(1.23);
-        final INDArray error = Nd4j.create(1).assign(0.666);
-
-        final double expected = new DormandPrince54Integrator(1e-20, 1e20, 1e-20, 1e20) {
-
-            double calcError() {
-                // Copy pasted from EmbeddedRungeKuttaIntegrator
-                final double factor =
-                        FastMath.min(getMaxGrowth(),
-                                FastMath.max(getMinReduction(), getSafety() * FastMath.pow(error.getDouble(0), -1.0 / getOrder())));
-                return filterStep(step.getDouble(0) * factor, true, true);
-            }
-        }.calcError();
-
-        final INDArray actual = new AdaptiveRungeKuttaStepPolicy(
-                new SolverConfig(1e-20, 1e-20, 1e-20, 1e20),
-                5)
-                .stepForward(step, error);
-
-        assertEquals("Incorrect filtered step!", expected, actual.getDouble(0), 1e-6);
-        assertEquals("Step shall not change!", 1.23, step.getDouble(0), 1e-6);
-        assertEquals("Error shall not change!", 0.666, error.getDouble(0), 1e-6);
+        testStep(step);
     }
 
     /**
      * Test step filtering versus reference implementation in {@link DormandPrince54Integrator}
      */
     @Test
-    public void filterStepBackward() {
+    public void stepBackward() {
         final INDArray step = Nd4j.create(1).assign(-1.23);
-        final INDArray error = Nd4j.create(1).assign(0.666);
+        testStep(step);
+    }
 
-        final double expected = new DormandPrince54Integrator(1e-20, 1e20, 1e-20, 1e20) {
+    /**
+     * Test step filtering versus reference implementation in {@link DormandPrince54Integrator}
+     */
+    @Test
+    public void stepForwardUpperBound() {
+        final INDArray step = Nd4j.create(1).assign(12345);
+        testStep(step); // Note: bounds are hardcoded in testStep
+    }
+
+    /**
+     * Test step filtering versus reference implementation in {@link DormandPrince54Integrator}
+     */
+    @Test
+    public void stepBackwardUpperBound() {
+        final INDArray step = Nd4j.create(1).assign(-12345);
+        testStep(step); // Note: bounds are hardcoded in testStep
+    }
+
+    /**
+     * Test step filtering versus reference implementation in {@link DormandPrince54Integrator}
+     */
+    @Test
+    public void stepForwardLowerBound() {
+        final INDArray step = Nd4j.create(1).assign(0.000001234);
+        testStep(step); // Note: bounds are hardcoded in testStep
+    }
+
+    /**
+     * Test step filtering versus reference implementation in {@link DormandPrince54Integrator}
+     */
+    @Test
+    public void stepBackwardLowerBound() {
+        final INDArray step = Nd4j.create(1).assign(-0.000001234);
+        testStep(step); // Note: bounds are hardcoded in testStep
+    }
+
+    private void testStep(INDArray step) {
+        final INDArray error = Nd4j.create(1).assign(0.666);
+        final double orgStep = step.getDouble(0);
+
+        final double expected = new DormandPrince54Integrator(1e-2, 1e2, 1e-20, 1e20) {
 
             double calcError() {
                 // Copy pasted from EmbeddedRungeKuttaIntegrator
                 final double factor =
                         FastMath.min(getMaxGrowth(),
                                 FastMath.max(getMinReduction(), getSafety() * FastMath.pow(error.getDouble(0), -1.0 / getOrder())));
-                return filterStep(step.getDouble(0) * factor, false, true);
+                return filterStep(orgStep * factor, orgStep > 0, true);
             }
         }.calcError();
 
         final INDArray actual = new AdaptiveRungeKuttaStepPolicy(
-                new SolverConfig(1e-20, 1e-20, 1e-20, 1e20),
+                new SolverConfig(1e-20, 1e-20, 1e-2, 1e2),
                 5)
-                .stepBackward(step, error);
+                .step(step, error);
 
         assertEquals("Incorrect filtered step!", expected, actual.getDouble(0), 1e-6);
-        assertEquals("Step shall not change!", -1.23, step.getDouble(0), 1e-6);
+        assertEquals("Step shall not change!", orgStep, step.getDouble(0), 1e-6);
         assertEquals("Error shall not change!", 0.666, error.getDouble(0), 1e-6);
     }
 }
