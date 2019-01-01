@@ -2,6 +2,9 @@ package ode.solve.impl.util;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.impl.AdaptiveRungeKuttaSolver;
+import org.nd4j.linalg.api.memory.MemoryWorkspace;
+import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
+import org.nd4j.linalg.api.memory.enums.SpillPolicy;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -12,6 +15,11 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
  * @author Christian Skarby
  */
 public class FirstOrderEquationWithState {
+
+    final static WorkspaceConfiguration wsConf = WorkspaceConfiguration.builder()
+            .overallocationLimit(0.0)
+            .policySpill(SpillPolicy.REALLOCATE)
+            .build();
 
     private final FirstOrderEquation equation;
     private final INDArray time;
@@ -111,7 +119,9 @@ public class FirstOrderEquationWithState {
      * @param step Base step. Must be a scalar
      */
     public void step(INDArray stepCoeffPerStage, INDArray step) {
-        state.step(stepCoeffPerStage, step);
+        try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(wsConf,this.getClass().getSimpleName()+"_step")) {
+            state.step(stepCoeffPerStage, step);
+        }
     }
 
     /**

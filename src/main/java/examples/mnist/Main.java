@@ -9,6 +9,7 @@ import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,6 +93,7 @@ class Main {
         final DataSetIterator trainIter = new MnistDataSetIterator(trainBatchSize, nrofTrainExamples, false, true, true, 666);
         final DataSetIterator evalIter = new MnistDataSetIterator(evalBatchSize, nrofTestExamples, false, false, true, 666);
         model.getLayers();
+        Nd4j.getMemoryManager().setAutoGcWindow(5000);
         for (int epoch = 0; epoch < nrofEpochs; epoch++) {
             log.info("Begin epoch " + epoch);
             model.fit(trainIter);

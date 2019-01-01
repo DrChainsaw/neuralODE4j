@@ -7,9 +7,9 @@ import org.deeplearning4j.nn.graph.vertex.VertexIndices;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.Nullable;
-import org.nd4j.linalg.api.memory.MemoryWorkspace;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.nd4j.linalg.workspace.WorkspacesCloseable;
 
 /**
  * Models forward pass through an undefined number of residual blocks as a first order differential equation.
@@ -37,11 +37,18 @@ public class ForwardPass implements FirstOrderEquation {
 
     @Override
     public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
-        try (MemoryWorkspace ws = innerWorkspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS)) {
+        try (WorkspacesCloseable ws = enterIfNotOpen(ArrayType.ACTIVATIONS)) {
             setInputsFromFlat(y);
             evaluate(inputs, fy);
         }
         return fy;
+    }
+
+    private WorkspacesCloseable enterIfNotOpen(ArrayType type) {
+        if (!innerWorkspaceMgr.isWorkspaceOpen(type)) {
+            return new WorkspacesCloseable(innerWorkspaceMgr.notifyScopeEntered(type));
+        }
+        return new WorkspacesCloseable();
     }
 
     private void setInputsFromFlat(INDArray flatArray) {
@@ -86,7 +93,13 @@ public class ForwardPass implements FirstOrderEquation {
                     // this method
                     int inputToIndex = v.getVertexIndex();
                     int vIdxEdge = v.getVertexEdgeNumber();
-                    graph.getVertices()[inputToIndex].setInput(vIdxEdge, out.detach(), innerWorkspaceMgr);
+                    GraphVertex outputVertex = graph.getVertices()[inputToIndex];
+                    if (outputVertex.getInputs() == null || outputVertex.getInputs()[vIdxEdge] == null) {
+                        outputVertex.setInput(vIdxEdge, innerWorkspaceMgr.leverageTo(ArrayType.INPUT, out), innerWorkspaceMgr);
+                    } else {
+                        outputVertex.getInputs()[vIdxEdge].assign(out);
+                    }
+
                 }
             }
         }

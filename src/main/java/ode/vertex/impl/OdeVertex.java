@@ -16,6 +16,8 @@ import org.nd4j.linalg.api.memory.MemoryWorkspace;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.primitives.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Map;
@@ -26,6 +28,9 @@ import java.util.Map;
  * @author Christian Skarby
  */
 public class OdeVertex extends BaseGraphVertex {
+
+    private static final Logger log = LoggerFactory.getLogger(OdeVertex.class);
+
 
     private final static String parName = "params";
 
@@ -119,6 +124,9 @@ public class OdeVertex extends BaseGraphVertex {
     public INDArray doForward(boolean training, LayerWorkspaceMgr workspaceMgr) {
         validateForward();
 
+        log.debug("Start forward. Training: " + training);
+
+        leverageInputs(workspaceMgr);
         try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().scopeOutOfWorkspaces()) {
 
             final ForwardPass equation = new ForwardPass(
@@ -127,8 +135,8 @@ public class OdeVertex extends BaseGraphVertex {
                     training ? this.innerWorkspaceMgr : workspaceMgr,
                     training,
                     getInputs());
-            lastOutput = Nd4j.createUninitialized(getInputs()[0].shape()).detach(); // nrof outputs must be same as number of inputs due to resblock
 
+            lastOutput = Nd4j.createUninitialized(getInputs()[0].shape()).detach(); // nrof outputs must be same as number of inputs due to resblock
             odeSolver.integrate(equation, time, getInputs()[0], lastOutput);
         }
 
@@ -145,6 +153,7 @@ public class OdeVertex extends BaseGraphVertex {
     @Override
     public Pair<Gradient, INDArray[]> doBackward(boolean tbptt, LayerWorkspaceMgr workspaceMgr) {
         validateBackprop();
+        log.debug("Start backward");
 
         final AugmentedDynamics augmentedDynamics;
         try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().scopeOutOfWorkspaces()) {
@@ -184,8 +193,19 @@ public class OdeVertex extends BaseGraphVertex {
         final Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
         gradient.setGradientFor(parName, graph.getFlattenedGradients());
 
+        System.out.println("all wses: " + Nd4j.getWorkspaceManager().getAllWorkspacesForCurrentThread().stream()
+                .mapToLong(ws -> ws.getCurrentSize())
+                .sum());
+
+        Nd4j.getWorkspaceManager().getAllWorkspacesForCurrentThread().forEach(ws -> System.out.println("ws: " + ws.getId() + " size: " + ws.getCurrentSize()));
 
         return new Pair<>(gradient, new INDArray[]{epsilonOut});
+    }
+
+    private void leverageInputs(LayerWorkspaceMgr workspaceMgr) {
+        for(int i = 0; i < getInputs().length; i++) {
+            setInput(i, workspaceMgr.leverageTo(ArrayType.INPUT, getInputs()[i]), workspaceMgr);
+        }
     }
 
     @Override

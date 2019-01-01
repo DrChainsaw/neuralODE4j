@@ -7,8 +7,11 @@ import ode.solve.impl.util.ButcherTableu;
 import ode.solve.impl.util.FirstOrderEquationWithState;
 import ode.solve.impl.util.StepPolicy;
 import org.nd4j.linalg.api.memory.MemoryWorkspace;
+import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
+import org.nd4j.linalg.api.memory.enums.SpillPolicy;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import util.time.StatisticsTimer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,11 +25,15 @@ import java.util.Collection;
  */
 public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
+    final static WorkspaceConfiguration wsConf = WorkspaceConfiguration.builder()
+            .overallocationLimit(0.0)
+            .policySpill(SpillPolicy.REALLOCATE)
+            .build();
+
     private final ButcherTableu tableu;
     private final StepPolicy stepPolicy;
     private final MseComputation mseComputation;
     private final Collection<StepListener> listeners = new ArrayList<>();
-
 
     public AdaptiveRungeKuttaSolver(ButcherTableu tableu, StepPolicy stepPolicy, MseComputation mseComputation) {
         this.tableu = tableu;
@@ -72,7 +79,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
         @Override
         public boolean isLastStep(INDArray step) {
-            if(t.add(step).getDouble(0) >= tLast) {
+            if (t.add(step).getDouble(0) >= tLast) {
                 step.assign(tLast - t.getDouble(0));
                 return true;
             }
@@ -92,7 +99,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
         @Override
         public boolean isLastStep(INDArray step) {
-            if(t.add(step).getDouble(0) <= tLast) {
+            if (t.add(step).getDouble(0) <= tLast) {
                 step.assign(tLast - t.getDouble(0));
                 return true;
             }
@@ -106,7 +113,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             throw new IllegalArgumentException("time must be size 2! Was: " + t);
         }
 
-        try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(DormandPrince54Solver.class.getSimpleName())) {
+        try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(wsConf, this.getClass().getSimpleName())) {
 
             final FirstOrderEquationWithState equationState = new FirstOrderEquationWithState(
                     equation,
@@ -129,8 +136,13 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
     }
 
     private void solve(FirstOrderEquationWithState equation, INDArray t) {
+        final StatisticsTimer solveTimer = new StatisticsTimer();
+        final StatisticsTimer eqTimer = new StatisticsTimer().start();
 
         equation.calculateDerivative(0);
+
+        eqTimer.pause();
+        solveTimer.start();
 
         // Alg variable used for error
         final INDArray error = Nd4j.create(1);
@@ -148,15 +160,22 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
         do {
 
             isLastStep = timeLimit.isLastStep(step);
-
             // next stages
             for (long k = 1; k < stages; ++k) {
-                equation.step(tableu.a[(int) k - 1], step);
-                equation.calculateDerivative(k);
-            }
 
+                equation.step(tableu.a[(int) k - 1], step);
+
+                solveTimer.pause();
+                eqTimer.start();
+
+                equation.calculateDerivative(k);
+
+                eqTimer.pause();
+                solveTimer.start();
+            }
             // estimate the state at the end of the step
             equation.step(tableu.b, step);
+
 
             // estimate the error at the end of the step
             error.assign(equation.estimateError(mseComputation));
@@ -166,7 +185,15 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             // Take a new step. Note: Redundand operation if isLastStep is true
             step.assign(stepPolicy.step(step, error));
 
+            solveTimer.stop();
+            eqTimer.stop();
+
+
         } while (!isLastStep);
+
+        eqTimer.logMean("Equation eval");
+        solveTimer.logMean("Solve");
+
     }
 
     private boolean acceptStep(FirstOrderEquationWithState equation, INDArray step, INDArray error) {
