@@ -49,7 +49,7 @@ public class DormandPrince54SolverTest {
      */
     @Test
     public void solveCircleForward() {
-        final INDArray ts = Nd4j.create(new double[]{-2, 5});
+        final INDArray ts = Nd4j.create(new double[]{-0.023, 0.0456});
         solveCircle(ts);
     }
 
@@ -58,12 +58,12 @@ public class DormandPrince54SolverTest {
      */
     @Test
     public void solveCircleBackward() {
-        final INDArray ts = Nd4j.create(new double[]{3, -6});
+        final INDArray ts = Nd4j.create(new double[]{0.023, -0.0456});
         solveCircle(ts);
     }
 
     private void solveCircle(INDArray ts) {
-        final CircleODE equation = new CircleODE(new double[]{1.23, 4.56}, 0.666);
+        final CircleODE equation = new CircleODE(new double[]{1.23, 4.56}, 20.666);
 
         final FirstOrderSolver reference = new FirstOrderSolverAdapter(
                 new DormandPrince54Integrator(1e-10, 100, 1e-10, 1e-10));
@@ -79,6 +79,7 @@ public class DormandPrince54SolverTest {
 
         final INDArray y0 = Nd4j.create(new double[]{3, -5});
         final INDArray y = Nd4j.create(1, 2);
+
 
         assertEquals("Incorrect solution!", reference.integrate(equation, ts, y0, y.dup()), test.integrate(equation, ts, y0, y.dup()));
 
