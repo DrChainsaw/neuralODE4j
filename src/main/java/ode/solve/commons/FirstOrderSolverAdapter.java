@@ -6,6 +6,7 @@ import ode.solve.impl.listen.StepListener;
 import org.apache.commons.math3.ode.FirstOrderDifferentialEquations;
 import org.apache.commons.math3.ode.FirstOrderIntegrator;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -21,7 +22,7 @@ public class FirstOrderSolverAdapter implements FirstOrderSolver {
     private final FirstOrderIntegrator wrappedSolver;
     private final Map<StepListener, StepListenerAdapter> listeners = new HashMap<>();
 
-    public FirstOrderSolverAdapter(FirstOrderIntegrator wrappedSolver) {
+    public FirstOrderSolverAdapter(@JsonProperty("wrappedSolver") FirstOrderIntegrator wrappedSolver) {
         this.wrappedSolver = wrappedSolver;
     }
 

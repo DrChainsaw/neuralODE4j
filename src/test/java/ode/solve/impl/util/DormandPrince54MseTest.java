@@ -55,7 +55,7 @@ public class DormandPrince54MseTest {
         }.estError(yDotK.toDoubleMatrix(), y0.toDoubleVector(), y1.toDoubleVector(), h.getDouble(0));
 
         final INDArray actual = new DormandPrince54Solver.DormandPrince54Mse(
-                new SolverConfig(absTol, relTol, minStep, maxStep))
+                new SolverConfigINDArray(absTol, relTol, minStep, maxStep))
                 .estimateMse(yDotK, y0, y1, h);
 
         assertEquals("Incorrect MSE!", expected, actual.getDouble(0), 1e-4);

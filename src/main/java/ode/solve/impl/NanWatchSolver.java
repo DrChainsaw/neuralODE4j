@@ -65,5 +65,6 @@ public class NanWatchSolver implements FirstOrderSolver {
     public void clearListeners(StepListener... listeners) {
         solver.clearListeners(listeners);
     }
+
 }
 
