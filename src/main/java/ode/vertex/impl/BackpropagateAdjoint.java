@@ -56,7 +56,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
             final INDArray prevFlattenedGrads = graph.getFlattenedGradients().dup();
 
-            final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint().neg());
+            final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint().negi());
 
             augmentedDynamics.updateZAdjoint(ret);
             augmentedDynamics.updateParamAdjoint(graph.getFlattenedGradients());

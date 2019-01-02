@@ -11,7 +11,6 @@ import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
 import org.nd4j.linalg.api.memory.enums.SpillPolicy;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import util.time.StatisticsTimer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -136,14 +135,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
     }
 
     private void solve(FirstOrderEquationWithState equation, INDArray t) {
-        final StatisticsTimer errorTimer = new StatisticsTimer();
-        final StatisticsTimer solveTimer = new StatisticsTimer();
-        final StatisticsTimer eqTimer = new StatisticsTimer().start();
-
         equation.calculateDerivative(0);
-
-        eqTimer.pause();
-        solveTimer.start();
 
         // Alg variable used for error
         final INDArray error = Nd4j.create(1);
@@ -163,40 +155,21 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             isLastStep = timeLimit.isLastStep(step);
             // next stages
             for (long k = 1; k < stages; ++k) {
-
                 equation.step(tableu.a[(int) k - 1], step);
-
-                solveTimer.pause();
-                eqTimer.start();
-
                 equation.calculateDerivative(k);
-
-                eqTimer.pause();
-                solveTimer.start();
             }
             // estimate the state at the end of the step
             equation.step(tableu.b, step);
 
             // estimate the error at the end of the step
-            errorTimer.start();
             error.assign(equation.estimateError(mseComputation));
-            errorTimer.stop();
 
             isLastStep &= acceptStep(equation, step, error);
 
             // Take a new step. Note: Redundant operation if isLastStep is true
             step.assign(stepPolicy.step(step, error));
 
-            solveTimer.stop();
-            eqTimer.stop();
-
-
         } while (!isLastStep);
-
-        eqTimer.logMean("Equation eval");
-        solveTimer.logMean("Solve");
-        errorTimer.logMean("Error");
-
     }
 
     private boolean acceptStep(FirstOrderEquationWithState equation, INDArray step, INDArray error) {

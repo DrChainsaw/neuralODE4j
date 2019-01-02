@@ -124,7 +124,7 @@ public class OdeVertex extends BaseGraphVertex {
     public INDArray doForward(boolean training, LayerWorkspaceMgr workspaceMgr) {
         validateForward();
 
-        log.debug("Start forward. Training: " + training);
+        log.trace("Start forward. Training: " + training);
 
         leverageInputs(workspaceMgr);
         try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().scopeOutOfWorkspaces()) {
@@ -153,7 +153,7 @@ public class OdeVertex extends BaseGraphVertex {
     @Override
     public Pair<Gradient, INDArray[]> doBackward(boolean tbptt, LayerWorkspaceMgr workspaceMgr) {
         validateBackprop();
-        log.debug("Start backward");
+        log.trace("Start backward");
 
         final AugmentedDynamics augmentedDynamics;
         try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().scopeOutOfWorkspaces()) {
@@ -192,12 +192,6 @@ public class OdeVertex extends BaseGraphVertex {
         graph.getFlattenedGradients().assign(augmentedDynamics.getParamAdjoint());
         final Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
         gradient.setGradientFor(parName, graph.getFlattenedGradients());
-
-        System.out.println("all wses: " + Nd4j.getWorkspaceManager().getAllWorkspacesForCurrentThread().stream()
-                .mapToLong(ws -> ws.getCurrentSize())
-                .sum());
-
-        Nd4j.getWorkspaceManager().getAllWorkspacesForCurrentThread().forEach(ws -> System.out.println("ws: " + ws.getId() + " size: " + ws.getCurrentSize()));
 
         return new Pair<>(gradient, new INDArray[]{epsilonOut});
     }
