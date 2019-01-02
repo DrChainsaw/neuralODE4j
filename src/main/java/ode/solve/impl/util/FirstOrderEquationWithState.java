@@ -2,12 +2,10 @@ package ode.solve.impl.util;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.impl.AdaptiveRungeKuttaSolver;
-import org.nd4j.linalg.api.memory.MemoryWorkspace;
-import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
-import org.nd4j.linalg.api.memory.enums.SpillPolicy;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+import util.time.StatisticsTimer;
 
 /**
  * Combines a {@link FirstOrderEquation} with the state needed to evaluate it
@@ -15,11 +13,6 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
  * @author Christian Skarby
  */
 public class FirstOrderEquationWithState {
-
-    final static WorkspaceConfiguration wsConf = WorkspaceConfiguration.builder()
-            .overallocationLimit(0.0)
-            .policySpill(SpillPolicy.REALLOCATE)
-            .build();
 
     private final FirstOrderEquation equation;
     private final INDArray time;
@@ -41,10 +34,10 @@ public class FirstOrderEquationWithState {
         void step(INDArray stepCoeffPerStage, INDArray step) {
             // yWorking = y + (stepCoeffPerStage*step) . yDot[0:startState, :]) where . is dot product
             timeOffset.assign(step);
-            yWorking.assign(
-                    y.add((stepCoeffPerStage.mul(step)).mmul(
+            yWorking.assign(y);
+                    yWorking.addi((stepCoeffPerStage.mul(step)).mmul(
                                     yDotK.get(NDArrayIndex.interval(0, stepCoeffPerStage.length()), NDArrayIndex.all())
-                            ).reshape(y.shape())));
+                            ).reshape(y.shape()));
         }
 
         INDArray getStateDot(long stage) {
@@ -119,9 +112,7 @@ public class FirstOrderEquationWithState {
      * @param step Base step. Must be a scalar
      */
     public void step(INDArray stepCoeffPerStage, INDArray step) {
-        try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(wsConf,this.getClass().getSimpleName()+"_step")) {
-            state.step(stepCoeffPerStage, step);
-        }
+        state.step(stepCoeffPerStage, step);
     }
 
     /**
@@ -132,5 +123,125 @@ public class FirstOrderEquationWithState {
         time.addi(state.timeOffset);
         state.y.assign(state.yWorking);
         state.yDotK.putRow(0, state.yDotK.getRow(state.yDotK.rows()-1));
+    }
+
+
+    public static void main(String[] args) {
+        final INDArray cOrder1 = Nd4j.rand('c', new int[] {100, 100000});
+
+        final StatisticsTimer timer = new StatisticsTimer();
+
+        for(int i = 1 ; i < 20; i++) {
+            cOrder1.get(NDArrayIndex.interval(0, i), NDArrayIndex.all());
+        }
+        for(int j = 1; j < 100; j++) {
+        for(int i = 1; i < 100; i++) {
+            timer.start();
+            cOrder1.get(NDArrayIndex.interval(0, i), NDArrayIndex.all());
+            timer.stop();
+        }}
+
+        for(int i = 1 ; i < 20; i++) {
+            cOrder1.reshape(new long[] {1, cOrder1.length()});
+            cOrder1.reshape(new long[] {100, 100000});
+        }
+        for(int j = 1; j < 100; j++) {
+            for(int i = 1; i < 100; i++) {
+                timer.start();
+                cOrder1.reshape(new long[] {1, cOrder1.length()});
+                cOrder1.reshape(new long[] {100, 100000});
+                timer.stop();
+            }}
+
+
+
+        timer.logMean("c order reshape");
+        timer.logMax("c order reshape");
+
+    }
+
+    private static void testAdd() {
+        final INDArray cOrder1 = Nd4j.rand('c', new int[] {100, 100000});
+        final INDArray cOrder2 = Nd4j.rand('c', new int[] {100, 100000});
+
+        final StatisticsTimer timer = new StatisticsTimer();
+
+        for(int i = 0 ; i < 20; i++) {
+            cOrder1.assign(cOrder2);
+            cOrder1.addi(cOrder2);
+        }
+
+        for(int i = 0; i < 100; i++) {
+            timer.start();
+            cOrder1.assign(cOrder2);
+            cOrder1.addi(cOrder2);
+            timer.stop();
+        }
+
+        timer.logMean("c order addi");
+        timer.logMax("c order addi");
+
+        for(int i = 0 ; i < 20; i++) {
+            cOrder1.add(cOrder2);
+        }
+
+        for(int i = 0; i < 100; i++) {
+            timer.start();
+            cOrder1.add(cOrder2);
+            timer.stop();
+        }
+
+        timer.logMean("c order add");
+        timer.logMax("c order add");
+    }
+
+    private static void testMmul() {
+        final INDArray cOrder = Nd4j.rand('c', new int[] {100, 100000});
+        final INDArray cOrder2 = Nd4j.rand('c', new int[] {1, 100});
+
+
+        final INDArray fOrder = Nd4j.rand('f', new int[] {100, 100000});
+        final INDArray fOrder2 = Nd4j.rand('f', new int[] {1, 100});
+
+        final StatisticsTimer timer = new StatisticsTimer();
+
+        for(int i = 0; i < 20; i++) {
+            fOrder2.mmul(fOrder);
+        }
+
+        for(int i = 0; i < 100; i++) {
+            timer.start();
+            fOrder2.mmul(fOrder);
+            timer.stop();
+        }
+
+        timer.logMean("f order mmul");
+        timer.logMax("f order mmul");
+
+        for(int i = 0; i < 20; i++) {
+            cOrder2.mmul(cOrder);
+        }
+
+        for(int i = 0; i < 100; i++) {
+            timer.start();
+            cOrder2.mmul(cOrder);
+            timer.stop();
+        }
+
+        timer.logMean("c order mmul");
+        timer.logMax("c order mmul");
+
+        for(int i = 0; i < 20; i++) {
+            Nd4j.gemm(fOrder2, fOrder, false, false);
+        }
+
+        for(int i = 0; i < 100; i++) {
+            timer.start();
+            Nd4j.gemm(fOrder2, fOrder, false, false);
+            timer.stop();
+        }
+
+        timer.logMean("f order gemm");
+        timer.logMax("f order gemm");
     }
 }

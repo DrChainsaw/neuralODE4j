@@ -136,6 +136,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
     }
 
     private void solve(FirstOrderEquationWithState equation, INDArray t) {
+        final StatisticsTimer errorTimer = new StatisticsTimer();
         final StatisticsTimer solveTimer = new StatisticsTimer();
         final StatisticsTimer eqTimer = new StatisticsTimer().start();
 
@@ -176,13 +177,14 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             // estimate the state at the end of the step
             equation.step(tableu.b, step);
 
-
             // estimate the error at the end of the step
+            errorTimer.start();
             error.assign(equation.estimateError(mseComputation));
+            errorTimer.stop();
 
             isLastStep &= acceptStep(equation, step, error);
 
-            // Take a new step. Note: Redundand operation if isLastStep is true
+            // Take a new step. Note: Redundant operation if isLastStep is true
             step.assign(stepPolicy.step(step, error));
 
             solveTimer.stop();
@@ -193,6 +195,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
         eqTimer.logMean("Equation eval");
         solveTimer.logMean("Solve");
+        errorTimer.logMean("Error");
 
     }
 
