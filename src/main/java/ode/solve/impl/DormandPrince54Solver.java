@@ -2,10 +2,11 @@ package ode.solve.impl;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
+import ode.solve.conf.SolverConfig;
 import ode.solve.impl.listen.StepListener;
 import ode.solve.impl.util.AdaptiveRungeKuttaStepPolicy;
 import ode.solve.impl.util.ButcherTableu;
-import ode.solve.impl.util.SolverConfig;
+import ode.solve.impl.util.SolverConfigINDArray;
 import org.nd4j.linalg.api.memory.MemoryWorkspace;
 import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
 import org.nd4j.linalg.api.memory.enums.SpillPolicy;
@@ -52,7 +53,7 @@ public class DormandPrince54Solver implements FirstOrderSolver {
      */
     public static class DormandPrince54Mse implements AdaptiveRungeKuttaSolver.MseComputation {
 
-        private final SolverConfig config;
+        private final SolverConfigINDArray config;
         private final INDArray errorCoeffs;
 
         final static WorkspaceConfiguration wsConf = WorkspaceConfiguration.builder()
@@ -60,11 +61,11 @@ public class DormandPrince54Solver implements FirstOrderSolver {
                 .policySpill(SpillPolicy.REALLOCATE)
                 .build();
 
-        public DormandPrince54Mse(SolverConfig config) {
+        public DormandPrince54Mse(SolverConfigINDArray config) {
             this(config, butcherTableuBuilder.build().bStar);
         }
 
-        public DormandPrince54Mse(SolverConfig config, INDArray errorCoeffs) {
+        public DormandPrince54Mse(SolverConfigINDArray config, INDArray errorCoeffs) {
             this.config = config;
             this.errorCoeffs = errorCoeffs;
         }
@@ -92,10 +93,11 @@ public class DormandPrince54Solver implements FirstOrderSolver {
     }
 
     public DormandPrince54Solver(SolverConfig config) {
+        final SolverConfigINDArray configINDArray = new SolverConfigINDArray(config);
         solver = new AdaptiveRungeKuttaSolver(
                 butcherTableuBuilder.build(),
-                new AdaptiveRungeKuttaStepPolicy(config, 5),
-                new DormandPrince54Mse(config));
+                new AdaptiveRungeKuttaStepPolicy(configINDArray, 5),
+                new DormandPrince54Mse(configINDArray));
     }
 
     @Override

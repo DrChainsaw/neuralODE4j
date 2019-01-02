@@ -1,8 +1,9 @@
 package ode.vertex.conf;
 
+import lombok.Data;
 import ode.solve.api.FirstOrderSolver;
-import ode.solve.commons.FirstOrderSolverAdapter;
-import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
+import ode.solve.api.FirstOrderSolverConf;
+import ode.solve.conf.DormandPrince54Solver;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
@@ -13,20 +14,26 @@ import org.deeplearning4j.nn.conf.layers.Layer;
 import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 /**
  * Configuration of an ODE block.
  *
  * @author Christian Skarby
  */
+@Data
 public class OdeVertex extends GraphVertex {
 
-    private final ComputationGraphConfiguration conf;
-    private final String firstVertex;
-    private final String lastVertex;
-    private final FirstOrderSolver odeSolver;
+    protected ComputationGraphConfiguration conf;
+    protected String firstVertex;
+    protected String lastVertex;
+    protected FirstOrderSolverConf odeSolver;
 
-    public OdeVertex(ComputationGraphConfiguration conf, String firstVertex, String lastVertex, FirstOrderSolver odeSolver) {
+    public OdeVertex(
+            @JsonProperty("conf") ComputationGraphConfiguration conf,
+            @JsonProperty("firstVertex") String firstVertex,
+            @JsonProperty("lastVertex") String lastVertex,
+            @JsonProperty("odeSolver") FirstOrderSolverConf odeSolver) {
         this.conf = conf;
         this.firstVertex = firstVertex;
         this.lastVertex = lastVertex;
@@ -35,8 +42,7 @@ public class OdeVertex extends GraphVertex {
 
     @Override
     public GraphVertex clone() {
-        // TODO: Make odeSolver cloneable
-        return new OdeVertex(conf.clone(), firstVertex, lastVertex, odeSolver);
+        return new OdeVertex(conf.clone(), firstVertex, lastVertex, odeSolver.clone());
     }
 
     @Override
@@ -44,7 +50,11 @@ public class OdeVertex extends GraphVertex {
         if (!(o instanceof OdeVertex)) {
             return false;
         }
-        return conf.equals(((OdeVertex) o).conf);
+        final OdeVertex other = (OdeVertex)o;
+        return conf.equals(other.conf)
+                && firstVertex.equals(other.firstVertex)
+                && lastVertex.equals(other.lastVertex)
+                && odeSolver.equals(other.odeSolver);
     }
 
     @Override
@@ -105,7 +115,7 @@ public class OdeVertex extends GraphVertex {
                 name,
                 idx,
                 innerGraph,
-                odeSolver,
+                odeSolver.instantiate(),
                 new DefaultTrainingConfig(name, graph.getVertices()[1].getConfig().getUpdaterByParam("W").clone()));
     }
 
@@ -129,13 +139,13 @@ public class OdeVertex extends GraphVertex {
         private String first = null;
         private String last;
 
-        private FirstOrderSolver odeSolver = new FirstOrderSolverAdapter(new DormandPrince54Integrator(
-                1e-10, 10d, 1e-2, 1e-2));
+        private FirstOrderSolverConf odeSolver = new DormandPrince54Solver();
 
         public Builder(String name, Layer layer) {
             graphBuilder
                     .addInputs(inputName)
                     .addLayer(name, layer, inputName);
+            first = name;
         }
 
         /**
@@ -163,7 +173,7 @@ public class OdeVertex extends GraphVertex {
          * @param odeSolver solver instance
          * @return the Builder for fluent API
          */
-        public Builder odeSolver(FirstOrderSolver odeSolver) {
+        public Builder odeSolver(FirstOrderSolverConf odeSolver) {
             this.odeSolver = odeSolver;
             return this;
         }

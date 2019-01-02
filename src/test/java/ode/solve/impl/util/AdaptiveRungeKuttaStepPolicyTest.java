@@ -54,7 +54,7 @@ public class AdaptiveRungeKuttaStepPolicyTest {
 
         final FirstOrderEquationWithState eqState = new FirstOrderEquationWithState(equation, t.getColumn(0), y0, 5);
         final INDArray stepAct = new AdaptiveRungeKuttaStepPolicy(
-                new SolverConfig(absTol, relTol, 1e-20, 1e20), 5)
+                new SolverConfigINDArray(absTol, relTol, 1e-20, 1e20), 5)
                 .initializeStep(eqState, t);
 
         assertEquals("Incorrect step size!", stepRef, stepAct.getDouble(0), 1e-6);
@@ -132,7 +132,7 @@ public class AdaptiveRungeKuttaStepPolicyTest {
         }.calcError();
 
         final INDArray actual = new AdaptiveRungeKuttaStepPolicy(
-                new SolverConfig(1e-20, 1e-20, 1e-2, 1e2),
+                new SolverConfigINDArray(1e-20, 1e-20, 1e-2, 1e2),
                 5)
                 .step(step, error);
 
