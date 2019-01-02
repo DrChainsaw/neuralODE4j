@@ -1,5 +1,6 @@
 package ode.solve.commons;
 
+import lombok.Data;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.SolverConfig;
@@ -14,11 +15,12 @@ import java.util.Map;
  *
  * @author Christian Skarby
  */
+@Data
 public class FirstOrderIntegratorConf implements FirstOrderSolverConf {
 
     private final static Map<String, Factory> factorymap = new HashMap<>();
 
-        private final SolverConfig config;
+    private final SolverConfig config;
     private final String integratorName;
 
     /**
@@ -40,7 +42,8 @@ public class FirstOrderIntegratorConf implements FirstOrderSolverConf {
 
     /**
      * Add a new factory to integrator mapping. Needs to be called before deserialization
-     * @param name Name to associate the factory with
+     *
+     * @param name    Name to associate the factory with
      * @param factory factory to produce the solver
      */
     public static void addIntegrator(String name, Factory factory) {
@@ -50,7 +53,7 @@ public class FirstOrderIntegratorConf implements FirstOrderSolverConf {
     @Override
     public FirstOrderSolver instantiate() {
         final Factory factory = factorymap.get(integratorName);
-        if(factory != null) {
+        if (factory != null) {
             return new FirstOrderSolverAdapter(factory.create(config));
         }
         return new FirstOrderSolverAdapter(defaultCreate());
@@ -68,7 +71,7 @@ public class FirstOrderIntegratorConf implements FirstOrderSolverConf {
     private FirstOrderIntegrator defaultCreate() {
         try {
             return (FirstOrderIntegrator) Class.forName(integratorName).getConstructor(double.class, double.class, double.class, double.class)
-            .newInstance(config.getMinStep(), config.getMaxStep(), config.getAbsTol(), config.getRelTol());
+                    .newInstance(config.getMinStep(), config.getMaxStep(), config.getAbsTol(), config.getRelTol());
         } catch (Exception e) {
             throw new UnsupportedOperationException("Could not create " + integratorName + " from default signature!", e);
         }

@@ -1,10 +1,11 @@
 package ode.solve.conf;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.api.FirstOrderSolverConf;
+import org.nd4j.shade.jackson.annotation.JsonProperty;
+
+import java.util.Objects;
 
 /**
  * Configuration for a NanWatchSolver.
@@ -12,11 +13,14 @@ import ode.solve.api.FirstOrderSolverConf;
  * @author Christian Skarby
  */
 @Data
-@Builder
-@AllArgsConstructor
 public class NanWatchSolver implements FirstOrderSolverConf {
 
     private final FirstOrderSolverConf confToWatch;
+
+    public NanWatchSolver(@JsonProperty("confToWatch") FirstOrderSolverConf confToWatch) {
+        this.confToWatch = Objects.requireNonNull(confToWatch);
+    }
+
 
     @Override
     public FirstOrderSolver instantiate() {
@@ -26,5 +30,13 @@ public class NanWatchSolver implements FirstOrderSolverConf {
     @Override
     public NanWatchSolver clone() {
         return new NanWatchSolver(confToWatch.clone());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!(obj instanceof NanWatchSolver)) {
+            return false;
+        }
+        return ((NanWatchSolver)obj).confToWatch.equals(confToWatch);
     }
 }

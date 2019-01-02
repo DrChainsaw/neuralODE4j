@@ -5,6 +5,7 @@ import ode.solve.api.FirstOrderSolver;
 import ode.solve.conf.SolverConfig;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince853Integrator;
+import org.apache.commons.math3.ode.nonstiff.HighamHall54Integrator;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -54,11 +55,14 @@ public class FirstOrderIntegratorConfTest {
      */
     @Test
     public void serializeDeserialize() throws IOException {
-        final FirstOrderIntegratorConf conf = new FirstOrderIntegratorConf();
+        final FirstOrderIntegratorConf conf = new FirstOrderIntegratorConf(HighamHall54Integrator.class.getName(),
+                new SolverConfig(1e-5, 1e-7, 1e-10, 10));
         final String json = NeuralNetConfiguration.mapper().writeValueAsString(conf);
-        final FirstOrderSolver solver = NeuralNetConfiguration.mapper().readValue(json, FirstOrderIntegratorConf.class).instantiate();
+        final FirstOrderIntegratorConf newConf = NeuralNetConfiguration.mapper().readValue(json, FirstOrderIntegratorConf.class);
 
-        verifySolvers(solver, conf.instantiate());
+        assertEquals("Incorrect solver!", conf.getIntegratorName(), newConf.getIntegratorName());
+        assertEquals("Incorrec absTol!", conf.getConfig().getAbsTol(), newConf.getConfig().getAbsTol(), 1e-10);
+        verifySolvers(newConf.instantiate(), conf.instantiate());
     }
 
     private void verifySolvers(FirstOrderSolver solver, FirstOrderSolver reference) {
