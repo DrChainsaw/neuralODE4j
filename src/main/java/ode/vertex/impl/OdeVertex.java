@@ -38,22 +38,19 @@ public class OdeVertex extends BaseGraphVertex {
     private final FirstOrderSolver odeSolver;
     private final TrainingConfig trainingConfig;
     private final INDArray time;
-    private INDArray lastOutput; // z(tN) from paper?
-    private final LayerWorkspaceMgr innerWorkspaceMgr;
+    private INDArray lastOutput; // z(t1) from paper
 
     public OdeVertex(ComputationGraph actualGraph,
                      String name,
                      int vertexIndex,
                      ComputationGraph innerGraph,
                      FirstOrderSolver odeSolver,
-                     TrainingConfig trainingConfig,
-                     LayerWorkspaceMgr innerWorkspaceMgr) {
+                     TrainingConfig trainingConfig) {
         super(actualGraph, name, vertexIndex, null, null);
         this.graph = innerGraph;
         this.trainingConfig = trainingConfig;
         this.odeSolver = odeSolver;
         time = Nd4j.create(new double[]{0, 1});
-        this.innerWorkspaceMgr = innerWorkspaceMgr;
     }
 
     @Override
@@ -127,12 +124,14 @@ public class OdeVertex extends BaseGraphVertex {
         log.trace("Start forward. Training: " + training);
 
         leverageInputs(workspaceMgr);
+        // Not sure if needed anymore...
         try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().scopeOutOfWorkspaces()) {
+
+            final LayerWorkspaceMgr innerWorkspaceMgr = createWorkspaceMgr(workspaceMgr);
 
             final ForwardPass equation = new ForwardPass(
                     graph,
-                    // Not sure if needed. Only use innerWorkspaceMgr even for eval?
-                    training ? this.innerWorkspaceMgr : workspaceMgr,
+                    innerWorkspaceMgr,
                     training,
                     getInputs());
 
@@ -156,11 +155,17 @@ public class OdeVertex extends BaseGraphVertex {
         log.trace("Start backward");
 
         final AugmentedDynamics augmentedDynamics;
+        // Not sure if needed anymore...
         try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().scopeOutOfWorkspaces()) {
 
-            // epsilon = dL / dz(tN) = dL / dlastOutput
-            // dL/dtN = dL / dz(tN) dot z(tN)
-            final INDArray dL_dtN = Nd4j.toFlattened(getEpsilon()).mmul(Nd4j.toFlattened(lastOutput).transposei()).muli(-1);
+            // Create augmented dynamics for adjoint method
+            // Initialization: S0:
+            // z(t1) = lastoutput
+            // a(t) = -dL/d(z(t1)) = -epsilon from next layer (i.e getEpsilon)
+            // parameters = zeros
+            // dL/dt1 = dL / dz(t1) dot z(t1)
+            final INDArray dL_dtN = getEpsilon().reshape(1, lastOutput.length())
+                    .mmul(lastOutput.reshape( lastOutput.length(),1)).muli(-1);
 
             augmentedDynamics = new AugmentedDynamics(
                     lastOutput.dup(),
@@ -168,12 +173,14 @@ public class OdeVertex extends BaseGraphVertex {
                     Nd4j.zeros(graph.params().shape()),
                     dL_dtN);
 
+            final LayerWorkspaceMgr innerWorkspaceMgr = createWorkspaceMgr(workspaceMgr);
+
             final FirstOrderEquation equation = new BackpropagateAdjoint(
                     graph,
-                    this.innerWorkspaceMgr,
+                    innerWorkspaceMgr,
                     augmentedDynamics,
                     new ForwardPass(graph,
-                            this.innerWorkspaceMgr,
+                            innerWorkspaceMgr,
                             true,
                             getInputs()),
                     tbptt
@@ -200,6 +207,29 @@ public class OdeVertex extends BaseGraphVertex {
         for(int i = 0; i < getInputs().length; i++) {
             setInput(i, workspaceMgr.leverageTo(ArrayType.INPUT, getInputs()[i]), workspaceMgr);
         }
+    }
+
+    private LayerWorkspaceMgr createWorkspaceMgr(final LayerWorkspaceMgr outerWsMgr) {
+
+         return new ComputationGraph(graph.getConfiguration()) {
+             public LayerWorkspaceMgr spyWsConfigs() {
+                 // A little bit too many methods to comfortablty decorate. Try to copy config instead
+                 final LayerWorkspaceMgr.Builder wsBuilder = LayerWorkspaceMgr.builder();
+                 for(ArrayType type: ArrayType.values()) {
+                     if(outerWsMgr.hasConfiguration(type)) {
+                         wsBuilder.with(type, outerWsMgr.getWorkspaceName(type), outerWsMgr.getConfiguration(type));
+                     }
+                 }
+
+                 final LayerWorkspaceMgr wsMgr =  wsBuilder
+                         .with(ArrayType.ACTIVATIONS, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WS_ALL_LAYERS_ACT_CONFIG)
+                         .with(ArrayType.ACTIVATION_GRAD, "WS_ODE_VERTEX_ALL_LAYERS_GRAD", WS_ALL_LAYERS_ACT_CONFIG)
+                         .build();
+                 wsMgr.setHelperWorkspacePointers(outerWsMgr.getHelperWorkspacePointers());
+                 return wsMgr;
+             }
+         }.spyWsConfigs();
+
     }
 
     @Override

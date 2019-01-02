@@ -11,6 +11,9 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.workspace.WorkspacesCloseable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Models forward pass through an undefined number of residual blocks as a first order differential equation.
  * See https://arxiv.org/pdf/1806.07366.pdf
@@ -20,16 +23,16 @@ import org.nd4j.linalg.workspace.WorkspacesCloseable;
 public class ForwardPass implements FirstOrderEquation {
 
     private final ComputationGraph graph;
-    private final LayerWorkspaceMgr innerWorkspaceMgr;
+    private final LayerWorkspaceMgr workspaceMgr;
     private final boolean training;
     private final INDArray[] inputs;
 
     public ForwardPass(ComputationGraph graph,
-                       LayerWorkspaceMgr innerWorkspaceMgr,
+                       LayerWorkspaceMgr workspaceMgr,
                        boolean training,
                        INDArray[] startInputs) {
         this.graph = graph;
-        this.innerWorkspaceMgr = innerWorkspaceMgr;
+        this.workspaceMgr = workspaceMgr;
         this.training = training;
         this.inputs = startInputs;
     }
@@ -44,11 +47,15 @@ public class ForwardPass implements FirstOrderEquation {
         return fy;
     }
 
-    private WorkspacesCloseable enterIfNotOpen(ArrayType type) {
-        if (!innerWorkspaceMgr.isWorkspaceOpen(type)) {
-            return new WorkspacesCloseable(innerWorkspaceMgr.notifyScopeEntered(type));
+    private WorkspacesCloseable enterIfNotOpen(ArrayType... types) {
+        List<ArrayType> shallOpen = new ArrayList<>();
+        for(ArrayType type: types) {
+            if (!workspaceMgr.isWorkspaceOpen(type)) {
+                shallOpen.add(type);
+            }
         }
-        return new WorkspacesCloseable();
+
+        return workspaceMgr.notifyScopeEntered(shallOpen.toArray(new ArrayType[0]));
     }
 
     private void setInputsFromFlat(INDArray flatArray) {
@@ -80,11 +87,10 @@ public class ForwardPass implements FirstOrderEquation {
             } else if (current.isOutputVertex()) {
                 for (INDArray outArr : current.getInputs()) {
                     outputAccum.increment(outArr);
-
                 }
             } else {
                 //Standard feed-forward case
-                out = current.doForward(training, innerWorkspaceMgr);
+                out = current.doForward(training, workspaceMgr);
             }
 
             if (inputsTo != null) {  //Output vertices may not input to any other vertices
@@ -95,7 +101,7 @@ public class ForwardPass implements FirstOrderEquation {
                     int vIdxEdge = v.getVertexEdgeNumber();
                     GraphVertex outputVertex = graph.getVertices()[inputToIndex];
                     if (outputVertex.getInputs() == null || outputVertex.getInputs()[vIdxEdge] == null) {
-                        outputVertex.setInput(vIdxEdge, innerWorkspaceMgr.leverageTo(ArrayType.INPUT, out), innerWorkspaceMgr);
+                        outputVertex.setInput(vIdxEdge, workspaceMgr.leverageTo(ArrayType.INPUT, out), workspaceMgr);
                     } else {
                         outputVertex.getInputs()[vIdxEdge].assign(out);
                     }
