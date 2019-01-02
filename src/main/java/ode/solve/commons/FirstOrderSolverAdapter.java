@@ -48,9 +48,8 @@ public class FirstOrderSolverAdapter implements FirstOrderSolver {
     @Override
     public void clearListeners(StepListener... listeners) {
         if(listeners == null || listeners.length == 0 || this.listeners.values().containsAll(Arrays.asList(listeners))) {
-            for (StepListenerAdapter listener : this.listeners.values()) {
-                wrappedSolver.clearStepHandlers();
-            }
+            wrappedSolver.clearStepHandlers();
+            this.listeners.keySet().removeAll(Arrays.asList(listeners));
         } else {
             throw new UnsupportedOperationException("Can not remove subset of listeners from " + wrappedSolver.getClass());
         }

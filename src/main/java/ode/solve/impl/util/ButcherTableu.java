@@ -19,6 +19,14 @@ public class ButcherTableu {
     public final INDArray bStar;
     public final INDArray c;
 
+    /**
+     * Create a new {@link Builder} instance
+     * @return a {@link Builder}.
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
     private ButcherTableu(INDArray[] a, INDArray b, INDArray bStar, INDArray c) {
         this.a = a;
         this.b = b;

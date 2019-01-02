@@ -24,7 +24,7 @@ import static org.nd4j.linalg.ops.transforms.Transforms.*;
 public class DormandPrince54Solver implements FirstOrderSolver {
 
     private static final ButcherTableu.Builder butcherTableuBuilder =
-            new ButcherTableu.Builder()
+            ButcherTableu.builder()
                     .a(new double[][]{
                             {1.0 / 5.0},
                             {3.0 / 40.0, 9.0 / 40.0},
