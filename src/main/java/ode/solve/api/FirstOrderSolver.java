@@ -1,5 +1,6 @@
 package ode.solve.api;
 
+import ode.solve.impl.listen.StepListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 /**
@@ -20,4 +21,16 @@ public interface FirstOrderSolver {
      * @return yOut, same instance as input param
      */
     INDArray integrate(FirstOrderEquation equation, INDArray t, INDArray y0, INDArray yOut);
+
+    /**
+     * Add {@link StepListener}s which will be notified of steps taken
+     * @param listeners listeners to add
+     */
+    void addListener(StepListener... listeners);
+
+    /**
+     * Clear the given listeners. Clear all listeners if empty
+     * @param listeners listeners to remove
+     */
+    void clearListeners(StepListener ... listeners);
 }

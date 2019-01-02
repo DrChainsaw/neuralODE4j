@@ -20,7 +20,15 @@ import java.util.List;
  * Models back propagation through a undefined number of residual blocks as a first order differential equation using
  * adjoint state.
  * See https://arxiv.org/pdf/1806.07366.pdf
- *
+ * <br><br>
+ * Interpretation of augmented dynamics for DL4J:
+ * <br><br>
+ * <pre>
+ * f(z(t), theta) = output from forward pass through the layers of the ODE vertex (i.e. the layers of graph)
+ * -a(t)*df/dz(t) = dL / dz(t) = epsilon from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt previous output (is it really?)
+ * -a(t) * df / dt = no change (not used yet, maybe set to 0?)
+ * -a(t) df/dtheta = -dL / dtheta = Gradient from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt -epsilon
+ *</pre>
  * @author Christian Skarby
  */
 public class BackpropagateAdjoint implements FirstOrderEquation {
@@ -56,7 +64,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
             final INDArray prevFlattenedGrads = graph.getFlattenedGradients().dup();
 
-            final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint().neg());
+            final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint().negi());
 
             augmentedDynamics.updateZAdjoint(ret);
             augmentedDynamics.updateParamAdjoint(graph.getFlattenedGradients());

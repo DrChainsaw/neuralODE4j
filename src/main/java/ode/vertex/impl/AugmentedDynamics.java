@@ -1,7 +1,6 @@
 package ode.vertex.impl;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 
@@ -52,10 +51,10 @@ class AugmentedDynamics {
 
     void transferTo(INDArray zAug) {
         final NDArrayIndexAccumulator accumulator = new NDArrayIndexAccumulator(zAug);
-        accumulator.increment(Nd4j.toFlattened(z))
-                .increment(Nd4j.toFlattened(zAdjoint))
-                .increment(Nd4j.toFlattened(paramAdjoint))
-                .increment(Nd4j.toFlattened(tAdjoint));
+        accumulator.increment(z.reshape(new long[] {1 ,z.length()}))
+                .increment(zAdjoint.reshape(new long[] {1 ,zAdjoint.length()}))
+                .increment(paramAdjoint.reshape(new long[] {1 ,paramAdjoint.length()}))
+                .increment(tAdjoint.reshape(new long[] {1 ,tAdjoint.length()}));
     }
 
     private static long updateSubsetArr(INDArray subsetArr, INDArray arr, long offset) {
@@ -67,7 +66,9 @@ class AugmentedDynamics {
         long lastInd = 0;
         for (int i = 0; i < epsilons.size(); i++) {
             final INDArray eps = epsilons.get(i);
-            zAdjoint.reshape(1 ,zAdjoint.length()).put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(lastInd, eps.length())}, Nd4j.toFlattened(eps));
+            zAdjoint.reshape(1 ,zAdjoint.length())
+                    .put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(lastInd, eps.length())},
+                            eps.reshape(new long[] {1, eps.length()}));
             lastInd += eps.length();
         }
     }

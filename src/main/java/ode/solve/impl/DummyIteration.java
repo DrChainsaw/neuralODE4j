@@ -2,8 +2,12 @@ package ode.solve.impl;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
+import ode.solve.impl.listen.StepListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.IntSupplier;
 
 /**
@@ -14,6 +18,7 @@ import java.util.function.IntSupplier;
 public class DummyIteration implements FirstOrderSolver {
 
     private final IntSupplier nrofIterations;
+    private final List<StepListener> listeners = new ArrayList<>();
 
     public DummyIteration(IntSupplier nrofIterations) {
         this.nrofIterations = nrofIterations;
@@ -27,5 +32,19 @@ public class DummyIteration implements FirstOrderSolver {
             next = equation.calculateDerivative(next.dup(), t.getColumn(0), yOut);
         }
         return yOut;
+    }
+
+    @Override
+    public void addListener(StepListener... listeners) {
+        this.listeners.addAll(Arrays.asList(listeners));
+    }
+
+    @Override
+    public void clearListeners(StepListener... listeners) {
+        if (listeners == null || listeners.length == 0) {
+            this.listeners.clear();
+        } else {
+            this.listeners.removeAll(Arrays.asList(listeners));
+        }
     }
 }

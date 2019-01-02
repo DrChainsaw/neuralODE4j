@@ -12,8 +12,6 @@ import org.deeplearning4j.nn.conf.layers.CnnLossLayer;
 import org.deeplearning4j.nn.conf.layers.Layer;
 import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
-import org.deeplearning4j.nn.workspace.ArrayType;
-import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 /**
@@ -79,19 +77,7 @@ public class OdeVertex extends GraphVertex {
             INDArray paramsView,
             boolean initializeParams) {
 
-        final LayerWorkspaceMgr.Builder wsBuilder = LayerWorkspaceMgr.builder();
         final ComputationGraph innerGraph = new ComputationGraph(conf) {
-
-            public ComputationGraph spyWsConfigs() {
-                wsBuilder
-                        // This needs to be the same as the workspace used by the real computation graph as layers
-                        // assume this workspace is open during both forward and backward
-                        .with(ArrayType.INPUT, WS_ALL_LAYERS_ACT, WS_ALL_LAYERS_ACT_CONFIG)
-                        .with(ArrayType.ACTIVATIONS, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WS_ALL_LAYERS_ACT_CONFIG)
-                        .with(ArrayType.ACTIVATION_GRAD, "WS_ODE_VERTEX_ALL_LAYERS_GRAD", WS_ALL_LAYERS_ACT_CONFIG)
-                        .build();
-                return this;
-            }
 
             @Override
             public void init() {
@@ -105,7 +91,7 @@ public class OdeVertex extends GraphVertex {
                 flattenedGradients = gradient;
                 super.setBackpropGradientsViewArray(gradient);
             }
-        }.spyWsConfigs();
+        };
 
         if (initializeParams) {
             innerGraph.init(); // This will init parameters using weight initialization
@@ -120,8 +106,7 @@ public class OdeVertex extends GraphVertex {
                 idx,
                 innerGraph,
                 odeSolver,
-                new DefaultTrainingConfig(name, graph.getVertices()[1].getConfig().getUpdaterByParam("W").clone()),
-                wsBuilder.build());
+                new DefaultTrainingConfig(name, graph.getVertices()[1].getConfig().getUpdaterByParam("W").clone()));
     }
 
     @Override

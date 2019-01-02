@@ -7,9 +7,12 @@ import org.deeplearning4j.nn.graph.vertex.VertexIndices;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.Nullable;
-import org.nd4j.linalg.api.memory.MemoryWorkspace;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.nd4j.linalg.workspace.WorkspacesCloseable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Models forward pass through an undefined number of residual blocks as a first order differential equation.
@@ -20,16 +23,16 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
 public class ForwardPass implements FirstOrderEquation {
 
     private final ComputationGraph graph;
-    private final LayerWorkspaceMgr innerWorkspaceMgr;
+    private final LayerWorkspaceMgr workspaceMgr;
     private final boolean training;
     private final INDArray[] inputs;
 
     public ForwardPass(ComputationGraph graph,
-                       LayerWorkspaceMgr innerWorkspaceMgr,
+                       LayerWorkspaceMgr workspaceMgr,
                        boolean training,
                        INDArray[] startInputs) {
         this.graph = graph;
-        this.innerWorkspaceMgr = innerWorkspaceMgr;
+        this.workspaceMgr = workspaceMgr;
         this.training = training;
         this.inputs = startInputs;
     }
@@ -37,11 +40,22 @@ public class ForwardPass implements FirstOrderEquation {
 
     @Override
     public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
-        try (MemoryWorkspace ws = innerWorkspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS)) {
+        try (WorkspacesCloseable ws = enterIfNotOpen(ArrayType.ACTIVATIONS)) {
             setInputsFromFlat(y);
             evaluate(inputs, fy);
         }
         return fy;
+    }
+
+    private WorkspacesCloseable enterIfNotOpen(ArrayType... types) {
+        List<ArrayType> shallOpen = new ArrayList<>();
+        for(ArrayType type: types) {
+            if (!workspaceMgr.isWorkspaceOpen(type)) {
+                shallOpen.add(type);
+            }
+        }
+
+        return workspaceMgr.notifyScopeEntered(shallOpen.toArray(new ArrayType[0]));
     }
 
     private void setInputsFromFlat(INDArray flatArray) {
@@ -73,11 +87,10 @@ public class ForwardPass implements FirstOrderEquation {
             } else if (current.isOutputVertex()) {
                 for (INDArray outArr : current.getInputs()) {
                     outputAccum.increment(outArr);
-
                 }
             } else {
                 //Standard feed-forward case
-                out = current.doForward(training, innerWorkspaceMgr);
+                out = current.doForward(training, workspaceMgr);
             }
 
             if (inputsTo != null) {  //Output vertices may not input to any other vertices
@@ -86,7 +99,13 @@ public class ForwardPass implements FirstOrderEquation {
                     // this method
                     int inputToIndex = v.getVertexIndex();
                     int vIdxEdge = v.getVertexEdgeNumber();
-                    graph.getVertices()[inputToIndex].setInput(vIdxEdge, out.detach(), innerWorkspaceMgr);
+                    GraphVertex outputVertex = graph.getVertices()[inputToIndex];
+                    if (outputVertex.getInputs() == null || outputVertex.getInputs()[vIdxEdge] == null) {
+                        outputVertex.setInput(vIdxEdge, workspaceMgr.leverageTo(ArrayType.INPUT, out), workspaceMgr);
+                    } else {
+                        outputVertex.getInputs()[vIdxEdge].assign(out);
+                    }
+
                 }
             }
         }
