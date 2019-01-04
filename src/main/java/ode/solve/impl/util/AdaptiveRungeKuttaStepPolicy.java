@@ -14,14 +14,14 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
 
     private final static INDArray MIN_H = Nd4j.create(1).putScalar(0, 1e-6);
 
-    private final SolverConfig config;
+    private final SolverConfigINDArray config;
     private final StepConfig stepConfig;
     private final double exp;
 
     public static class StepConfig {
         private final INDArray maxGrowth;
-        private final INDArray minReduction;
-        private final INDArray safety;
+        private final INDArray  minReduction;
+        private final INDArray  safety;
         private final int order;
 
         public static Builder builder(int order) {
@@ -32,9 +32,9 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
                           final double minReduction,
                           final double safety,
                           final int order) {
-            this.maxGrowth = Nd4j.create(1).assign(maxGrowth);
-            this.minReduction = Nd4j.create(1).assign(minReduction);
-            this.safety = Nd4j.create(1).assign(safety);
+            this.maxGrowth = Nd4j.scalar(maxGrowth);
+            this.minReduction = Nd4j.scalar(minReduction);
+            this.safety = Nd4j.scalar(safety);
             this.order = order;
         }
         
@@ -76,11 +76,11 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
         }
     }
 
-    public AdaptiveRungeKuttaStepPolicy(SolverConfig config, int order) {
+    public AdaptiveRungeKuttaStepPolicy(SolverConfigINDArray config, int order) {
         this(config, StepConfig.builder(order).build());
     }
 
-    public AdaptiveRungeKuttaStepPolicy(SolverConfig config, StepConfig stepConfig) {
+    public AdaptiveRungeKuttaStepPolicy(SolverConfigINDArray config, StepConfig stepConfig) {
         this.config = config;
         this.stepConfig = stepConfig;
         this.exp = -1.0 / stepConfig.order;
@@ -127,8 +127,8 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
         step.assign(min(abs(step).muli(100), step1));
         step.assign(max(step, abs(t.getColumn(0)).muli(1e-12)));
 
-        step.assign(max(config.getMinStep(), step));
-        step.assign(min(config.getMaxStep(), step));
+        step.assign(max(config.getMinStep(), step.getDouble(0)));
+        step.assign(min(config.getMaxStep(), step.getDouble(0)));
 
         if (backward) {
             step.negi();
@@ -144,7 +144,7 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
     }
 
     private INDArray stepFactor(INDArray error) {
-        return bound(stepConfig.safety.mul(pow(error, exp)), stepConfig.maxGrowth, stepConfig.minReduction);
+        return bound((pow(error, exp).muli(stepConfig.safety)), stepConfig.maxGrowth, stepConfig.minReduction);
     }
 
     private static INDArray bound(INDArray var, INDArray upper, INDArray lower) {
