@@ -73,10 +73,6 @@ class AugmentedDynamics {
         }
     }
 
-    void updateParamAdjoint(INDArray gradient) {
-        paramAdjoint.assign(gradient);
-    }
-
     public INDArray getZ() {
         return z;
     }

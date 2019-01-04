@@ -1,5 +1,6 @@
 package ode.vertex.impl;
 
+import lombok.AllArgsConstructor;
 import ode.solve.api.FirstOrderEquation;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Models back propagation through a undefined number of residual blocks as a first order differential equation using
@@ -35,23 +37,25 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
     private static final Logger log = LoggerFactory.getLogger(BackpropagateAdjoint.class);
 
-    private final ComputationGraph graph;
-    private final LayerWorkspaceMgr workspaceMgr;
     private final AugmentedDynamics augmentedDynamics;
     private final FirstOrderEquation forwardPass;
-    private final boolean truncatedBPTT;
+    private final GraphInfo graphInfo;
+
+    @AllArgsConstructor
+    public static class GraphInfo {
+        private final ComputationGraph graph;
+        private final NonContiguous1DView realGradients;
+        private final LayerWorkspaceMgr workspaceMgr;
+        private final boolean truncatedBPTT;
+    }
 
     public BackpropagateAdjoint(
-            ComputationGraph graph,
-            LayerWorkspaceMgr workspaceMgr,
             AugmentedDynamics augmentedDynamics,
             FirstOrderEquation forwardPass,
-            boolean truncatedBPTT) {
-        this.graph = graph;
-        this.workspaceMgr = workspaceMgr;
+            GraphInfo graphInfo) {
         this.augmentedDynamics = augmentedDynamics;
         this.forwardPass = forwardPass;
-        this.truncatedBPTT = truncatedBPTT;
+        this.graphInfo = graphInfo;
     }
 
     @Override
@@ -60,16 +64,14 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
         forwardPass.calculateDerivative(augmentedDynamics.getZ(), t, augmentedDynamics.getZ());
 
-        try (WorkspacesCloseable ws = workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.ACTIVATION_GRAD)) {
+        try (WorkspacesCloseable ws = graphInfo.workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.ACTIVATION_GRAD)) {
 
-            final INDArray prevFlattenedGrads = graph.getFlattenedGradients().dup();
+            graphInfo.graph.getFlattenedGradients().assign(0);
 
             final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint().negi());
 
             augmentedDynamics.updateZAdjoint(ret);
-            augmentedDynamics.updateParamAdjoint(graph.getFlattenedGradients());
-
-            graph.getFlattenedGradients().assign(prevFlattenedGrads);
+            graphInfo.realGradients.assignTo(augmentedDynamics.getParamAdjoint());
         }
 
         augmentedDynamics.transferTo(fzAug);
@@ -79,8 +81,8 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
     private List<INDArray> backPropagate(INDArray epsilon) {
 
         //Do backprop, in reverse topological order
-        final int[] topologicalOrder = graph.topologicalSortOrder();
-        final GraphVertex[] vertices = graph.getVertices();
+        final int[] topologicalOrder = graphInfo.graph.topologicalSortOrder();
+        final GraphVertex[] vertices = graphInfo.graph.getVertices();
 
         List<INDArray> outputEpsilons = new ArrayList<>();
 
@@ -91,7 +93,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             if (current.isOutputVertex()) {
                 for (VertexIndices vertexIndices : current.getInputVertices()) {
                     final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();
-                    graph.getVertex(inputName).setEpsilon(epsilon);
+                    graphInfo.graph.getVertex(inputName).setEpsilon(epsilon);
                 }
                 continue;
             }
@@ -102,21 +104,23 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
             Pair<Gradient, INDArray[]> pair;
             INDArray[] epsilons;
-            pair = current.doBackward(truncatedBPTT, workspaceMgr);
+            pair = current.doBackward(graphInfo.truncatedBPTT, graphInfo.workspaceMgr);
             epsilons = pair.getSecond();
 
             if (log.isWarnEnabled()) {
-                final double max = pair.getFirst().gradient().maxNumber().doubleValue();
-                if (max > 50) {
-                    log.warn(current.getVertexName() + " large gradient found: " + max);
+                for(Map.Entry<String, INDArray> gradEntry : pair.getFirst().gradientForVariable().entrySet()) {
+                    final double max = gradEntry.getValue().maxNumber().doubleValue();
+                    if (max > 50) {
+                        log.warn(current.getVertexName() + " large gradient for " + gradEntry.getKey() +" found: " + max);
+                    }
                 }
             }
 
             for (VertexIndices vertexIndices : current.getInputVertices()) {
                 final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();
-                if (graph.getConfiguration().getNetworkInputs().contains(
+                if (graphInfo.graph.getConfiguration().getNetworkInputs().contains(
                         inputName)) {
-                    outputEpsilons.add(graph.getConfiguration().getNetworkInputs().indexOf(inputName),
+                    outputEpsilons.add(graphInfo.graph.getConfiguration().getNetworkInputs().indexOf(inputName),
                             epsilons[vertexIndices.getVertexEdgeNumber()].migrate(true));
                 }
             }
@@ -128,7 +132,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             if (inputVertices != null) {
                 int j = 0;
                 for (VertexIndices v : inputVertices) {
-                    GraphVertex gv = graph.getVertices()[v.getVertexIndex()];
+                    GraphVertex gv = graphInfo.graph.getVertices()[v.getVertexIndex()];
                     if (setVertexEpsilon[gv.getVertexIndex()]) {
                         //This vertex: must output to multiple vertices... we want to add the epsilons here
                         INDArray currentEps = gv.getEpsilon();
