@@ -29,7 +29,6 @@ public class ConvStem implements Block {
                                 .nOut(nrofKernels)
                                 .convolutionMode(ConvolutionMode.Same)
                                 .activation(new ActivationIdentity())
-                                .hasBias(false)
                                 .build(), "input")
                 .addLayer("firstNorm",
                         new BatchNormalization.Builder()
@@ -40,7 +39,6 @@ public class ConvStem implements Block {
                                 .nOut(nrofKernels)
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same)
-                                .hasBias(false)
                                 .build(), "firstNorm")
                 .addLayer("secondNorm",
                         new BatchNormalization.Builder()
@@ -51,7 +49,6 @@ public class ConvStem implements Block {
                                 .nOut(nrofKernels)
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same)
-                                .hasBias(false)
                                 .build(), "secondNorm");
 
         return "thirdConv";
