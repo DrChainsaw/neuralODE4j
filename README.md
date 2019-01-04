@@ -9,9 +9,6 @@ Implementation of neural ordinary differential equations built for deeplearning4
 NOTE: This is very much a work in progress and given that I haven't touched a differential equation since school chances
 are that there are conceptual misunderstandings.
 
-There is currently a critical [memory issue](https://github.com/DrChainsaw/neuralODE4j/issues/5) which prevents validation.
-As such, the implementation is basically unverified except for indications that test score steadily decreases in the MNIST example.
-
 ## Getting Started
 
 GIT clone and run with maven or in IDE.
