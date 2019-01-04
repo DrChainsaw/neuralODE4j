@@ -5,6 +5,7 @@ import com.beust.jcommander.Parameter;
 import org.deeplearning4j.datasets.fetchers.MnistDataFetcher;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.nd4j.evaluation.classification.Evaluation;
@@ -13,6 +14,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,16 +75,21 @@ class Main {
 
     private void init(ComputationGraph model) {
         this.model = model;
-        log.info("Nrof parameters in model: " + model.numParams());
+        long cnt = 0;
+        for(GraphVertex vertex : model.getVertices()) {
+            log.trace("vertex: " + vertex.getVertexName() + " nrof params: " + vertex.numParams());
+            cnt += vertex.numParams();
+        }
+        log.info("Nrof parameters in model: " + cnt);
     }
 
     private void addListeners() {
         model.addListeners(
                 new PerformanceListener(20, true),
-                new CheckpointListener.Builder("")
+                new CheckpointListener.Builder(new File("").getAbsolutePath())
                         .keepLast(1)
                         .deleteExisting(true)
-                        .saveEveryNIterations(1000)
+                        .saveEveryEpoch()
                         .build(),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");

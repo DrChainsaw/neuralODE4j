@@ -62,16 +62,19 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
     public INDArray calculateDerivative(INDArray zAug, INDArray t, INDArray fzAug) {
         augmentedDynamics.updateFrom(zAug);
 
-        forwardPass.calculateDerivative(augmentedDynamics.getZ(), t, augmentedDynamics.getZ());
+        forwardPass.calculateDerivative(augmentedDynamics.z(), t, augmentedDynamics.z());
 
         try (WorkspacesCloseable ws = graphInfo.workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.ACTIVATION_GRAD)) {
 
+            // Seems like some layers let previous gradients influence their new gradients. I haven't really figured out
+            // why but it seems to have a detrimental effect on the accuracy and general stability
             graphInfo.graph.getFlattenedGradients().assign(0);
 
-            final List<INDArray> ret = backPropagate(augmentedDynamics.getZAdjoint().negi());
+            final List<INDArray> ret = backPropagate(augmentedDynamics.zAdjoint().negi());
 
             augmentedDynamics.updateZAdjoint(ret);
-            graphInfo.realGradients.assignTo(augmentedDynamics.getParamAdjoint());
+            graphInfo.realGradients.assignTo(augmentedDynamics.paramAdjoint());
+            augmentedDynamics.tAdjoint().assign(0); // Nothing depends on t as of yet.
         }
 
         augmentedDynamics.transferTo(fzAug);
@@ -110,7 +113,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             if (log.isWarnEnabled()) {
                 for(Map.Entry<String, INDArray> gradEntry : pair.getFirst().gradientForVariable().entrySet()) {
                     final double max = gradEntry.getValue().maxNumber().doubleValue();
-                    if (max > 50) {
+                    if (max > 100) {
                         log.warn(current.getVertexName() + " large gradient for " + gradEntry.getKey() +" found: " + max);
                     }
                 }

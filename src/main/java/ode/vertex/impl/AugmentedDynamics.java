@@ -73,15 +73,19 @@ class AugmentedDynamics {
         }
     }
 
-    public INDArray getZ() {
+    public INDArray z() {
         return z;
     }
 
-    public INDArray getZAdjoint() {
+    public INDArray zAdjoint() {
         return zAdjoint;
     }
 
-    public INDArray getParamAdjoint() {
+    public INDArray paramAdjoint() {
         return paramAdjoint;
+    }
+
+    public INDArray tAdjoint() {
+        return tAdjoint;
     }
 }

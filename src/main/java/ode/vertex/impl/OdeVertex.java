@@ -143,7 +143,7 @@ public class OdeVertex extends BaseGraphVertex {
         final ForwardPass equation = new ForwardPass(
                 graph,
                 innerWorkspaceMgr,
-                training,
+                true, // Always use training as batch norm running mean and var become messed up otherwise. Same effect seen in original pytorch repo.
                 getInputs());
 
         parameters.lastOutput = Nd4j.createUninitialized(getInputs()[0].shape()).detach(); // nrof outputs must be same as number of inputs due to resblock
@@ -197,9 +197,9 @@ public class OdeVertex extends BaseGraphVertex {
 
         augmentedDynamics.updateFrom(augAns);
 
-        final INDArray epsilonOut = workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, augmentedDynamics.getZAdjoint());
+        final INDArray epsilonOut = workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, augmentedDynamics.zAdjoint());
 
-        parameters.realGradients.assignFrom(augmentedDynamics.getParamAdjoint());
+        parameters.realGradients.assignFrom(augmentedDynamics.paramAdjoint());
         final Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
         gradient.setGradientFor(parName, graph.getFlattenedGradients());
 
