@@ -55,7 +55,7 @@ public class OdeNetModel implements ModelFactory {
                                 .build()
                 ))
                 .graphBuilder()
-                .setInputTypes(InputType.feedForward(28 * 28));
+                .setInputTypes(InputType.convolutionalFlat(28 , 28, 1));
     }
 
     @Override

@@ -53,7 +53,7 @@ public class ResNetReferenceModel implements ModelFactory {
                                 .build()
                 ))
                 .graphBuilder()
-                .setInputTypes(InputType.feedForward(28 * 28));
+                .setInputTypes(InputType.convolutionalFlat(28 , 28, 1));
     }
 
     @Override
@@ -87,7 +87,7 @@ public class ResNetReferenceModel implements ModelFactory {
                 .addLayer("normSecond_" + cnt,
                         new BatchNormalization.Builder()
                                 .nOut(nrofKernels)
-                                .activation(new ActivationIdentity()).build(), "convFirst_" + cnt)
+                                .activation(new ActivationReLU()).build(), "convFirst_" + cnt)
                 .addLayer("convSecond_" + cnt,
                         new Convolution2D.Builder(3, 3)
                                 .nOut(nrofKernels)

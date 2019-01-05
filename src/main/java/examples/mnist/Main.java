@@ -1,5 +1,6 @@
 package examples.mnist;
 
+import ch.qos.logback.classic.Level;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import org.deeplearning4j.datasets.fetchers.MnistDataFetcher;
@@ -14,6 +15,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.listen.training.NanScoreWatcher;
+import util.listen.training.ZeroGrad;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,18 +47,21 @@ class Main {
     private int nrofTestExamples = MnistDataFetcher.NUM_EXAMPLES_TEST;
 
     private ComputationGraph model;
+    private String modelName;
 
     public static void main(String[] args) throws IOException {
-        final Main main = new Main();
+        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        root.setLevel(Level.INFO);
 
-        final ModelFactory modelFactory = parseArgs(args, main);
+        final Main main = parseArgs(args);
 
-        main.init(modelFactory.create());
         main.addListeners();
         main.run();
     }
 
-    private static ModelFactory parseArgs(String[] args, Main main) {
+    private static Main parseArgs(String[] args) {
+
+        final Main main = new Main();
         final Map<String, ModelFactory> modelCommands = new HashMap<>();
         modelCommands.put("resnet", new ResNetReferenceModel());
         modelCommands.put("odenet", new OdeNetModel());
@@ -71,11 +76,15 @@ class Main {
         JCommander jCommander = parbuilder.build();
         jCommander.parse(args);
 
-        return modelCommands.get(jCommander.getParsedCommand());
+        final ModelFactory factory = modelCommands.get(jCommander.getParsedCommand());
+
+        main.init(factory.create(), jCommander.getParsedCommand());
+        return main;
     }
 
-    private void init(ComputationGraph model) {
+    private void init(ComputationGraph model, String modelName) {
         this.model = model;
+        this.modelName = modelName;
         long cnt = 0;
         for(GraphVertex vertex : model.getVertices()) {
             log.trace("vertex: " + vertex.getVertexName() + " nrof params: " + vertex.numParams());
@@ -86,8 +95,9 @@ class Main {
 
     private void addListeners() {
         model.addListeners(
+                new ZeroGrad(),
                 new PerformanceListener(20, true),
-                new CheckpointListener.Builder(new File("").getAbsolutePath())
+                new CheckpointListener.Builder(new File(modelName).getAbsolutePath())
                         .keepLast(1)
                         .deleteExisting(true)
                         .saveEveryEpoch()
@@ -98,19 +108,22 @@ class Main {
     }
 
     private void run() throws IOException {
-        final DataSetIterator trainIter = new MnistDataSetIterator(trainBatchSize, nrofTrainExamples, false, true, true, 666);
-        final DataSetIterator evalIter = new MnistDataSetIterator(evalBatchSize, nrofTestExamples, false, false, true, 666);
-        model.getLayers();
+        final DataSetIterator trainIter = new MnistDataSetIterator(trainBatchSize, nrofTrainExamples, false, true, true, 1234);
+        final DataSetIterator evalIter = new MnistDataSetIterator(evalBatchSize, nrofTestExamples, false, false, false, 1234);
         Nd4j.getMemoryManager().setAutoGcWindow(5000);
-        for (int epoch = 0; epoch < nrofEpochs; epoch++) {
+
+        double bestAccuracy = 0;
+        for (int epoch = model.getEpochCount(); epoch < nrofEpochs; epoch++) {
             log.info("Begin epoch " + epoch);
             model.fit(trainIter);
             log.info("Begin validation in epoch " + epoch);
             final Evaluation evaluation = model.evaluate(evalIter);
-            log.info(evaluation.stats());
+            log.info(evaluation.stats() + " best accuracy so far: " + bestAccuracy);
+
+            if(evaluation.accuracy() > bestAccuracy) {
+                bestAccuracy = evaluation.accuracy();
+                model.save(new File("best_" + modelName + "_epoch_" + epoch));
+            }
         }
-
     }
-
-
 }
