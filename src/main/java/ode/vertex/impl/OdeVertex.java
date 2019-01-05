@@ -33,7 +33,6 @@ public class OdeVertex extends BaseGraphVertex {
 
     private static final Logger log = LoggerFactory.getLogger(OdeVertex.class);
 
-
     private final static String parName = "params";
 
     private final ComputationGraph graph;
@@ -146,7 +145,8 @@ public class OdeVertex extends BaseGraphVertex {
                 true, // Always use training as batch norm running mean and var become messed up otherwise. Same effect seen in original pytorch repo.
                 getInputs());
 
-        parameters.lastOutput = Nd4j.createUninitialized(getInputs()[0].shape()).detach(); // nrof outputs must be same as number of inputs due to resblock
+        // nrof outputs must be same as number of inputs due to resblock
+        parameters.lastOutput = workspaceMgr.createUninitialized(ArrayType.INPUT, getInputs()[0].shape()).detach();
         odeSolver.integrate(equation, parameters.time, getInputs()[0], parameters.lastOutput);
 
         for (GraphVertex vertex : graph.getVertices()) {

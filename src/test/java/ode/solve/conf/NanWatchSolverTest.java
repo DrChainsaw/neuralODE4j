@@ -3,7 +3,7 @@ package ode.solve.conf;
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.api.FirstOrderSolverConf;
-import ode.solve.impl.listen.StepListener;
+import ode.solve.api.StepListener;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -21,7 +21,7 @@ public class NanWatchSolverTest extends AbstractConfTest {
 
     @Override
     protected FirstOrderSolverConf createConf() {
-        return new NanWatchSolver(new MockSolverConf());
+        return new NanWatchSolver(new DummyIteration(1));
     }
 
     /**
@@ -50,6 +50,7 @@ public class NanWatchSolverTest extends AbstractConfTest {
         solver.integrate(new MockEquation(),
                 Nd4j.scalar(0), y0, Nd4j.zeros(y0.shape())); // Throws exception!
     }
+
 
     /**
      * Mock {@link FirstOrderSolverConf} for testing
@@ -89,6 +90,16 @@ public class NanWatchSolverTest extends AbstractConfTest {
         @Override
         public boolean equals(Object obj) {
             return obj instanceof MockSolverConf;
+        }
+
+        @Override
+        public void addListeners(StepListener... listeners) {
+            fail("Not used!");
+        }
+
+        @Override
+        public void clearListeners(StepListener... listeners) {
+            fail("Not used!");
         }
     }
 

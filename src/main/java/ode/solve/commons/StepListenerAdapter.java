@@ -1,6 +1,6 @@
 package ode.solve.commons;
 
-import ode.solve.impl.listen.StepListener;
+import ode.solve.api.StepListener;
 import org.apache.commons.math3.exception.MaxCountExceededException;
 import org.apache.commons.math3.ode.sampling.StepHandler;
 import org.apache.commons.math3.ode.sampling.StepInterpolator;

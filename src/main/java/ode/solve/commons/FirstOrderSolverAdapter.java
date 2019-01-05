@@ -2,7 +2,7 @@ package ode.solve.commons;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
-import ode.solve.impl.listen.StepListener;
+import ode.solve.api.StepListener;
 import org.apache.commons.math3.ode.FirstOrderDifferentialEquations;
 import org.apache.commons.math3.ode.FirstOrderIntegrator;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -31,6 +31,11 @@ public class FirstOrderSolverAdapter implements FirstOrderSolver {
         final FirstOrderDifferentialEquations wrappedEquations = new FirstOrderEquationAdapter(y0.dup(), equation);
         final double[] y = y0.reshape(1, y0.length()).toDoubleVector();
         wrappedSolver.integrate(wrappedEquations, t.getDouble(0), y, t.getDouble(1), y);
+
+        for(StepListener listener: listeners.keySet()) {
+            listener.done();
+        }
+
         for(int i = 0; i < y.length; i++) {
             yOut.putScalar(i, y[i]);
         }

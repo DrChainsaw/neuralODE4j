@@ -1,6 +1,5 @@
 package ode.solve.api;
 
-import ode.solve.impl.listen.StepListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 /**

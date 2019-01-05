@@ -1,9 +1,12 @@
-package ode.solve.commons;
+package ode.solve.conf;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.api.FirstOrderSolverConf;
-import ode.solve.conf.SolverConfig;
+import ode.solve.api.StepListener;
+import ode.solve.commons.FirstOrderSolverAdapter;
+import ode.solve.impl.util.AggStepListener;
 import org.apache.commons.math3.ode.FirstOrderIntegrator;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 
@@ -22,6 +25,9 @@ public class FirstOrderIntegratorConf implements FirstOrderSolverConf {
 
     private final SolverConfig config;
     private final String integratorName;
+
+    @EqualsAndHashCode.Exclude
+    private final AggStepListener listener = new AggStepListener();
 
     /**
      * Factory interface as {@link FirstOrderIntegrator}s are generally not serializable. Factories must be mapped to
@@ -53,10 +59,14 @@ public class FirstOrderIntegratorConf implements FirstOrderSolverConf {
     @Override
     public FirstOrderSolver instantiate() {
         final Factory factory = factorymap.get(integratorName);
+        final FirstOrderSolver ret;
         if (factory != null) {
-            return new FirstOrderSolverAdapter(factory.create(config));
+          ret = new FirstOrderSolverAdapter(factory.create(config));
+        } else {
+            ret = new FirstOrderSolverAdapter(defaultCreate());
         }
-        return new FirstOrderSolverAdapter(defaultCreate());
+        ret.addListener(listener);
+        return ret;
     }
 
     @Override
@@ -75,5 +85,15 @@ public class FirstOrderIntegratorConf implements FirstOrderSolverConf {
         } catch (Exception e) {
             throw new UnsupportedOperationException("Could not create " + integratorName + " from default signature!", e);
         }
+    }
+
+    @Override
+    public void addListeners(StepListener... listeners) {
+        listener.addListeners(listeners);
+    }
+
+    @Override
+    public void clearListeners(StepListener... listeners) {
+        listener.clearListeners(listeners);
     }
 }

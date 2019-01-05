@@ -2,9 +2,9 @@ package ode.solve.impl;
 
 import ode.solve.CircleODE;
 import ode.solve.api.FirstOrderSolver;
+import ode.solve.api.StepListener;
 import ode.solve.commons.FirstOrderSolverAdapter;
 import ode.solve.conf.SolverConfig;
-import ode.solve.impl.listen.StepListener;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;

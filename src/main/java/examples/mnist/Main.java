@@ -13,6 +13,7 @@ import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.listen.training.NanScoreWatcher;
 
 import java.io.File;
 import java.io.IOException;

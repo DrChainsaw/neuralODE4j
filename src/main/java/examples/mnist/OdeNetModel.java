@@ -3,7 +3,6 @@ package examples.mnist;
 import com.beust.jcommander.Parameter;
 import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.DormandPrince54Solver;
-import ode.solve.conf.NanWatchSolver;
 import ode.solve.conf.SolverConfig;
 import ode.vertex.conf.OdeVertex;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
@@ -22,6 +21,8 @@ import org.nd4j.linalg.schedule.MapSchedule;
 import org.nd4j.linalg.schedule.ScheduleType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.listen.step.Mask;
+import util.listen.step.StepCounter;
 
 /**
  * OdeNet reference model for. Reimplementation of https://github.com/rtqichen/torchdiffeq/blob/master/examples/odenet_mnist.py
@@ -60,13 +61,18 @@ public class OdeNetModel implements ModelFactory {
     @Override
     public ComputationGraph create() {
         return create(
-                new NanWatchSolver(
-                        new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 1e-20, 100))));
+               // new NanWatchSolver(
+                        new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 1e-20, 100)));
     }
 
     ComputationGraph create(FirstOrderSolverConf solver) {
 
         log.info("Create model");
+
+        solver.addListeners(
+                Mask.backward(new StepCounter(20, "Average nrof forward steps: ")),
+                Mask.forward(new StepCounter(20, "Average nrof backward steps: "))
+        );
 
         String next = new ConvStem(nrofKernels).add(null, builder);
         next = addOdeBlock(next, solver);

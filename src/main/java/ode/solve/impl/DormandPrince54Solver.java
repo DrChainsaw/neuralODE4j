@@ -2,8 +2,8 @@ package ode.solve.impl;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
+import ode.solve.api.StepListener;
 import ode.solve.conf.SolverConfig;
-import ode.solve.impl.listen.StepListener;
 import ode.solve.impl.util.AdaptiveRungeKuttaStepPolicy;
 import ode.solve.impl.util.ButcherTableu;
 import ode.solve.impl.util.SolverConfigINDArray;
