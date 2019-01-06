@@ -1,13 +1,13 @@
 package examples.mnist;
 
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
-import org.deeplearning4j.nn.conf.layers.BatchNormalization;
 import org.deeplearning4j.nn.conf.layers.GlobalPoolingLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.conf.layers.PoolingType;
-import org.nd4j.linalg.activations.impl.ActivationReLU;
 import org.nd4j.linalg.activations.impl.ActivationSoftmax;
 import org.nd4j.linalg.lossfunctions.impl.LossMCXENT;
+
+import static examples.mnist.LayerUtil.norm;
 
 /**
  * Adds output block
@@ -16,9 +16,9 @@ import org.nd4j.linalg.lossfunctions.impl.LossMCXENT;
  */
 public class Output implements Block {
 
-    private final long nrofKernels;
+    private final int nrofKernels;
 
-    public Output(long nrofKernels) {
+    public Output(int nrofKernels) {
         this.nrofKernels = nrofKernels;
     }
 
@@ -26,9 +26,7 @@ public class Output implements Block {
     public String add(String prev, ComputationGraphConfiguration.GraphBuilder builder) {
         builder
                 .addLayer("normOutput",
-                        new BatchNormalization.Builder()
-                                .nOut(nrofKernels)
-                                .activation(new ActivationReLU()).build(), prev)
+                        norm(nrofKernels), prev)
                 .addLayer("globPool", new GlobalPoolingLayer.Builder().poolingType(PoolingType.AVG).build(), "normOutput")
                 .addLayer("output", new OutputLayer.Builder()
                         .nOut(10)

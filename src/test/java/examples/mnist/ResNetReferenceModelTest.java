@@ -25,8 +25,8 @@ public class ResNetReferenceModelTest {
                 .parse("-stem", "res");
 
         final ComputationGraph model = factory.create();
-        model.fit(new DataSet(Nd4j.randn(1, 28*28), Nd4j.randn(1,10)));
-        model.fit(new DataSet(Nd4j.randn(1, 28*28), Nd4j.randn(1,10)));
+        model.fit(new DataSet(Nd4j.randn(new long[]{1, 1, 28, 28}), Nd4j.randn(1,10)));
+        model.fit(new DataSet(Nd4j.randn(new long[]{1, 1, 28, 28}), Nd4j.randn(1,10)));
     }
 
     /**
@@ -41,7 +41,7 @@ public class ResNetReferenceModelTest {
                 .parse("-stem", "conv");
 
         final ComputationGraph model = factory.create();
-        model.fit(new DataSet(Nd4j.randn(1, 28*28), Nd4j.randn(1,10)));
-        model.fit(new DataSet(Nd4j.randn(1, 28*28), Nd4j.randn(1,10)));
+        model.fit(new DataSet(Nd4j.randn(new long[]{1, 1, 28, 28}), Nd4j.randn(1,10)));
+        model.fit(new DataSet(Nd4j.randn(new long[]{1, 1, 28, 28}), Nd4j.randn(1,10)));
     }
 }
