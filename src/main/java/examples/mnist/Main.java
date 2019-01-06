@@ -94,10 +94,13 @@ class Main {
     }
 
     private void addListeners() {
+        final File savedir = new File("savedmodels" + File.separator + modelName);
+        log.info("Models will be saved in: " + savedir.getAbsolutePath());
+        savedir.mkdirs();
         model.addListeners(
                 new ZeroGrad(),
                 new PerformanceListener(20, true),
-                new CheckpointListener.Builder(new File(modelName).getAbsolutePath())
+                new CheckpointListener.Builder(savedir.getAbsolutePath())
                         .keepLast(1)
                         .deleteExisting(true)
                         .saveEveryEpoch()
@@ -118,11 +121,11 @@ class Main {
             model.fit(trainIter);
             log.info("Begin validation in epoch " + epoch);
             final Evaluation evaluation = model.evaluate(evalIter);
-            log.info(evaluation.stats() + " best accuracy so far: " + bestAccuracy);
+            log.info(evaluation.stats() + "\nBest accuracy so far: " + bestAccuracy);
 
             if(evaluation.accuracy() > bestAccuracy) {
                 bestAccuracy = evaluation.accuracy();
-                model.save(new File("best_" + modelName + "_epoch_" + epoch));
+                model.save(new File("savedmodels" + File.separator + modelName + File.separator + "best_epoch_" + epoch + ".zip"));
             }
         }
     }

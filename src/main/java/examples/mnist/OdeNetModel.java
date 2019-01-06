@@ -55,14 +55,14 @@ public class OdeNetModel implements ModelFactory {
                                 .build()
                 ))
                 .graphBuilder()
-                .setInputTypes(InputType.convolutionalFlat(28 , 28, 1));
+                .setInputTypes(InputType.convolutionalFlat(28, 28, 1));
     }
 
     @Override
     public ComputationGraph create() {
         return create(
-               // new NanWatchSolver(
-                        new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 1e-20, 100)));
+                //new NanWatchSolver(
+                new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 1e-20, 100)));
     }
 
     ComputationGraph create(FirstOrderSolverConf solver) {
