@@ -38,7 +38,7 @@ class Main {
     private int evalBatchSize = 1000;
 
     @Parameter(names = "-nrofEpochs", description = "Number of epochs to train over")
-    private int nrofEpochs = 200;
+    private int nrofEpochs = 160;
 
     @Parameter(names = "-nrofTrainExamples", description = "Number of examples to use for training")
     private int nrofTrainExamples = MnistDataFetcher.NUM_EXAMPLES;
@@ -78,7 +78,7 @@ class Main {
 
         final ModelFactory factory = modelCommands.get(jCommander.getParsedCommand());
 
-        main.init(factory.create(), jCommander.getParsedCommand());
+        main.init(factory.create(), factory.name());
         return main;
     }
 

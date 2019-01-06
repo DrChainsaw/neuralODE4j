@@ -8,6 +8,8 @@ import org.nd4j.linalg.activations.impl.ActivationReLU;
 
 /**
  * Standard convolution stem block from https://github.com/rtqichen/torchdiffeq/blob/master/examples/odenet_mnist.py
+ *
+ * @author Christian Skarby
  */
 public class ConvStem implements Block {
 
@@ -20,12 +22,11 @@ public class ConvStem implements Block {
     @Override
     public String add(String prev, ComputationGraphConfiguration.GraphBuilder builder) {
         builder
-                .addInputs("input")
                 .addLayer("firstConv",
                         new Convolution2D.Builder(3, 3)
                                 .nOut(nrofKernels)
                                 .activation(new ActivationIdentity())
-                                .build(), "input")
+                                .build(), prev)
                 .addLayer("firstNorm",
                         new BatchNormalization.Builder()
                                 .nOut(nrofKernels)

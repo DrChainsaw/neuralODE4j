@@ -1,6 +1,7 @@
 package examples.mnist;
 
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParametersDelegate;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
@@ -28,6 +29,9 @@ public class ResNetReferenceModel implements ModelFactory {
 
     private static final Logger log = LoggerFactory.getLogger(ResNetReferenceModel.class);
 
+    @ParametersDelegate
+    private StemSelection stemSelection = new StemSelection();
+
     @Parameter(names = "-nrofResBlocks", description = "Number of residual blocks to use")
     private int nrofResBlocks = 6;
 
@@ -42,7 +46,7 @@ public class ResNetReferenceModel implements ModelFactory {
     public ResNetReferenceModel() {
         builder = new NeuralNetConfiguration.Builder()
                 .seed(seed)
-                .weightInit(WeightInit.RELU)
+                .weightInit(WeightInit.UNIFORM)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(new Nesterovs(
                         new MapSchedule.Builder(ScheduleType.EPOCH)
@@ -53,7 +57,8 @@ public class ResNetReferenceModel implements ModelFactory {
                                 .build()
                 ))
                 .graphBuilder()
-                .setInputTypes(InputType.convolutionalFlat(28 , 28, 1));
+                .setInputTypes(InputType.convolutionalFlat(28, 28, 1))
+                .addInputs("input");
     }
 
     @Override
@@ -61,7 +66,7 @@ public class ResNetReferenceModel implements ModelFactory {
 
         log.info("Create model");
 
-        String next = new ConvStem(nrofKernels).add(null, builder);
+        String next = stemSelection.get(nrofKernels).add(builder.getNetworkInputs().get(0), builder);
         for (int i = 0; i < nrofResBlocks; i++) {
             next = addResBlock(next, i);
         }
@@ -69,6 +74,11 @@ public class ResNetReferenceModel implements ModelFactory {
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
         return graph;
+    }
+
+    @Override
+    public String name() {
+        return "resnet_" + nrofResBlocks + "_" + stemSelection.name();
     }
 
 
@@ -81,6 +91,7 @@ public class ResNetReferenceModel implements ModelFactory {
                 .addLayer("convFirst_" + cnt,
                         new Convolution2D.Builder(3, 3)
                                 .nOut(nrofKernels)
+                                .hasBias(false)
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same)
                                 .build(), "normFirst_" + cnt)
@@ -91,6 +102,7 @@ public class ResNetReferenceModel implements ModelFactory {
                 .addLayer("convSecond_" + cnt,
                         new Convolution2D.Builder(3, 3)
                                 .nOut(nrofKernels)
+                                .hasBias(false)
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same)
                                 .build(), "normSecond_" + cnt)
