@@ -11,16 +11,19 @@ import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.dataset.api.preprocessor.CompositeDataSetPreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.listen.training.NanScoreWatcher;
 import util.listen.training.ZeroGrad;
+import util.preproc.ShiftDim;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Main class for MNIST example. Reimplementation of https://github.com/rtqichen/torchdiffeq/blob/master/examples/odenet_mnist.py
@@ -45,6 +48,9 @@ class Main {
 
     @Parameter(names = "-nrofTestExamples", description = "Number of examples to use for validation")
     private int nrofTestExamples = MnistDataFetcher.NUM_EXAMPLES_TEST;
+
+    @Parameter(names = "-data_aug", description = "Use data augmentation for training if set to true", arity = 1)
+    private boolean useDataAugmentation = true;
 
     private ComputationGraph model;
     private String modelName;
@@ -113,8 +119,15 @@ class Main {
     private void run() throws IOException {
         final DataSetIterator trainIter = new MnistDataSetIterator(trainBatchSize, nrofTrainExamples, false, true, true, 1234);
         final DataSetIterator evalIter = new MnistDataSetIterator(evalBatchSize, nrofTestExamples, false, false, false, 1234);
-        Nd4j.getMemoryManager().setAutoGcWindow(5000);
 
+        if(useDataAugmentation) {
+            trainIter.setPreProcessor(new CompositeDataSetPreProcessor(
+                    new ShiftDim(0, new Random(666), 4),
+                    new ShiftDim(1, new Random(667), 4)
+            ));
+        }
+
+        Nd4j.getMemoryManager().setAutoGcWindow(5000);
         double bestAccuracy = 0;
         for (int epoch = model.getEpochCount(); epoch < nrofEpochs; epoch++) {
             log.info("Begin epoch " + epoch);

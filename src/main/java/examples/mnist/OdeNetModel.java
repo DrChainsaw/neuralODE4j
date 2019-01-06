@@ -30,9 +30,6 @@ public class OdeNetModel implements ModelFactory {
     @Parameter(names = "-nrofKernels", description = "Number of filter kernels in each convolution layer")
     private int nrofKernels = 64;
 
-    @Parameter(names = "-seed", description = "Random seed")
-    private long seed = 666;
-
     private final GraphBuilder builder;
 
     public OdeNetModel() {
