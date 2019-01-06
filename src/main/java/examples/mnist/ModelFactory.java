@@ -14,4 +14,10 @@ interface ModelFactory {
      * @return a {@link ComputationGraph} for the model
      */
     ComputationGraph create();
+
+    /**
+     * Return the name of the model built to use e.g. for saving models
+     * @return the name of the models
+     */
+    String name();
 }

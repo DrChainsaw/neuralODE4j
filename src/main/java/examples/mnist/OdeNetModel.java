@@ -1,6 +1,7 @@
 package examples.mnist;
 
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParametersDelegate;
 import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.DormandPrince54Solver;
 import ode.solve.conf.SolverConfig;
@@ -33,6 +34,9 @@ public class OdeNetModel implements ModelFactory {
 
     private static final Logger log = LoggerFactory.getLogger(OdeNetModel.class);
 
+    @ParametersDelegate
+    private StemSelection stemSelection = new StemSelection();
+
     @Parameter(names = "-nrofKernels", description = "Number of filter kernels in each convolution layer")
     private int nrofKernels = 64;
 
@@ -55,7 +59,8 @@ public class OdeNetModel implements ModelFactory {
                                 .build()
                 ))
                 .graphBuilder()
-                .setInputTypes(InputType.convolutionalFlat(28, 28, 1));
+                .setInputTypes(InputType.convolutionalFlat(28, 28, 1))
+                .addInputs("input");
     }
 
     @Override
@@ -74,7 +79,7 @@ public class OdeNetModel implements ModelFactory {
                 Mask.forward(new StepCounter(20, "Average nrof backward steps: "))
         );
 
-        String next = new ConvStem(nrofKernels).add(null, builder);
+        String next = stemSelection.get(nrofKernels).add(builder.getNetworkInputs().get(0), builder);
         next = addOdeBlock(next, solver);
         new Output(nrofKernels).add(next, builder);
         final ComputationGraph graph = new ComputationGraph(builder.build());
@@ -82,16 +87,19 @@ public class OdeNetModel implements ModelFactory {
         return graph;
     }
 
+    @Override
+    public String name() {
+        return "odenet_" + "_" + stemSelection.name();
+    }
+
     private String addOdeBlock(String prev, FirstOrderSolverConf solver) {
         builder
                 .addVertex("odeBlock", new OdeVertex.Builder("normFirst",
                         new BatchNormalization.Builder()
-                                .weightInit(WeightInit.UNIFORM)
                                 .nOut(nrofKernels)
                                 .activation(new ActivationReLU()).build())
                         .addLayer("convFirst",
                                 new Convolution2D.Builder(3, 3)
-                                        .weightInit(WeightInit.UNIFORM)
                                         .nOut(nrofKernels)
                                         .activation(new ActivationIdentity())
                                         .convolutionMode(ConvolutionMode.Same)
@@ -99,12 +107,10 @@ public class OdeNetModel implements ModelFactory {
                                         .build(), "normFirst")
                         .addLayer("normSecond",
                                 new BatchNormalization.Builder()
-                                        .weightInit(WeightInit.UNIFORM)
                                         .nOut(nrofKernels)
                                         .activation(new ActivationReLU()).build(), "convFirst")
                         .addLayer("convSecond",
                                 new Convolution2D.Builder(3, 3)
-                                        .weightInit(WeightInit.UNIFORM)
                                         .nOut(nrofKernels)
                                         .activation(new ActivationIdentity())
                                         .convolutionMode(ConvolutionMode.Same)
@@ -112,7 +118,6 @@ public class OdeNetModel implements ModelFactory {
                                         .build(), "normSecond")
                         .addLayer("normThird",
                                 new BatchNormalization.Builder()
-                                        .weightInit(WeightInit.UNIFORM)
                                         .nOut(nrofKernels)
                                         .activation(new ActivationIdentity()).build(), "convSecond")
                         .odeSolver(solver)
