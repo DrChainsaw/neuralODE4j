@@ -2,7 +2,8 @@ package ode.solve.impl;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
-import ode.solve.impl.listen.StepListener;
+import ode.solve.api.StepListener;
+import ode.solve.impl.util.AggStepListener;
 import ode.solve.impl.util.ButcherTableu;
 import ode.solve.impl.util.FirstOrderEquationWithState;
 import ode.solve.impl.util.StepPolicy;
@@ -11,10 +12,6 @@ import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
 import org.nd4j.linalg.api.memory.enums.SpillPolicy;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 
 /**
  * Generic adaptive step size Runge-Kutta solver. Implementation based on
@@ -32,7 +29,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
     private final ButcherTableu tableu;
     private final StepPolicy stepPolicy;
     private final MseComputation mseComputation;
-    private final Collection<StepListener> listeners = new ArrayList<>();
+    private final AggStepListener listener = new AggStepListener();
 
     public AdaptiveRungeKuttaSolver(ButcherTableu tableu, StepPolicy stepPolicy, MseComputation mseComputation) {
         this.tableu = tableu;
@@ -120,15 +117,11 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
                     yOut.assign(y0),
                     tableu.c.length() + 1);
 
-            for (StepListener listener : listeners) {
-                listener.begin(t, y0);
-            }
+            listener.begin(t, y0);
 
             solve(equationState, t);
 
-            for (StepListener listener : listeners) {
-                listener.done();
-            }
+            listener.done();
 
             return yOut;
         }
@@ -177,9 +170,8 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             // local error is small enough: accept the step,
             equation.update();
 
-            for (StepListener listener : listeners) {
-                listener.step(equation.time(), step, error, equation.getCurrentState());
-            }
+            listener.step(equation.time(), step, error, equation.getCurrentState());
+
             return true;
         }
         return false;
@@ -187,15 +179,11 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
     @Override
     public void addListener(StepListener... listeners) {
-        this.listeners.addAll(Arrays.asList(listeners));
+        this.listener.addListeners(listeners);
     }
 
     @Override
     public void clearListeners(StepListener... listeners) {
-        if (listeners == null || listeners.length == 0) {
-            this.listeners.clear();
-        } else {
-            this.listeners.removeAll(Arrays.asList(listeners));
-        }
+        this.listener.clearListeners(listeners);
     }
 }

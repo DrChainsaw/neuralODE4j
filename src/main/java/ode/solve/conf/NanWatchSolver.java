@@ -3,6 +3,7 @@ package ode.solve.conf;
 import lombok.Data;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.api.FirstOrderSolverConf;
+import ode.solve.api.StepListener;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
@@ -21,7 +22,6 @@ public class NanWatchSolver implements FirstOrderSolverConf {
         this.confToWatch = Objects.requireNonNull(confToWatch);
     }
 
-
     @Override
     public FirstOrderSolver instantiate() {
         return new ode.solve.impl.NanWatchSolver(confToWatch.instantiate());
@@ -38,5 +38,15 @@ public class NanWatchSolver implements FirstOrderSolverConf {
             return false;
         }
         return ((NanWatchSolver)obj).confToWatch.equals(confToWatch);
+    }
+
+    @Override
+    public void addListeners(StepListener... listeners) {
+        confToWatch.addListeners(listeners);
+    }
+
+    @Override
+    public void clearListeners(StepListener... listeners) {
+        confToWatch.clearListeners(listeners);
     }
 }

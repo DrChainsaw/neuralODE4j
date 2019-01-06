@@ -1,8 +1,9 @@
-package ode.solve.commons;
+package ode.solve.conf;
 
 import ode.solve.CircleODE;
 import ode.solve.api.FirstOrderSolver;
-import ode.solve.conf.SolverConfig;
+import ode.solve.api.FirstOrderSolverConf;
+import ode.solve.commons.FirstOrderSolverAdapter;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince853Integrator;
 import org.apache.commons.math3.ode.nonstiff.HighamHall54Integrator;
@@ -20,7 +21,12 @@ import static org.junit.Assert.assertEquals;
  *
  * @author Christian Skarby
  */
-public class FirstOrderIntegratorConfTest {
+public class FirstOrderIntegratorConfTest extends AbstractConfTest {
+
+    @Override
+    protected FirstOrderSolverConf createConf() {
+        return new FirstOrderIntegratorConf();
+    }
 
     /**
      * Test that the default ({@link DormandPrince54Integrator}) works
