@@ -5,11 +5,13 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import org.deeplearning4j.datasets.fetchers.MnistDataFetcher;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
+import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.nd4j.evaluation.classification.Evaluation;
+import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.CompositeDataSetPreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
@@ -17,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.listen.training.NanScoreWatcher;
 import util.listen.training.ZeroGrad;
+import util.preproc.Reshape;
 import util.preproc.ShiftDim;
 
 import java.io.File;
@@ -117,15 +120,8 @@ class Main {
     }
 
     private void run() throws IOException {
-        final DataSetIterator trainIter = new MnistDataSetIterator(trainBatchSize, nrofTrainExamples, false, true, true, 1234);
-        final DataSetIterator evalIter = new MnistDataSetIterator(evalBatchSize, nrofTestExamples, false, false, false, 1234);
-
-        if(useDataAugmentation) {
-            trainIter.setPreProcessor(new CompositeDataSetPreProcessor(
-                    new ShiftDim(0, new Random(666), 4),
-                    new ShiftDim(1, new Random(667), 4)
-            ));
-        }
+        final DataSetIterator trainIter = createDataSetIter(true);
+        final DataSetIterator evalIter = createDataSetIter(false);
 
         Nd4j.getMemoryManager().setAutoGcWindow(5000);
         double bestAccuracy = 0;
@@ -141,5 +137,30 @@ class Main {
                 model.save(new File("savedmodels" + File.separator + modelName + File.separator + "best_epoch_" + epoch + ".zip"));
             }
         }
+    }
+
+    private DataSetIterator createDataSetIter(boolean train) throws IOException {
+        final DataSetIterator iter = new MnistDataSetIterator(
+                train ? trainBatchSize : evalBatchSize,
+                train ? nrofTrainExamples: nrofTestExamples,
+                false, train, train, 1234) {
+            @Override
+            public DataSet next() {
+                // Original implementation does not apply preprocessor!
+                return next(trainBatchSize);
+            }
+        };
+
+        iter.setPreProcessor(new Reshape(InputType.convolutional(28,28,1)));
+
+        if(train && useDataAugmentation) {
+            iter.setPreProcessor(new CompositeDataSetPreProcessor(
+                    iter.getPreProcessor(),
+                    new ShiftDim(2, new Random(666), 4),
+                    new ShiftDim(3, new Random(667), 4)
+            ));
+        }
+
+        return iter;
     }
 }

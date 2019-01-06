@@ -41,7 +41,7 @@ class LayerUtil {
                                 .build()
                 ))
                 .graphBuilder()
-                .setInputTypes(InputType.convolutionalFlat(28, 28, 1))
+                .setInputTypes(InputType.convolutional(28, 28, 1))
                 .addInputs("input");
     }
 
