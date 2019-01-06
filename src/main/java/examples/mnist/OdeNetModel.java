@@ -62,7 +62,7 @@ public class OdeNetModel implements ModelFactory {
 
     @Override
     public String name() {
-        return "odenet_" + "_" + stemSelection.name();
+        return "odenet_" + stemSelection.name();
     }
 
     private String addOdeBlock(String prev, FirstOrderSolverConf solver) {
