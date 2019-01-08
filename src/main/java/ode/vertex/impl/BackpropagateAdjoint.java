@@ -11,8 +11,7 @@ import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.primitives.Pair;
 import org.nd4j.linalg.workspace.WorkspacesCloseable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import util.time.StatisticsTimer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,8 +33,6 @@ import java.util.List;
  */
 public class BackpropagateAdjoint implements FirstOrderEquation {
 
-    private static final Logger log = LoggerFactory.getLogger(BackpropagateAdjoint.class);
-
     private final AugmentedDynamics augmentedDynamics;
     private final FirstOrderEquation forwardPass;
     private final GraphInfo graphInfo;
@@ -48,6 +45,9 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
         private final boolean truncatedBPTT;
     }
 
+    final StatisticsTimer gradTimer = new StatisticsTimer();
+    final StatisticsTimer updatePostTimer= new StatisticsTimer();
+    final StatisticsTimer updatePreTimer= new StatisticsTimer();
     public BackpropagateAdjoint(
             AugmentedDynamics augmentedDynamics,
             FirstOrderEquation forwardPass,
@@ -59,7 +59,9 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
     @Override
     public INDArray calculateDerivative(INDArray zAug, INDArray t, INDArray fzAug) {
+        updatePreTimer.start();
         augmentedDynamics.updateFrom(zAug);
+        updatePreTimer.stop();
 
         forwardPass.calculateDerivative(augmentedDynamics.z(), t, augmentedDynamics.z());
 
@@ -69,14 +71,18 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             // why but it seems to have a detrimental effect on the accuracy and general stability
             graphInfo.graph.getFlattenedGradients().assign(0);
 
+            gradTimer.start();
             final List<INDArray> ret = backPropagate(augmentedDynamics.zAdjoint().negi());
+            gradTimer.stop();
 
+            updatePostTimer.start();
             augmentedDynamics.updateZAdjoint(ret);
             graphInfo.realGradients.assignTo(augmentedDynamics.paramAdjoint());
             augmentedDynamics.tAdjoint().assign(0); // Nothing depends on t as of yet.
         }
 
         augmentedDynamics.transferTo(fzAug);
+        updatePostTimer.stop();
         return fzAug;
     }
 
