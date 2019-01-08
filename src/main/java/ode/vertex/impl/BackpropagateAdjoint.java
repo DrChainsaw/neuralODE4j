@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Models back propagation through a undefined number of residual blocks as a first order differential equation using
@@ -110,21 +109,12 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             pair = current.doBackward(graphInfo.truncatedBPTT, graphInfo.workspaceMgr);
             epsilons = pair.getSecond();
 
-            if (log.isWarnEnabled()) {
-                for(Map.Entry<String, INDArray> gradEntry : pair.getFirst().gradientForVariable().entrySet()) {
-                    final double max = gradEntry.getValue().maxNumber().doubleValue();
-                    if (max > 100) {
-                        log.warn(current.getVertexName() + " large gradient for " + gradEntry.getKey() +" found: " + max);
-                    }
-                }
-            }
-
             for (VertexIndices vertexIndices : current.getInputVertices()) {
                 final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();
                 if (graphInfo.graph.getConfiguration().getNetworkInputs().contains(
                         inputName)) {
                     outputEpsilons.add(graphInfo.graph.getConfiguration().getNetworkInputs().indexOf(inputName),
-                            epsilons[vertexIndices.getVertexEdgeNumber()].migrate(true));
+                            epsilons[vertexIndices.getVertexEdgeNumber()]);
                 }
             }
 
@@ -147,8 +137,6 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
                 }
             }
         }
-
-        //Now, add the gradients in the order we need them in for flattening (same as params order)
 
         return outputEpsilons;
     }
