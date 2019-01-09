@@ -79,16 +79,14 @@ public class DormandPrince54Solver implements FirstOrderSolver {
         ) {
 
             // TODO: Test remove zero row from bStar and yDotK and see if there are net gains
-            final INDArray mse = Nd4j.createUninitialized(1);
-              try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(wsConf, this.getClass().getSimpleName())) {
+            try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(wsConf, this.getClass().getSimpleName())) {
                 final INDArray errSum = errorCoeffs.mmul(yDotK);
-                final INDArray yScale = max(abs(y0), abs(y1), false).reshape(new long[] {1, y0.length()});
+                final INDArray yScale = max(abs(y0), abs(y1), false).reshape(new long[]{1, y0.length()});
                 final INDArray tol = yScale.muli(config.getRelTol()).addi(config.getAbsTol());
                 final INDArray ratio = errSum.divi(tol).muli(h);
                 final INDArray error = ratio.muli(ratio);
-                mse.assign(sqrt(error.mean(), false));
+                return sqrt(error.mean()).leverageOrDetach(ws.getParentWorkspace().getId());
             }
-            return mse;
         }
     }
 

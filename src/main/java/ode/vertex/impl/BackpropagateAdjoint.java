@@ -9,6 +9,7 @@ import org.deeplearning4j.nn.graph.vertex.VertexIndices;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.primitives.Pair;
 import org.nd4j.linalg.workspace.WorkspacesCloseable;
 import util.time.StatisticsTimer;
@@ -48,6 +49,9 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
     final StatisticsTimer gradTimer = new StatisticsTimer();
     final StatisticsTimer updatePostTimer= new StatisticsTimer();
     final StatisticsTimer updatePreTimer= new StatisticsTimer();
+    final StatisticsTimer assignTo = new StatisticsTimer();
+    final StatisticsTimer forward = new StatisticsTimer();
+    int nfe = 0;
     public BackpropagateAdjoint(
             AugmentedDynamics augmentedDynamics,
             FirstOrderEquation forwardPass,
@@ -59,11 +63,17 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
     @Override
     public INDArray calculateDerivative(INDArray zAug, INDArray t, INDArray fzAug) {
+        nfe++;
+        Nd4j.getExecutioner().commit();
         updatePreTimer.start();
         augmentedDynamics.updateFrom(zAug);
+        Nd4j.getExecutioner().commit();
         updatePreTimer.stop();
 
+        forward.start();
         forwardPass.calculateDerivative(augmentedDynamics.z(), t, augmentedDynamics.z());
+        Nd4j.getExecutioner().commit();
+        forward.stop();
 
         try (WorkspacesCloseable ws = graphInfo.workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.ACTIVATION_GRAD)) {
 
@@ -71,19 +81,27 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             // why but it seems to have a detrimental effect on the accuracy and general stability
             graphInfo.graph.getFlattenedGradients().assign(0);
 
+            Nd4j.getExecutioner().commit();
             gradTimer.start();
             final List<INDArray> ret = backPropagate(augmentedDynamics.zAdjoint().negi());
+            Nd4j.getExecutioner().commit();
             gradTimer.stop();
 
             updatePostTimer.start();
-            augmentedDynamics.updateZAdjoint(ret);
             graphInfo.realGradients.assignTo(augmentedDynamics.paramAdjoint());
             augmentedDynamics.tAdjoint().assign(0); // Nothing depends on t as of yet.
-        }
+            Nd4j.getExecutioner().commit();
+            assignTo.start();
+            augmentedDynamics.updateZAdjoint(ret);
+            Nd4j.getExecutioner().commit();
+            assignTo.stop();
 
-        augmentedDynamics.transferTo(fzAug);
-        updatePostTimer.stop();
-        return fzAug;
+            augmentedDynamics.transferTo(fzAug);
+            Nd4j.getExecutioner().commit();
+
+            updatePostTimer.stop();
+            return fzAug;
+        }
     }
 
     private List<INDArray> backPropagate(INDArray epsilon) {

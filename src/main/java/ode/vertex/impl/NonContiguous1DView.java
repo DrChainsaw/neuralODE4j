@@ -66,7 +66,6 @@ public class NonContiguous1DView {
         }
 
         long ptr = 0;
-        final INDArray[] inds = new INDArray[assignTo.rank()];
         for(INDArray viewSlice: view) {
             assignTo.put(new INDArrayIndex[] {NDArrayIndex.interval(ptr, ptr + viewSlice.length())}, viewSlice);
             ptr += viewSlice.length();
@@ -88,5 +87,4 @@ public class NonContiguous1DView {
         view.clear();
         length = 0;
     }
-
 }

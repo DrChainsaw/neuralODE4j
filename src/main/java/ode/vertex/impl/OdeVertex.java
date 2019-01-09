@@ -176,9 +176,9 @@ public class OdeVertex extends BaseGraphVertex {
         final INDArray zAug = Nd4j.create(1, parameters.lastOutput.length() + getEpsilon().length() + graph.numParams() + dL_dtN.length());
 
         final NDArrayIndexAccumulator accumulator = new NDArrayIndexAccumulator(zAug);
-        accumulator.increment( parameters.lastOutput.reshape(new long[]{1,  parameters.lastOutput.length()}))
+        accumulator.increment(parameters.lastOutput.reshape(new long[]{1, parameters.lastOutput.length()}))
                 .increment(getEpsilon().reshape(new long[]{1, getEpsilon().length()}))
-                .increment(Nd4j.zeros(parameters.realGradients.length()).reshape(new long[]{1,Nd4j.zeros(parameters.realGradients.length()).length()}))
+                .increment(Nd4j.zeros(parameters.realGradients.length()).reshape(new long[]{1, Nd4j.zeros(parameters.realGradients.length()).length()}))
                 .increment(dL_dtN.reshape(new long[]{1, dL_dtN.length()}));
 
         final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(
@@ -198,14 +198,14 @@ public class OdeVertex extends BaseGraphVertex {
                 new BackpropagateAdjoint.GraphInfo(graph, parameters.realGradients, innerWorkspaceMgr, tbptt)
         );
 
-
-        augmentedDynamics.transferTo(zAug);
-
         INDArray augAns = odeSolver.integrate(equation, Nd4j.reverse(parameters.time.dup()), zAug, zAug.dup());
 
-        //((BackpropagateAdjoint)equation).updatePostTimer.logSum("update state pre");
-        //((BackpropagateAdjoint)equation).gradTimer.logSum("grad calc");
-        //((BackpropagateAdjoint)equation).updatePostTimer.logSum("update state post");
+        ((BackpropagateAdjoint) equation).updatePreTimer.logSum("update state pre");
+        ((BackpropagateAdjoint) equation).forward.logSum("forward");
+        ((BackpropagateAdjoint) equation).gradTimer.logSum("grad calc");
+        ((BackpropagateAdjoint) equation).updatePostTimer.logSum("update state post");
+        ((BackpropagateAdjoint) equation).assignTo.logSum("assign to from non cont view");
+        System.out.println("Nfe backwards: " + ((BackpropagateAdjoint) equation).nfe);
 
         augmentedDynamics.updateFrom(augAns);
 

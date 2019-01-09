@@ -13,7 +13,7 @@ import java.util.List;
  */
 class AugmentedDynamics {
 
-    private final INDArray flatView;
+    private final INDArray augStateFlat;
     private final INDArray z;
     private final INDArray zAdjoint;
     private final INDArray paramAdjoint;
@@ -29,8 +29,8 @@ class AugmentedDynamics {
                 zAug.get(NDArrayIndex.interval(2 * length(zShape) + length(paramShape), 2 * length(zShape) + length(paramShape) + length(tShape))).reshape(tShape));
     }
 
-    AugmentedDynamics(INDArray flatView, INDArray z, INDArray zAdjoint, INDArray paramAdjoint, INDArray tAdjoint) {
-        this.flatView = flatView;
+    AugmentedDynamics(INDArray augStateFlat, INDArray z, INDArray zAdjoint, INDArray paramAdjoint, INDArray tAdjoint) {
+        this.augStateFlat = augStateFlat;
         this.z = z;
         this.zAdjoint = zAdjoint;
         this.paramAdjoint = paramAdjoint;
@@ -46,11 +46,11 @@ class AugmentedDynamics {
     }
 
     void updateFrom(INDArray zAug) {
-        flatView.assign(zAug);
+        augStateFlat.assign(zAug);
     }
 
     void transferTo(INDArray zAug) {
-        zAug.assign(flatView);
+        zAug.assign(augStateFlat);
     }
 
     void updateZAdjoint(final List<INDArray> epsilons) {
