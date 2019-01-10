@@ -11,12 +11,9 @@ import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.primitives.Pair;
 import org.nd4j.linalg.workspace.WorkspacesCloseable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Models back propagation through a undefined number of residual blocks as a first order differential equation using
@@ -27,15 +24,14 @@ import java.util.Map;
  * <br><br>
  * <pre>
  * f(z(t), theta) = output from forward pass through the layers of the ODE vertex (i.e. the layers of graph)
- * -a(t)*df/dz(t) = dL / dz(t) = epsilon from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt previous output (is it really?)
- * -a(t) * df / dt = no change (not used yet, maybe set to 0?)
- * -a(t) df/dtheta = -dL / dtheta = Gradient from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt -epsilon
- *</pre>
+ * -a(t)*df/dz(t) = dL / dz(t) = epsilon from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt previous output.
+ * -a(t) * df / dt = not used, set to 0
+ * -a(t) df/dtheta = -dL / dtheta = Gradient from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt -epsilon.
+ * </pre>
+ *
  * @author Christian Skarby
  */
 public class BackpropagateAdjoint implements FirstOrderEquation {
-
-    private static final Logger log = LoggerFactory.getLogger(BackpropagateAdjoint.class);
 
     private final AugmentedDynamics augmentedDynamics;
     private final FirstOrderEquation forwardPass;
@@ -62,6 +58,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
     public INDArray calculateDerivative(INDArray zAug, INDArray t, INDArray fzAug) {
         augmentedDynamics.updateFrom(zAug);
 
+        // Note: Will also update z
         forwardPass.calculateDerivative(augmentedDynamics.z(), t, augmentedDynamics.z());
 
         try (WorkspacesCloseable ws = graphInfo.workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.ACTIVATION_GRAD)) {
@@ -72,13 +69,15 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
             final List<INDArray> ret = backPropagate(augmentedDynamics.zAdjoint().negi());
 
+            // Note: z updated above
             augmentedDynamics.updateZAdjoint(ret);
             graphInfo.realGradients.assignTo(augmentedDynamics.paramAdjoint());
             augmentedDynamics.tAdjoint().assign(0); // Nothing depends on t as of yet.
-        }
 
-        augmentedDynamics.transferTo(fzAug);
-        return fzAug;
+            augmentedDynamics.transferTo(fzAug);
+
+            return fzAug;
+        }
     }
 
     private List<INDArray> backPropagate(INDArray epsilon) {
@@ -110,21 +109,12 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             pair = current.doBackward(graphInfo.truncatedBPTT, graphInfo.workspaceMgr);
             epsilons = pair.getSecond();
 
-            if (log.isWarnEnabled()) {
-                for(Map.Entry<String, INDArray> gradEntry : pair.getFirst().gradientForVariable().entrySet()) {
-                    final double max = gradEntry.getValue().maxNumber().doubleValue();
-                    if (max > 100) {
-                        log.warn(current.getVertexName() + " large gradient for " + gradEntry.getKey() +" found: " + max);
-                    }
-                }
-            }
-
             for (VertexIndices vertexIndices : current.getInputVertices()) {
                 final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();
                 if (graphInfo.graph.getConfiguration().getNetworkInputs().contains(
                         inputName)) {
                     outputEpsilons.add(graphInfo.graph.getConfiguration().getNetworkInputs().indexOf(inputName),
-                            epsilons[vertexIndices.getVertexEdgeNumber()].migrate(true));
+                            epsilons[vertexIndices.getVertexEdgeNumber()]);
                 }
             }
 
@@ -147,8 +137,6 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
                 }
             }
         }
-
-        //Now, add the gradients in the order we need them in for flattening (same as params order)
 
         return outputEpsilons;
     }

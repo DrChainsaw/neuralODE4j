@@ -72,4 +72,12 @@ public class StatisticsTimer implements WallClockTimer {
     public void logMin(String prefix) {
         log.info(prefix + " min duration: " + statistics.getMin()+ " ms");
     }
+
+    /**
+     * Log the measured sum value.
+     * @param prefix Prefix of log string
+     */
+    public void logSum(String prefix) {
+        log.info(prefix + " sum duration: " + statistics.getSum() + " ms");
+    }
 }

@@ -173,11 +173,19 @@ public class OdeVertex extends BaseGraphVertex {
         final INDArray dL_dtN = getEpsilon().reshape(1, parameters.lastOutput.length())
                 .mmul(parameters.lastOutput.reshape(parameters.lastOutput.length(), 1)).muli(-1);
 
+        final INDArray zAug = Nd4j.create(1, parameters.lastOutput.length() + getEpsilon().length() + graph.numParams() + dL_dtN.length());
+
+        final NDArrayIndexAccumulator accumulator = new NDArrayIndexAccumulator(zAug);
+        accumulator.increment(parameters.lastOutput.reshape(new long[]{1, parameters.lastOutput.length()}))
+                .increment(getEpsilon().reshape(new long[]{1, getEpsilon().length()}))
+                .increment(Nd4j.zeros(parameters.realGradients.length()).reshape(new long[]{1, Nd4j.zeros(parameters.realGradients.length()).length()}))
+                .increment(dL_dtN.reshape(new long[]{1, dL_dtN.length()}));
+
         final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(
-                parameters.lastOutput.dup(),
-                getEpsilon().dup(),
-                Nd4j.zeros(parameters.realGradients.length()),
-                dL_dtN);
+                zAug,
+                getEpsilon().shape(),
+                new long[]{parameters.realGradients.length()},
+                dL_dtN.shape());
 
         final LayerWorkspaceMgr innerWorkspaceMgr = createWorkspaceMgr(workspaceMgr);
 
@@ -189,9 +197,6 @@ public class OdeVertex extends BaseGraphVertex {
                         getInputs()),
                 new BackpropagateAdjoint.GraphInfo(graph, parameters.realGradients, innerWorkspaceMgr, tbptt)
         );
-
-        final INDArray zAug = Nd4j.create(1, parameters.lastOutput.length() + getEpsilon().length() + graph.numParams() + dL_dtN.length());
-        augmentedDynamics.transferTo(zAug);
 
         INDArray augAns = odeSolver.integrate(equation, Nd4j.reverse(parameters.time.dup()), zAug, zAug.dup());
 
