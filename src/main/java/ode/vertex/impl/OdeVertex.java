@@ -200,13 +200,6 @@ public class OdeVertex extends BaseGraphVertex {
 
         INDArray augAns = odeSolver.integrate(equation, Nd4j.reverse(parameters.time.dup()), zAug, zAug.dup());
 
-        ((BackpropagateAdjoint) equation).updatePreTimer.logSum("update state pre");
-        ((BackpropagateAdjoint) equation).forward.logSum("forward");
-        ((BackpropagateAdjoint) equation).gradTimer.logSum("grad calc");
-        ((BackpropagateAdjoint) equation).updatePostTimer.logSum("update state post");
-        ((BackpropagateAdjoint) equation).assignTo.logSum("assign to from non cont view");
-        System.out.println("Nfe backwards: " + ((BackpropagateAdjoint) equation).nfe);
-
         augmentedDynamics.updateFrom(augAns);
 
         final INDArray epsilonOut = workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, augmentedDynamics.zAdjoint());

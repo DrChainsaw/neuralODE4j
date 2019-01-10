@@ -7,6 +7,9 @@ import ode.solve.impl.util.AggStepListener;
 import ode.solve.impl.util.ButcherTableu;
 import ode.solve.impl.util.FirstOrderEquationWithState;
 import ode.solve.impl.util.StepPolicy;
+import org.nd4j.linalg.api.memory.MemoryWorkspace;
+import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
+import org.nd4j.linalg.api.memory.enums.SpillPolicy;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -17,6 +20,11 @@ import org.nd4j.linalg.factory.Nd4j;
  * @author Christian Skarby
  */
 public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
+
+    final static WorkspaceConfiguration wsConf = WorkspaceConfiguration.builder()
+            .overallocationLimit(0.0)
+            .policySpill(SpillPolicy.REALLOCATE)
+            .build();
 
     private final ButcherTableu tableu;
     private final StepPolicy stepPolicy;
@@ -101,19 +109,22 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             throw new IllegalArgumentException("time must be size 2! Was: " + t);
         }
 
-        final FirstOrderEquationWithState equationState = new FirstOrderEquationWithState(
-                equation,
-                t.getScalar(0).dup(),
-                yOut.assign(y0),
-                tableu.c.length() + 1);
+        try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(wsConf, this.getClass().getSimpleName())) {
 
-        listener.begin(t, y0);
+            final FirstOrderEquationWithState equationState = new FirstOrderEquationWithState(
+                    equation,
+                    t.getScalar(0).dup(),
+                    yOut.assign(y0),
+                    tableu.c.length() + 1);
 
-        solve(equationState, t);
+            listener.begin(t, y0);
 
-        listener.done();
+            solve(equationState, t);
 
-        return yOut;
+            listener.done();
+
+            return yOut;
+        }
     }
 
     private void solve(FirstOrderEquationWithState equation, INDArray t) {
