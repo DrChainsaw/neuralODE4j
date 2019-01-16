@@ -4,8 +4,9 @@ import org.junit.Test;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.nd4j.linalg.primitives.Triple;
 
-import java.util.Collections;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
@@ -24,19 +25,19 @@ public class NormElboLossTest {
     public void computeScore() {
         final double sigma = 0.3;
         final double mean = 2 * Math.PI;
-        final ActivationListener qMean = new ActivationListener("mean");
-        final ActivationListener qLogVar = new ActivationListener("logVar");
-        final NormElboLoss loss = new NormElboLoss(mean, sigma, qMean, qLogVar);
+        final NormElboLoss loss = new NormElboLoss(mean, sigma, result -> new Triple<>(
+                result.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 5)),
+                result.get(NDArrayIndex.all(), NDArrayIndex.point(5)),
+                result.get(NDArrayIndex.all(), NDArrayIndex.point(6))));
 
-        qMean.onForwardPass(null, Collections.singletonMap("mean", Nd4j.scalar(Math.log(mean))));
-        qLogVar.onForwardPass(null, Collections.singletonMap("logVar", Nd4j.scalar(Math.log(sigma) * 2)));
-
-        final INDArray output = Nd4j.create(new double[][]{
+        final INDArray labels = Nd4j.create(new double[][]{
                 {-1, 2, -3, 4, -5},
         });
 
+        final INDArray resultConc = Nd4j.concat(1, labels, Nd4j.scalar(Math.log(mean)), Nd4j.scalar(2 * Math.log(sigma)));
+
         assertEquals("Incorrect loss!",1.0126971006393433,
-                loss.computeScore(output, output, new ActivationIdentity(), null, false), 1e-4);
+                loss.computeScore(labels, resultConc, new ActivationIdentity(), null, false), 1e-4);
     }
 
     /**
@@ -46,20 +47,30 @@ public class NormElboLossTest {
     public void computeScoreArraySpiral() {
         final double sigma = 0.3;
         final double mean = 2 * Math.PI;
-        final ActivationListener qMean = new ActivationListener("mean");
-        final ActivationListener qLogVar = new ActivationListener("logVar");
-        final NormElboLoss loss = new NormElboLoss(mean, sigma, qMean, qLogVar);
-
+        final long nrofSamples = 50;
+        final long nrofLatentDims = 4;
         final int batchSize = 10;
-        qMean.onForwardPass(null, Collections.singletonMap("mean", Nd4j.arange(batchSize*4).reshape(10, 4)));
-        qLogVar.onForwardPass(null, Collections.singletonMap("logVar", Nd4j.arange(batchSize*4).reshape(10, 4)));
+
+        final NormElboLoss loss = new NormElboLoss(mean, sigma, result -> new Triple<>(
+                result.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 2*nrofSamples)).reshape(batchSize, nrofSamples, 2),
+                result.get(NDArrayIndex.all(), NDArrayIndex.interval(2*nrofSamples, 2*nrofSamples + nrofLatentDims)),
+                result.get(NDArrayIndex.all(), NDArrayIndex.interval(2*nrofSamples+nrofLatentDims, 2*nrofSamples + 2*nrofLatentDims))
+        ));
+
+
 
         final SpiralIterator.Generator gen = new SpiralIterator.Generator(
                 new SpiralFactory(0, 0.3, 0, 2*Math.PI, 200),
-                0.3, 50, new Random(666));
-        final INDArray resultAndOutput = gen.generate(batchSize).getFeatures(0);
+                0.3, nrofSamples, new Random(666));
+        final INDArray labels = gen.generate(batchSize).getFeatures(0);
 
-        final INDArray score = loss.computeScoreArray(resultAndOutput, resultAndOutput, new ActivationIdentity(), null);
+        final INDArray resultConc = Nd4j.hstack(
+                labels.reshape(batchSize, labels.length() / batchSize),
+                Nd4j.arange(batchSize*nrofLatentDims).reshape(batchSize, nrofLatentDims),
+                Nd4j.arange(batchSize*nrofLatentDims).reshape(batchSize, nrofLatentDims));
+
+
+        final INDArray score = loss.computeScoreArray(labels, resultConc, new ActivationIdentity(), null);
 
         assertEquals("Incorrect size!", batchSize, score.length());
 
