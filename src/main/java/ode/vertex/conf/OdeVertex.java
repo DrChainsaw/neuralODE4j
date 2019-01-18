@@ -9,12 +9,16 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
-import org.deeplearning4j.nn.conf.layers.CnnLossLayer;
+import org.deeplearning4j.nn.conf.layers.Convolution3D;
 import org.deeplearning4j.nn.conf.layers.Layer;
 import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.learning.config.IUpdater;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Configuration of an ODE block.
@@ -28,21 +32,24 @@ public class OdeVertex extends GraphVertex {
     protected String firstVertex;
     protected String lastVertex;
     protected FirstOrderSolverConf odeSolver;
+    protected int timeInputIndex;
 
     public OdeVertex(
             @JsonProperty("conf") ComputationGraphConfiguration conf,
             @JsonProperty("firstVertex") String firstVertex,
             @JsonProperty("lastVertex") String lastVertex,
-            @JsonProperty("odeSolver") FirstOrderSolverConf odeSolver) {
+            @JsonProperty("odeSolver") FirstOrderSolverConf odeSolver,
+            @JsonProperty("timeInputIndex") int timeInputIndex) {
         this.conf = conf;
         this.firstVertex = firstVertex;
         this.lastVertex = lastVertex;
         this.odeSolver = odeSolver;
+        this.timeInputIndex = timeInputIndex;
     }
 
     @Override
     public GraphVertex clone() {
-        return new OdeVertex(conf.clone(), firstVertex, lastVertex, odeSolver.clone());
+        return new OdeVertex(conf.clone(), firstVertex, lastVertex, odeSolver.clone(), timeInputIndex);
     }
 
     @Override
@@ -50,11 +57,12 @@ public class OdeVertex extends GraphVertex {
         if (!(o instanceof OdeVertex)) {
             return false;
         }
-        final OdeVertex other = (OdeVertex)o;
+        final OdeVertex other = (OdeVertex) o;
         return conf.equals(other.conf)
                 && firstVertex.equals(other.firstVertex)
                 && lastVertex.equals(other.lastVertex)
-                && odeSolver.equals(other.odeSolver);
+                && odeSolver.equals(other.odeSolver)
+                && timeInputIndex == other.timeInputIndex;
     }
 
     @Override
@@ -71,12 +79,14 @@ public class OdeVertex extends GraphVertex {
 
     @Override
     public int minVertexInputs() {
-        return conf.getVertices().get(firstVertex).minVertexInputs();
+        final int timeOrNot = timeInputIndex == -1 ? 0 : 1;
+        return conf.getVertices().get(firstVertex).minVertexInputs() + timeOrNot;
     }
 
     @Override
     public int maxVertexInputs() {
-        return conf.getVertices().get(firstVertex).maxVertexInputs();
+        final int timeOrNot = timeInputIndex == -1 ? 0 : 1;
+        return conf.getVertices().get(firstVertex).maxVertexInputs() + timeOrNot;
     }
 
     @Override
@@ -110,18 +120,60 @@ public class OdeVertex extends GraphVertex {
 
         innerGraph.init(paramsView, false); // This does not update any parameters, just sets them
 
+        // Crappy code! ParamTable might not have deterministic iter order!
+        IUpdater updater = innerGraph.getLayer(0).getConfig().getUpdaterByParam(innerGraph.getLayer(0).paramTable().keySet().iterator().next()).clone();
+        for(org.deeplearning4j.nn.graph.vertex.GraphVertex vertex: graph.getVertices()) {
+            if(vertex != null && vertex.hasLayer()) {
+                String parname = vertex.paramTable(false).keySet().iterator().next();
+                updater = vertex.getConfig().getUpdaterByParam(parname).clone();
+            }
+        }
+
         return new ode.vertex.impl.OdeVertex(
-                graph,
-                name,
-                idx,
+                new ode.vertex.impl.OdeVertex.BaseGraphVertexInputs(graph, name, idx),
                 innerGraph,
                 odeSolver.instantiate(),
-                new DefaultTrainingConfig(name, graph.getVertices()[1].getConfig().getUpdaterByParam("W").clone()));
+                new DefaultTrainingConfig(name, updater),
+                timeInputIndex);
     }
 
     @Override
     public InputType getOutputType(int layerIndex, InputType... vertexInputs) throws InvalidInputTypeException {
-        return conf.getLayerActivationTypes(vertexInputs).get(lastVertex);
+        List<InputType> inputTypeList = new ArrayList<>();
+        InputType time = null;
+        for (int i = 0; i < vertexInputs.length; i++) {
+            if (i != timeInputIndex) { // Never true if timeInputIndex == -1
+                inputTypeList.add(vertexInputs[i]);
+            } else {
+                time = vertexInputs[i];
+            }
+        }
+
+        InputType outputs = conf.getLayerActivationTypes(inputTypeList.toArray(new InputType[0])).get(lastVertex);
+
+        if(time != null && time.getType() != InputType.Type.FF) {
+            throw new IllegalArgumentException("Time must be 1D!");
+        }
+
+        return addTimeDim(outputs, time);
+    }
+
+    private InputType addTimeDim(InputType type, InputType timeDim) {
+        if(timeDim == null) {
+            return type;
+        }
+
+        switch (type.getType()) {
+            case FF: return InputType.recurrent(type.arrayElementsPerExample(), timeDim.arrayElementsPerExample());
+            case CNN:
+                InputType.InputTypeConvolutional convType = (InputType.InputTypeConvolutional)type;
+                return InputType.convolutional3D(Convolution3D.DataFormat.NDHWC,
+                        timeDim.arrayElementsPerExample(),
+                        convType.getHeight(),
+                        convType.getWidth(),
+                        convType.getChannels());
+            default: throw new UnsupportedOperationException("Input type not supported with time as input!");
+        }
     }
 
     @Override
@@ -132,12 +184,12 @@ public class OdeVertex extends GraphVertex {
     public static class Builder {
 
         private final String inputName = this.toString() + "_input";
-        private final String outputName = this.toString() + "_output";
         private final ComputationGraphConfiguration.GraphBuilder graphBuilder = new NeuralNetConfiguration.Builder()
                 .graphBuilder();
 
-        private String first = null;
+        private String first;
         private String last;
+        private int timeInputIndex = -1;
 
         private FirstOrderSolverConf odeSolver = new DormandPrince54Solver();
 
@@ -146,6 +198,7 @@ public class OdeVertex extends GraphVertex {
                     .addInputs(inputName)
                     .addLayer(name, layer, inputName);
             first = name;
+            last = name;
         }
 
         /**
@@ -170,11 +223,29 @@ public class OdeVertex extends GraphVertex {
 
         /**
          * Sets the {@link FirstOrderSolver} to use
+         *
          * @param odeSolver solver instance
          * @return the Builder for fluent API
          */
         public Builder odeSolver(FirstOrderSolverConf odeSolver) {
             this.odeSolver = odeSolver;
+            return this;
+        }
+
+        /**
+         * Indicates that time is given as an input to the vertex. Example:
+         * <pre>
+         * graphBuilder.addVertex("odeVertex",
+         *    new OdeVertex.Builder("0", new DenseLayer.Builder().nOut(4).build())
+         *    .timeAsInputIndex(1)
+         *    .build(), "someLayer", "time");
+         * </pre>
+         *
+         * @param timeInputIndex input index for time
+         * @return the Builder for fluent API
+         */
+        public Builder timeAsInputIndex(int timeInputIndex) {
+            this.timeInputIndex = timeInputIndex;
             return this;
         }
 
@@ -191,9 +262,12 @@ public class OdeVertex extends GraphVertex {
          */
         public OdeVertex build() {
             return new OdeVertex(graphBuilder
-                    .setOutputs(outputName)
-                    .addLayer(outputName, new CnnLossLayer(), last)
-                    .build(), first, last, odeSolver);
+                    .allowNoOutput(true)
+                    .build(),
+                    first,
+                    last,
+                    odeSolver,
+                    timeInputIndex);
         }
 
     }

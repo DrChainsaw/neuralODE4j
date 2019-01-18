@@ -10,6 +10,7 @@ import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
+import org.nd4j.linalg.dataset.MultiDataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Sgd;
 
@@ -92,5 +93,35 @@ public class OdeVertexTest {
         final INDArray before = graph.getVertex("1").params().dup();
         graph.fit(new DataSet(Nd4j.randn(new long[]{1, 1, 9, 9}), Nd4j.create(new double[] {0,1,0})));
         assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("1").params().dup());
+    }
+
+    /**
+     * Smoke test to see that it is possible to do a forward pass when time is one of the inputs
+     */
+    @Test
+    public void fitWithTimeAsInput() {
+        final long nOut = 8;
+        final long nrofTimeSteps = 10;
+        final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
+                .graphBuilder()
+                .addInputs("input", "time")
+                .setInputTypes(InputType.feedForward(5), InputType.feedForward(nrofTimeSteps))
+                .addLayer("0", new DenseLayer.Builder().nOut(nOut).build(), "input")
+                .addVertex("odeVertex", new ode.vertex.conf.OdeVertex.Builder("ode0",
+                       new DenseLayer.Builder().nOut(nOut).build())
+                        .timeAsInputIndex(1)
+                        .build(), "0", "time")
+                .setOutputs("output")
+                .addLayer("output", new RnnOutputLayer.Builder().nOut(3).build(), "odeVertex")
+                .build());
+
+        graph.init();
+
+        final INDArray before = graph.getVertex("odeVertex").params().dup();
+        final int batchSize = 3;
+        graph.fit(new MultiDataSet(
+                new INDArray[] {Nd4j.randn(new long[]{batchSize, 5}),  Nd4j.linspace(0, 2, nrofTimeSteps)},
+                new INDArray[] {Nd4j.repeat(Nd4j.create(new double[] {0,1,0}).transposei(), batchSize*(int)nrofTimeSteps)}));
+        assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
     }
 }

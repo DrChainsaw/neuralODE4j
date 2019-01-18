@@ -86,19 +86,13 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
         final int[] topologicalOrder = graphInfo.graph.topologicalSortOrder();
         final GraphVertex[] vertices = graphInfo.graph.getVertices();
 
+        vertices[topologicalOrder[topologicalOrder.length-1]].setEpsilon(epsilon);
+
         List<INDArray> outputEpsilons = new ArrayList<>();
 
         boolean[] setVertexEpsilon = new boolean[topologicalOrder.length]; //If true: already set epsilon for this vertex; later epsilons should be *added* to the existing one, not set
         for (int i = topologicalOrder.length - 1; i >= 0; i--) {
             GraphVertex current = vertices[topologicalOrder[i]];
-
-            if (current.isOutputVertex()) {
-                for (VertexIndices vertexIndices : current.getInputVertices()) {
-                    final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();
-                    graphInfo.graph.getVertex(inputName).setEpsilon(epsilon);
-                }
-                continue;
-            }
 
             if (current.isInputVertex()) {
                 continue;
