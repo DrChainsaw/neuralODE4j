@@ -234,7 +234,7 @@ public class OdeVertex extends BaseGraphVertex {
                 parameters.inputs());
 
         // nrof outputs must be same as number of inputs due to resblock
-        final INDArray output = addTimeStepsToOutput(workspaceMgr.createUninitialized(ArrayType.INPUT, parameters.inputs()[0].shape()).detach());
+        final INDArray output = addTimeStepsToOutput(Nd4j.createUninitialized(parameters.inputs()[0].shape()));
         new MultiStepSolver(odeSolver).integrate(equation, parameters.time(), parameters.inputs()[0], output);
 
         for (GraphVertex vertex : graph.getVertices()) {
