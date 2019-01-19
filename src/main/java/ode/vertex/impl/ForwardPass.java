@@ -37,7 +37,6 @@ public class ForwardPass implements FirstOrderEquation {
         this.inputs = startInputs;
     }
 
-
     @Override
     public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
         try (WorkspacesCloseable ws = enterIfNotOpen(ArrayType.ACTIVATIONS)) {
@@ -81,19 +80,17 @@ public class ForwardPass implements FirstOrderEquation {
 
             VertexIndices[] inputsTo = current.getOutputVertices();
 
-            INDArray out = null;
+            final INDArray out;
             if (current.isInputVertex()) {
                 out = inputs[vIdx];
-            } else if (current.isOutputVertex()) {
-                for (INDArray outArr : current.getInputs()) {
-                    outputAccum.increment(outArr);
-                }
             } else {
                 //Standard feed-forward case
                 out = current.doForward(training, workspaceMgr);
             }
 
-            if (inputsTo != null) {  //Output vertices may not input to any other vertices
+            if (inputsTo == null) {  //Output vertices may not input to any other vertices
+                outputAccum.increment(out);
+            } else {
                 for (VertexIndices v : inputsTo) {
                     //Note that we don't have to do anything special here: the activations are always detached in
                     // this method
