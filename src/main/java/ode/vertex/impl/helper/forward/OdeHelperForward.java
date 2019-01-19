@@ -12,10 +12,12 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 public interface OdeHelperForward {
 
     /**
-     * Return the solution to the ODE for the given inputs (typically activations from previous layers)
+     * Return the solution to the ODE when assuming that a forward pass through the layers of the given graph is
+     * the derivative of the sought function.
+     * @param graph Graph of layers to do forward pass through
      * @param wsMgr To handle workspaces for newly created arrays
-     * @param inputs Inputs to vertex
-     * @return an {@link INDArray} with the solution to the ODE which is typically the output
+     * @param inputs Inputs to vertex, typically activations from previous layers
+     * @return an {@link INDArray} with the solution to the ODE
      */
     INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, INDArray[] inputs);
 }

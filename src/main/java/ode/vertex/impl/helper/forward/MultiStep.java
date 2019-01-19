@@ -4,7 +4,6 @@ import com.google.common.primitives.Longs;
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.impl.MultiStepSolver;
-import ode.vertex.impl.ForwardPass;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -26,7 +25,7 @@ public class MultiStep implements OdeHelperForward {
         this.solver = new MultiStepSolver(solver);
         this.time = time;
         if(time.length() <= 2 || !time.isVector()) {
-            throw new IllegalArgumentException("time must be a vector! Was of shape: " + Arrays.toString(time.shape())+ "!");
+            throw new IllegalArgumentException("time must be a vector of size > 2! Was of shape: " + Arrays.toString(time.shape())+ "!");
         }
     }
 

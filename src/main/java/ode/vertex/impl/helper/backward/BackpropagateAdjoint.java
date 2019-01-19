@@ -1,7 +1,8 @@
-package ode.vertex.impl;
+package ode.vertex.impl.helper.backward;
 
 import lombok.AllArgsConstructor;
 import ode.solve.api.FirstOrderEquation;
+import ode.vertex.impl.NonContiguous1DView;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
@@ -25,7 +26,7 @@ import java.util.List;
  * <pre>
  * f(z(t), theta) = output from forward pass through the layers of the ODE vertex (i.e. the layers of graph)
  * -a(t)*df/dz(t) = dL / dz(t) = epsilon from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt previous output.
- * -a(t) * df / dt = not used, set to 0
+ * -a(t) * df / dt = not used (as of now), set to 0
  * -a(t) df/dtheta = -dL / dtheta = Gradient from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt -epsilon.
  * </pre>
  *

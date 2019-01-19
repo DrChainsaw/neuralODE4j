@@ -1,6 +1,7 @@
-package ode.vertex.impl;
+package ode.vertex.impl.helper.forward;
 
 import ode.solve.api.FirstOrderEquation;
+import ode.vertex.impl.helper.NDArrayIndexAccumulator;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.graph.vertex.VertexIndices;

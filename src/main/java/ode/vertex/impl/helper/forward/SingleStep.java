@@ -3,7 +3,6 @@ package ode.vertex.impl.helper.forward;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
-import ode.vertex.impl.ForwardPass;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;

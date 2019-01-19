@@ -1,4 +1,4 @@
-package ode.vertex.impl;
+package ode.vertex.impl.helper.forward;
 
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
