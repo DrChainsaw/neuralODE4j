@@ -16,11 +16,11 @@ import org.nd4j.linalg.factory.Nd4j;
 import static org.junit.Assert.assertArrayEquals;
 
 /**
- * Test cases for {@link SingleStepOdeHelperForward}
+ * Test cases for {@link SingleStep}
  *
  * @author Christian Skarby
  */
-public class SingleStepOdeHelperForwardTest {
+public class SingleStepTest {
 
     /**
      * Test if a simple ODE can be solved
@@ -35,7 +35,7 @@ public class SingleStepOdeHelperForwardTest {
         final INDArray expected = input.mul(Math.exp(2));
 
         final FirstOrderSolver solver = new DormandPrince54Solver(new SolverConfig(1e-10, 1e-10, 1e-10, 100));
-        final OdeHelperForward helper = new SingleStepOdeHelperForward(
+        final OdeHelperForward helper = new SingleStep(
                 solver,
                 Nd4j.linspace(0, 1, 2));
 

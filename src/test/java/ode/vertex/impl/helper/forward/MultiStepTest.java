@@ -13,11 +13,11 @@ import org.nd4j.linalg.ops.transforms.Transforms;
 import static org.junit.Assert.assertArrayEquals;
 
 /**
- * Test cases for {@link MultiStepOdeHelperForward}
+ * Test cases for {@link MultiStep}
  *
  * @author Christian Skarby
  */
-public class MultiStepOdeHelperForwardTest {
+public class MultiStepTest {
 
     /**
      * Test if a simple ODE can be solved
@@ -27,13 +27,13 @@ public class MultiStepOdeHelperForwardTest {
         final INDArray t = Nd4j.arange(4);
         final double exponent = 1.23;
         final int nrofInputs = 3;
-        final ComputationGraph graph = SingleStepOdeHelperForwardTest.getSimpleExpGraph(exponent, nrofInputs);
+        final ComputationGraph graph = SingleStepTest.getSimpleExpGraph(exponent, nrofInputs);
 
         final INDArray input = Nd4j.arange(nrofInputs);
         final INDArray expected = input.transpose().mmul(Transforms.exp(t.mul(exponent)));
 
         final FirstOrderSolver solver = new DormandPrince54Solver(new SolverConfig(1e-10, 1e-10, 1e-10, 100));
-        final OdeHelperForward helper = new MultiStepOdeHelperForward(
+        final OdeHelperForward helper = new MultiStep(
                 solver,
                 t);
 

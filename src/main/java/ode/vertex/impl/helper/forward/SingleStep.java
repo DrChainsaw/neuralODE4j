@@ -13,15 +13,15 @@ import java.util.Arrays;
 
 /**
  * Simple {@link OdeHelperForward} capable of only a single time step. Main difference compared to using
- * {@link MultiStepOdeHelperForward} is that the latter will return output (zt) which includes the first step (z0)
+ * {@link MultiStep} is that the latter will return output (zt) which includes the first step (z0)
  * as well.
  */
-public class SingleStepOdeHelperForward implements OdeHelperForward {
+public class SingleStep implements OdeHelperForward {
 
     private final FirstOrderSolver solver;
     private final INDArray time;
 
-    public SingleStepOdeHelperForward(FirstOrderSolver solver, INDArray time) {
+    public SingleStep(FirstOrderSolver solver, INDArray time) {
         this.solver = solver;
         this.time = time;
         if(time.length() != 2 && time.rank() != 1) {

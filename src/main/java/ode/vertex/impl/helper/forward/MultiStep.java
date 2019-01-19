@@ -17,12 +17,12 @@ import java.util.Arrays;
  *
  * @author Christian Skarby
  */
-public class MultiStepOdeHelperForward implements OdeHelperForward {
+public class MultiStep implements OdeHelperForward {
 
     private final FirstOrderSolver solver;
     private final INDArray time;
 
-    public MultiStepOdeHelperForward(FirstOrderSolver solver, INDArray time) {
+    public MultiStep(FirstOrderSolver solver, INDArray time) {
         this.solver = new MultiStepSolver(solver);
         this.time = time;
         if(time.length() <= 2 || !time.isVector()) {
