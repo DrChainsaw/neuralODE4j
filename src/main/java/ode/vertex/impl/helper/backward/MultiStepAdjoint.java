@@ -80,8 +80,8 @@ public class MultiStepAdjoint implements OdeHelperBackward {
     }
 
     private void assertSizeVsTime(INDArray array) {
-        if(array.size(0) + 1 != time.length()) {
-            throw new IllegalArgumentException("Must have one element less in first dimension compared to time! Input: "
+        if(array.size(0) != time.length()) {
+            throw new IllegalArgumentException("Must have same number of in first dimension as there are time steps! Input: "
             + array.size(0) + ", time: " + time.length());
         }
     }
@@ -95,7 +95,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
     }
 
     private INDArray getStep(INDArrayIndex[] indexer, INDArray array, int step) {
-        indexer[0] = NDArrayIndex.point(step-1);
+        indexer[0] = NDArrayIndex.point(step);
         return array.get(indexer);
     }
 

@@ -26,4 +26,9 @@ public class InputStepAdjoint implements OdeHelperBackward {
     public ode.vertex.impl.helper.backward.OdeHelperBackward instantiate() {
         return new ode.vertex.impl.helper.backward.InputStepAdjoint(solverConf.instantiate(), timeInputIndex);
     }
+
+    @Override
+    public InputStepAdjoint clone() {
+        return new InputStepAdjoint(solverConf.clone(), timeInputIndex);
+    }
 }

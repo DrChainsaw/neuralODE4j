@@ -1,35 +1,27 @@
 package ode.vertex.impl;
 
-import com.google.common.primitives.Longs;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import ode.solve.api.FirstOrderEquation;
-import ode.solve.api.FirstOrderSolver;
-import ode.solve.impl.MultiStepSolver;
-import ode.vertex.impl.helper.NDArrayIndexAccumulator;
-import ode.vertex.impl.helper.backward.AugmentedDynamics;
-import ode.vertex.impl.helper.backward.BackpropagateAdjoint;
-import ode.vertex.impl.helper.forward.ForwardPass;
+import ode.vertex.impl.helper.backward.OdeHelperBackward;
+import ode.vertex.impl.helper.forward.OdeHelperForward;
 import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.api.MaskState;
 import org.deeplearning4j.nn.api.TrainingConfig;
-import org.deeplearning4j.nn.gradient.DefaultGradient;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.BaseGraphVertex;
-import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.params.BatchNormalizationParamInitializer;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.INDArrayIndex;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.primitives.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Implementation of an ODE block.
@@ -43,11 +35,12 @@ public class OdeVertex extends BaseGraphVertex {
     private final static String parName = "params";
 
     private final ComputationGraph graph;
-    private final FirstOrderSolver odeSolver;
+    private final OdeHelperForward odeHelperForward;
+    private final OdeHelperBackward odeHelperBackward;
     private final TrainingConfig trainingConfig;
     private final Parameters parameters;
 
-    private abstract class Parameters {
+    private static class Parameters {
 
         private INDArray lastOutput; // z(t1) from paper
         private final NonContiguous1DView realGradients; // Parts of graph.getFlattenedGradients() which are actually gradients
@@ -55,12 +48,6 @@ public class OdeVertex extends BaseGraphVertex {
         private Parameters() {
             this.realGradients = new NonContiguous1DView();
         }
-
-        abstract INDArray time();
-
-        abstract INDArray[] inputs();
-
-        abstract INDArray[] epsilons(LayerWorkspaceMgr wsMgr, AugmentedDynamics finalState);
 
         private INDArray lastOutput() {
             return lastOutput;
@@ -75,69 +62,6 @@ public class OdeVertex extends BaseGraphVertex {
         }
     }
 
-    private class ParametersFixedTime extends Parameters {
-        private final INDArray time;
-
-        private ParametersFixedTime(INDArray time) {
-            super();
-            this.time = time;
-        }
-
-        @Override
-        INDArray time() {
-            return time;
-        }
-
-        @Override
-        INDArray[] inputs() {
-            return getInputs();
-        }
-
-        @Override
-        INDArray[] epsilons(LayerWorkspaceMgr wsMgr, AugmentedDynamics finalState) {
-            return new INDArray[] {wsMgr.leverageTo(ArrayType.ACTIVATION_GRAD, finalState.zAdjoint())};
-        }
-    }
-
-    private class ParametersTimeAsInput extends Parameters {
-
-        private final int timeInputIndex;
-
-        private ParametersTimeAsInput(int timeInputIndex) {
-            super();
-            this.timeInputIndex = timeInputIndex;
-        }
-
-        @Override
-        INDArray time() {
-            return getInputs()[timeInputIndex];
-        }
-
-        @Override
-        INDArray[] inputs() {
-            final List<INDArray> notTimeInputs = new ArrayList<>();
-            for(int i = 0; i < getInputs().length; i++) {
-                if(i != timeInputIndex) {
-                    notTimeInputs.add(getInputs()[i]);
-                }
-            }
-            return notTimeInputs.toArray(new INDArray[0]);
-        }
-
-        @Override
-        INDArray[] epsilons(LayerWorkspaceMgr wsMgr, AugmentedDynamics finalState) {
-            final INDArray[] epsilons = new INDArray[getInputs().length];
-            for(int i = 0; i < getInputs().length; i++) {
-                if(i != timeInputIndex) {
-                    epsilons[i] = wsMgr.leverageTo(ArrayType.ACTIVATION_GRAD, finalState.zAdjoint());
-                } else {
-                    epsilons[i] = wsMgr.leverageTo(ArrayType.ACTIVATION_GRAD, finalState.tAdjoint());
-                }
-            }
-            return epsilons;
-        }
-    }
-
     @AllArgsConstructor @Getter
     public static class BaseGraphVertexInputs {
         private final ComputationGraph graph;
@@ -147,14 +71,15 @@ public class OdeVertex extends BaseGraphVertex {
 
     public OdeVertex(BaseGraphVertexInputs baseGraphVertexInputs,
                      ComputationGraph innerGraph,
-                     FirstOrderSolver odeSolver,
-                     TrainingConfig trainingConfig,
-                     int timeAsInputIndex) {
+                     OdeHelperForward odeHelperForward,
+                     OdeHelperBackward odeHelperBackward,
+                     TrainingConfig trainingConfig) {
         super(baseGraphVertexInputs.getGraph(), baseGraphVertexInputs.getName(), baseGraphVertexInputs.getVertexIndex(), null, null);
         this.graph = innerGraph;
         this.trainingConfig = trainingConfig;
-        this.odeSolver = odeSolver;
-        this.parameters = timeAsInputIndex != -1 ? new ParametersTimeAsInput(timeAsInputIndex) : new ParametersFixedTime(Nd4j.create(new double[]{0, 1}));
+        this.odeHelperForward = odeHelperForward;
+        this.odeHelperBackward = odeHelperBackward;
+        this.parameters = new Parameters();
     }
 
     @Override
@@ -202,10 +127,6 @@ public class OdeVertex extends BaseGraphVertex {
     private void validateForward() {
         if (!canDoForward())
             throw new IllegalStateException("Cannot do forward pass: inputs not set");
-
-        if (parameters.inputs().length != 1) {
-            throw new IllegalStateException("Only one input supported!");
-        }
     }
 
     private void validateBackprop() {
@@ -231,25 +152,10 @@ public class OdeVertex extends BaseGraphVertex {
 
         final LayerWorkspaceMgr innerWorkspaceMgr = createWorkspaceMgr(workspaceMgr);
 
-        final ForwardPass equation = new ForwardPass(
-                graph,
-                innerWorkspaceMgr,
-                true, // Always use training as batch norm running mean and var become messed up otherwise. Same effect seen in original pytorch repo.
-                parameters.inputs());
-
-        // nrof outputs must be same as number of inputs due to resblock
-        final INDArray output = addTimeStepsToOutput(Nd4j.createUninitialized(parameters.inputs()[0].shape()));
-        new MultiStepSolver(odeSolver).integrate(equation, parameters.time(), parameters.inputs()[0], output);
-
-        for (GraphVertex vertex : graph.getVertices()) {
-            final INDArray[] inputs = vertex.getInputs();
-            for (int i = 0; i < inputs.length; i++) {
-                vertex.setInput(i, workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, inputs[i]), workspaceMgr);
-            }
-        }
+        final INDArray output = odeHelperForward.solve(graph, innerWorkspaceMgr, getInputs());
 
         parameters.setLastOutput(output.detach());
-        return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, alignOutShape(output));
+        return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, output);
     }
 
     @Override
@@ -257,114 +163,34 @@ public class OdeVertex extends BaseGraphVertex {
         validateBackprop();
         log.trace("Start backward");
 
-        // Create augmented dynamics for adjoint method
-        // Initialization: S0:
-        // z(t1) = lastoutput
-        // a(t) = -dL/d(z(t1)) = -epsilon from next layer (i.e getEpsilon). Use last row if more than one timestep
-        // parameters = zeros
-        // dL/dt1 = dL / dz(t1) dot z(t1)
-
-        // TODO: This is just a placeholder to verify that dims work out! Need to do all the below for each discrete timestep and not
-        //  use MultiStepSolver
-        final INDArray dL_dztN = getLast(alignInShape(getEpsilon()));
-        final INDArray ztN = getLast(parameters.lastOutput());
-
-        final INDArray dL_dtN = dL_dztN.reshape(1, ztN.length())
-                .mmul(ztN.reshape(ztN.length(), 1)).muli(-1);
-
-        final INDArray zAug = Nd4j.create(1, ztN.length() + dL_dztN.length() + graph.numParams() + dL_dtN.length());
-
-        final NDArrayIndexAccumulator accumulator = new NDArrayIndexAccumulator(zAug);
-        accumulator.increment(ztN.reshape(new long[]{1, ztN.length()}))
-                .increment(dL_dztN.reshape(new long[]{1, dL_dztN.length()}))
-                .increment(Nd4j.zeros(parameters.realGradients().length()).reshape(new long[]{1, Nd4j.zeros(parameters.realGradients().length()).length()}))
-                .increment(dL_dtN.reshape(new long[]{1, dL_dtN.length()}));
-
-        final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(
-                zAug,
-                dL_dztN.shape(),
-                new long[]{parameters.realGradients().length()},
-                dL_dtN.shape());
-
-        final LayerWorkspaceMgr innerWorkspaceMgr = createWorkspaceMgr(workspaceMgr);
-
-        final FirstOrderEquation equation = new BackpropagateAdjoint(
-                augmentedDynamics,
-                new ForwardPass(graph,
-                        innerWorkspaceMgr,
-                        true,
-                        parameters.inputs()),
-                new BackpropagateAdjoint.GraphInfo(graph, parameters.realGradients(), innerWorkspaceMgr, tbptt)
+        final OdeHelperBackward.InputArrays inputArrays = new OdeHelperBackward.InputArrays(
+                getInputs(),
+                parameters.lastOutput(),
+                getEpsilon(),
+                parameters.realGradients()
         );
 
-        INDArray augAns = new MultiStepSolver(odeSolver).integrate(equation, Nd4j.reverse(parameters.time().dup()), zAug, addTimeStepsToOutput(zAug.dup()));
+        final OdeHelperBackward.MiscPar miscPar = new OdeHelperBackward.MiscPar(
+                tbptt,
+                createWorkspaceMgr(workspaceMgr),
+                parName
+        );
 
-        augmentedDynamics.updateFrom(getLast(augAns));
+        final Pair<Gradient, INDArray[]> gradients = odeHelperBackward.solve(graph, inputArrays, miscPar);
 
-        parameters.realGradients().assignFrom(augmentedDynamics.paramAdjoint());
-        final Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
-        gradient.setGradientFor(parName, graph.getFlattenedGradients());
+        final INDArray[] inputGrads = gradients.getSecond();
+        final INDArray[] leveragedGrads = new INDArray[inputGrads.length];
+        for(int i = 0; i < inputGrads.length; i++) {
+            leveragedGrads[i] = workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, inputGrads[i]);
+        }
 
-        return new Pair<>(gradient, parameters.epsilons(workspaceMgr, augmentedDynamics));
+        return new Pair<>(gradients.getFirst(), leveragedGrads);
     }
 
     private void leverageInputs(LayerWorkspaceMgr workspaceMgr) {
         for (int i = 0; i < getInputs().length; i++) {
             setInput(i, workspaceMgr.leverageTo(ArrayType.INPUT, getInputs()[i]), workspaceMgr);
         }
-    }
-
-    private INDArray addTimeStepsToOutput(INDArray output) {
-        if(parameters.time().length() == 2) {
-            return output.reshape(Longs.concat(new long[] {1}, output.shape()));
-        }
-
-        return Nd4j.repeat(output, (int)parameters.time().length()-1);
-    }
-
-    private INDArray alignOutShape(INDArray array) {
-        if(parameters.time().length() == 2) {
-            return array.reshape(getInputs()[0].shape());
-        }
-
-        final long[] shape = array.shape();
-        switch (shape.length) {
-            case 3: // Assume recurrent output
-                return Nd4j.concat(0, getInputs()[0].reshape(1, shape[1], shape[2]), array).permute(1,2,0);
-            case 5: // Assume conv 3D output
-                return Nd4j.concat(0, getInputs()[0].reshape(1, shape[1], shape[2], shape[3], shape[4]), array).permute(1,0,2,3,4);
-                // Should not happen as conf throws exception for other types
-                default: throw new UnsupportedOperationException("Rank not supported: " + array.rank());
-        }
-    }
-
-    private INDArray alignInShape(INDArray array) {
-        if(parameters.time().length() == 2) {
-            return array.reshape(getInputs()[0].shape());
-        }
-
-        final long[] shape = array.shape();
-        switch (shape.length) {
-            case 3: // Assume recurrent output
-                return array.permute(2,0,1);
-            case 5: // Assume conv 3D output
-                return array.permute(1,0,2,3,4);
-            // Should not happen as conf throws exception for other types
-            default: throw new UnsupportedOperationException("Rank not supported: " + array.rank());
-        }
-    }
-
-    private INDArray getLast(INDArray array) {
-        if(parameters.time().length() == 2) {
-            return array;
-        }
-
-        final INDArrayIndex[] last = new INDArrayIndex[array.rank()];
-        for(int i = 1; i < last.length; i++) {
-            last[i] = NDArrayIndex.all();
-        }
-        last[0] = NDArrayIndex.point(array.size(0)-1);
-        return array.get(last);
     }
 
     private LayerWorkspaceMgr createWorkspaceMgr(final LayerWorkspaceMgr outerWsMgr) {

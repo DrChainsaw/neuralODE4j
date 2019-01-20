@@ -33,4 +33,9 @@ public class FixedStepAdjoint implements OdeHelperBackward {
     public ode.vertex.impl.helper.backward.OdeHelperBackward instantiate() {
         return new ode.vertex.impl.helper.backward.FixedStepAdjoint(solverConf.instantiate(), time);
     }
+
+    @Override
+    public FixedStepAdjoint clone() {
+        return new FixedStepAdjoint(solverConf.clone(), time.dup());
+    }
 }

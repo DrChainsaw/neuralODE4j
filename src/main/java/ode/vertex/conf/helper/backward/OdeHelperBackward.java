@@ -15,4 +15,10 @@ public interface OdeHelperBackward {
      * @return a New {@link ode.vertex.impl.helper.backward.OdeHelperBackward}
      */
     ode.vertex.impl.helper.backward.OdeHelperBackward instantiate();
+
+    /**
+     * Clone the configuration
+     * @return a clone of the configuration
+     */
+    OdeHelperBackward clone();
 }

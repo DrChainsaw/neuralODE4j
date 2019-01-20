@@ -2,7 +2,13 @@ package ode.vertex.conf.helper.forward;
 
 import lombok.Data;
 import ode.solve.api.FirstOrderSolverConf;
+import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
+import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Serializable configuration of an {@link ode.vertex.impl.helper.forward.InputStep}
@@ -25,5 +31,30 @@ public class InputStep implements OdeHelperForward {
     @Override
     public ode.vertex.impl.helper.forward.OdeHelperForward instantiate() {
         return new ode.vertex.impl.helper.forward.InputStep(solverConf.instantiate(), timeInputIndex);
+    }
+
+    @Override
+    public int nrofTimeInputs() {
+        return 1;
+    }
+
+    @Override
+    public InputStep clone() {
+        return new InputStep(solverConf.clone(), timeInputIndex);
+    }
+
+    @Override
+    public InputType getOutputType(ComputationGraphConfiguration conf, InputType... vertexInputs) throws InvalidInputTypeException {
+        final InputType timeInput = vertexInputs[timeInputIndex];
+        if(timeInput.arrayElementsPerExample() > 2) {
+            return new OutputTypeAddTimeAsDimension(timeInputIndex, new OutputTypeFromConfig()).getOutputType(conf, vertexInputs);
+        }
+        List<InputType> inputTypeList = new ArrayList<>();
+        for (int i = 0; i < vertexInputs.length; i++) {
+            if (i != timeInputIndex) {
+                inputTypeList.add(vertexInputs[i]);
+            }
+        }
+        return new OutputTypeFromConfig().getOutputType(conf, inputTypeList.toArray(new InputType[0]));
     }
 }

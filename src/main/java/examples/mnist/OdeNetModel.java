@@ -6,8 +6,10 @@ import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.DormandPrince54Solver;
 import ode.solve.conf.SolverConfig;
 import ode.vertex.conf.OdeVertex;
+import ode.vertex.conf.helper.FixedStep;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.listen.step.Mask;
@@ -77,7 +79,7 @@ public class OdeNetModel implements ModelFactory {
                                 conv3x3Same(nrofKernels), "normSecond")
                         .addLayer("normThird",
                                 norm(nrofKernels), "convSecond")
-                        .odeSolver(solver)
+                        .odeConf(new FixedStep(solver, Nd4j.arange(2)))
                         .build(), prev);
         return "odeBlock";
     }

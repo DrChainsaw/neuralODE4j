@@ -31,7 +31,7 @@ public class MultiStepAdjointTest {
         final int nrofInputs = 7;
         final int nrofTimeSteps = 5;
         final ComputationGraph graph = SingleStepAdjointTest.getTestGraph(nrofInputs);
-        final OdeHelperBackward.InputArrays inputArrays = getTestInputArrays(nrofInputs, nrofTimeSteps - 1, graph);
+        final OdeHelperBackward.InputArrays inputArrays = getTestInputArrays(nrofInputs, nrofTimeSteps, graph);
 
         final INDArray time = Nd4j.arange(nrofTimeSteps);
         final OdeHelperBackward helper = new MultiStepAdjoint(
@@ -62,7 +62,7 @@ public class MultiStepAdjointTest {
         final int nrofInputs = 5;
         final int nrofTimeSteps = 7;
         final ComputationGraph graph = SingleStepAdjointTest.getTestGraph(nrofInputs);
-        final OdeHelperBackward.InputArrays inputArrays = getTestInputArrays(nrofInputs, nrofTimeSteps - 1, graph);
+        final OdeHelperBackward.InputArrays inputArrays = getTestInputArrays(nrofInputs, nrofTimeSteps, graph);
 
         final INDArray time = Nd4j.arange(nrofTimeSteps);
         final OdeHelperBackward helper = new MultiStepAdjoint(

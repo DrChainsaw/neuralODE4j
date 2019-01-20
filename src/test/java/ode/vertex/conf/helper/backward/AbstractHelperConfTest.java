@@ -122,7 +122,7 @@ abstract class AbstractHelperConfTest {
         final long[] shape = convInput.getShape(true);
         shape[0] = batchSize;
 
-        final int nrofTimeStepsToUse = nrofTimeSteps == 2 ? 1 : nrofTimeSteps-1;
+        final int nrofTimeStepsToUse = nrofTimeSteps == 2 ? 1 : nrofTimeSteps;
         final long[] outputShape = nrofTimeSteps == 2 ? shape : new long[]{ batchSize, nrofTimeStepsToUse, shape[1], shape[2], shape[3]};
 
 

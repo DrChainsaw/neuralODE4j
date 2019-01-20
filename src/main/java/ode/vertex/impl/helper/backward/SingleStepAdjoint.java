@@ -8,8 +8,6 @@ import ode.vertex.impl.helper.forward.ForwardPass;
 import org.deeplearning4j.nn.gradient.DefaultGradient;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
-import org.deeplearning4j.nn.workspace.ArrayType;
-import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.primitives.Pair;
@@ -94,11 +92,10 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         final Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
         gradient.setGradientFor(miscPars.getGradientParName(), graph.getFlattenedGradients());
 
-        return new Pair<>(gradient, epsilons(miscPars.getWsMgr(), augmentedDynamics, dL_dt1, input.getLastInputs()));
+        return new Pair<>(gradient, epsilons(augmentedDynamics, dL_dt1, input.getLastInputs()));
     }
 
     private INDArray[] epsilons(
-            LayerWorkspaceMgr wsMgr,
             AugmentedDynamics finalState,
             INDArray dL_dt1,
             INDArray[] inputs) {
@@ -106,30 +103,29 @@ public class SingleStepAdjoint implements OdeHelperBackward {
             throw new UnsupportedOperationException("More than one inputs not supported! Was: " + inputs.length + "!");
         }
         if(timeIndex != -1) {
-            return epsilonsWithTime(wsMgr, finalState, dL_dt1, inputs);
+            return epsilonsWithTime(finalState, dL_dt1, inputs);
         }
-        return epsilonsWithoutTime(wsMgr, finalState, inputs);
+        return epsilonsWithoutTime(finalState, inputs);
     }
 
     private INDArray[] epsilonsWithTime(
-            LayerWorkspaceMgr wsMgr,
             AugmentedDynamics finalState,
             INDArray dL_dt1,
             INDArray[] inputs) {
         final INDArray[] epsilons = new INDArray[inputs.length + 1];
         for (int i = 0; i < inputs.length; i++) {
             if (i != timeIndex) {
-                epsilons[i] = wsMgr.leverageTo(ArrayType.ACTIVATION_GRAD, finalState.zAdjoint());
+                epsilons[i] = finalState.zAdjoint();
             }
         }
         epsilons[timeIndex] = Nd4j.hstack(dL_dt1, finalState.tAdjoint());
         return epsilons;
     }
 
-    private INDArray[] epsilonsWithoutTime(LayerWorkspaceMgr wsMgr, AugmentedDynamics finalState, INDArray[] inputs) {
+    private INDArray[] epsilonsWithoutTime(AugmentedDynamics finalState, INDArray[] inputs) {
         final INDArray[] epsilons = new INDArray[inputs.length];
         for (int i = 0; i < inputs.length; i++) {
-            epsilons[i] = wsMgr.leverageTo(ArrayType.ACTIVATION_GRAD, finalState.zAdjoint());
+            epsilons[i] = finalState.zAdjoint();
         }
         return epsilons;
     }

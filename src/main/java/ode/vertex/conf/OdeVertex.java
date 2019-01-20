@@ -1,24 +1,24 @@
 package ode.vertex.conf;
 
 import lombok.Data;
-import ode.solve.api.FirstOrderSolver;
-import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.DormandPrince54Solver;
+import ode.vertex.conf.helper.OdeHelper;
+import ode.vertex.conf.helper.backward.FixedStepAdjoint;
+import ode.vertex.conf.helper.backward.OdeHelperBackward;
+import ode.vertex.conf.helper.forward.FixedStep;
+import ode.vertex.conf.helper.forward.OdeHelperForward;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
-import org.deeplearning4j.nn.conf.layers.Convolution3D;
 import org.deeplearning4j.nn.conf.layers.Layer;
 import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.IUpdater;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Configuration of an ODE block.
@@ -31,25 +31,25 @@ public class OdeVertex extends GraphVertex {
     protected ComputationGraphConfiguration conf;
     protected String firstVertex;
     protected String lastVertex;
-    protected FirstOrderSolverConf odeSolver;
-    protected int timeInputIndex;
+    protected OdeHelperForward odeForwardConf;
+    protected OdeHelperBackward odeBackwardConf;
 
     public OdeVertex(
             @JsonProperty("conf") ComputationGraphConfiguration conf,
             @JsonProperty("firstVertex") String firstVertex,
             @JsonProperty("lastVertex") String lastVertex,
-            @JsonProperty("odeSolver") FirstOrderSolverConf odeSolver,
-            @JsonProperty("timeInputIndex") int timeInputIndex) {
+            @JsonProperty("odeForwardConf") OdeHelperForward odeForwardConf,
+            @JsonProperty("odeBackwardConf") OdeHelperBackward odeBackwardConf) {
         this.conf = conf;
         this.firstVertex = firstVertex;
         this.lastVertex = lastVertex;
-        this.odeSolver = odeSolver;
-        this.timeInputIndex = timeInputIndex;
+        this.odeForwardConf = odeForwardConf;
+        this.odeBackwardConf = odeBackwardConf;
     }
 
     @Override
     public GraphVertex clone() {
-        return new OdeVertex(conf.clone(), firstVertex, lastVertex, odeSolver.clone(), timeInputIndex);
+        return new OdeVertex(conf.clone(), firstVertex, lastVertex, odeForwardConf.clone(), odeBackwardConf.clone());
     }
 
     @Override
@@ -61,8 +61,8 @@ public class OdeVertex extends GraphVertex {
         return conf.equals(other.conf)
                 && firstVertex.equals(other.firstVertex)
                 && lastVertex.equals(other.lastVertex)
-                && odeSolver.equals(other.odeSolver)
-                && timeInputIndex == other.timeInputIndex;
+                && odeForwardConf.equals(other.odeForwardConf)
+                && odeBackwardConf.equals(other.odeBackwardConf);
     }
 
     @Override
@@ -79,14 +79,12 @@ public class OdeVertex extends GraphVertex {
 
     @Override
     public int minVertexInputs() {
-        final int timeOrNot = timeInputIndex == -1 ? 0 : 1;
-        return conf.getVertices().get(firstVertex).minVertexInputs() + timeOrNot;
+        return conf.getVertices().get(firstVertex).minVertexInputs() + odeForwardConf.nrofTimeInputs();
     }
 
     @Override
     public int maxVertexInputs() {
-        final int timeOrNot = timeInputIndex == -1 ? 0 : 1;
-        return conf.getVertices().get(firstVertex).maxVertexInputs() + timeOrNot;
+        return conf.getVertices().get(firstVertex).maxVertexInputs() + odeForwardConf.nrofTimeInputs();
     }
 
     @Override
@@ -132,48 +130,14 @@ public class OdeVertex extends GraphVertex {
         return new ode.vertex.impl.OdeVertex(
                 new ode.vertex.impl.OdeVertex.BaseGraphVertexInputs(graph, name, idx),
                 innerGraph,
-                odeSolver.instantiate(),
-                new DefaultTrainingConfig(name, updater),
-                timeInputIndex);
+                odeForwardConf.instantiate(),
+                odeBackwardConf.instantiate(),
+                new DefaultTrainingConfig(name, updater));
     }
 
     @Override
     public InputType getOutputType(int layerIndex, InputType... vertexInputs) throws InvalidInputTypeException {
-        List<InputType> inputTypeList = new ArrayList<>();
-        InputType time = null;
-        for (int i = 0; i < vertexInputs.length; i++) {
-            if (i != timeInputIndex) { // Never true if timeInputIndex == -1
-                inputTypeList.add(vertexInputs[i]);
-            } else {
-                time = vertexInputs[i];
-            }
-        }
-
-        InputType outputs = conf.getLayerActivationTypes(inputTypeList.toArray(new InputType[0])).get(lastVertex);
-
-        if(time != null && time.getType() != InputType.Type.FF) {
-            throw new IllegalArgumentException("Time must be 1D!");
-        }
-
-        return addTimeDim(outputs, time);
-    }
-
-    private InputType addTimeDim(InputType type, InputType timeDim) {
-        if(timeDim == null) {
-            return type;
-        }
-
-        switch (type.getType()) {
-            case FF: return InputType.recurrent(type.arrayElementsPerExample(), timeDim.arrayElementsPerExample());
-            case CNN:
-                InputType.InputTypeConvolutional convType = (InputType.InputTypeConvolutional)type;
-                return InputType.convolutional3D(Convolution3D.DataFormat.NDHWC,
-                        timeDim.arrayElementsPerExample(),
-                        convType.getHeight(),
-                        convType.getWidth(),
-                        convType.getChannels());
-            default: throw new UnsupportedOperationException("Input type not supported with time as input!");
-        }
+        return odeForwardConf.getOutputType(conf, vertexInputs);
     }
 
     @Override
@@ -189,10 +153,9 @@ public class OdeVertex extends GraphVertex {
 
         private String first;
         private String last;
-        private int timeInputIndex = -1;
-
-        private FirstOrderSolverConf odeSolver = new DormandPrince54Solver();
-
+        private OdeHelperForward odeForwardConf = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2));
+        private OdeHelperBackward odeBackwardConf = new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.arange(2));
+        
         public Builder(String name, Layer layer) {
             graphBuilder
                     .addInputs(inputName)
@@ -222,30 +185,34 @@ public class OdeVertex extends GraphVertex {
         }
 
         /**
-         * Sets the {@link FirstOrderSolver} to use
-         *
-         * @param odeSolver solver instance
+         * Set the {@link OdeHelper} to use
+         * @param odeConf ODE configuration
          * @return the Builder for fluent API
          */
-        public Builder odeSolver(FirstOrderSolverConf odeSolver) {
-            this.odeSolver = odeSolver;
+        public Builder odeConf(OdeHelper odeConf) {
+            odeForward(odeConf.forward());
+            return odeBackward(odeConf.backward());
+        }
+
+        /**
+         * Sets the {@link OdeHelperForward} to use
+         *
+         * @param odeForwardConf Configuration of forward helper
+         * @return the Builder for fluent API
+         */
+        public Builder odeForward(OdeHelperForward odeForwardConf) {
+            this.odeForwardConf = odeForwardConf;
             return this;
         }
 
         /**
-         * Indicates that time is given as an input to the vertex. Example:
-         * <pre>
-         * graphBuilder.addVertex("odeVertex",
-         *    new OdeVertex.Builder("0", new DenseLayer.Builder().nOut(4).build())
-         *    .timeAsInputIndex(1)
-         *    .build(), "someLayer", "time");
-         * </pre>
+         * Sets the {@link OdeHelperBackward} to use
          *
-         * @param timeInputIndex input index for time
+         * @param odeBackwardConf Configuration of backward helper
          * @return the Builder for fluent API
          */
-        public Builder timeAsInputIndex(int timeInputIndex) {
-            this.timeInputIndex = timeInputIndex;
+        public Builder odeBackward(OdeHelperBackward odeBackwardConf) {
+            this.odeBackwardConf = odeBackwardConf;
             return this;
         }
 
@@ -266,8 +233,8 @@ public class OdeVertex extends GraphVertex {
                     .build(),
                     first,
                     last,
-                    odeSolver,
-                    timeInputIndex);
+                    odeForwardConf,
+                    odeBackwardConf);
         }
 
     }

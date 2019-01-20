@@ -2,6 +2,9 @@ package ode.vertex.conf.helper.forward;
 
 import lombok.Data;
 import ode.solve.api.FirstOrderSolverConf;
+import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
+import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.serde.jackson.shaded.NDArrayDeSerializer;
 import org.nd4j.serde.jackson.shaded.NDArraySerializer;
@@ -32,5 +35,29 @@ public class FixedStep implements OdeHelperForward{
     @Override
     public ode.vertex.impl.helper.forward.OdeHelperForward instantiate() {
         return new ode.vertex.impl.helper.forward.FixedStep(solverConf.instantiate(), time);
+    }
+
+    @Override
+    public int nrofTimeInputs() {
+        return 0;
+    }
+
+    @Override
+    public FixedStep clone() {
+        return new FixedStep(solverConf.clone(), time.dup());
+    }
+
+    @Override
+    public InputType getOutputType(ComputationGraphConfiguration conf, InputType... vertexInputs) throws InvalidInputTypeException {
+
+        final OutputTypeHelper confHelper = new OutputTypeFromConfig();
+        if(time.length() == 2) {
+            return confHelper.getOutputType(conf, vertexInputs);
+        }
+
+        final InputType[] withTime = new InputType[vertexInputs.length+1];
+        System.arraycopy(vertexInputs, 0, withTime, 0, vertexInputs.length);
+        withTime[vertexInputs.length] =  InputType.inferInputType(this.time);
+        return new OutputTypeAddTimeAsDimension(vertexInputs.length, confHelper).getOutputType(conf, withTime);
     }
 }

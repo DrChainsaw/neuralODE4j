@@ -1,5 +1,7 @@
 package ode.vertex.impl;
 
+import ode.solve.conf.DormandPrince54Solver;
+import ode.vertex.conf.helper.InputStep;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
@@ -109,7 +111,7 @@ public class OdeVertexTest {
                 .addLayer("0", new DenseLayer.Builder().nOut(nOut).build(), "input")
                 .addVertex("odeVertex", new ode.vertex.conf.OdeVertex.Builder("ode0",
                        new DenseLayer.Builder().nOut(nOut).build())
-                        .timeAsInputIndex(1)
+                        .odeConf(new InputStep(new DormandPrince54Solver(), 1))
                         .build(), "0", "time")
                 .setOutputs("output")
                 .addLayer("output", new RnnOutputLayer.Builder().nOut(3).build(), "odeVertex")
