@@ -55,7 +55,7 @@ public class SingleStepAdjoint implements OdeHelperBackward {
 
         final FirstOrderEquation forward = new ForwardPass(graph,
                 miscPars.getWsMgr(),
-                false,
+                true, // Always use training as batch norm running mean and var become messed up otherwise. Same effect seen in original pytorch repo.
                 input.getLastInputs());
 
         // TODO: This is only used for computing time gradients. Make it so that it only happens when they are needed

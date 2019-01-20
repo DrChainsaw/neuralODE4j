@@ -37,7 +37,7 @@ public class SingleStep implements OdeHelperForward {
         final FirstOrderEquation equation = new ForwardPass(
                 graph,
                 wsMgr,
-                true,
+                true, // Always use training as batch norm running mean and var become messed up otherwise. Same effect seen in original pytorch repo.
                 inputs
         );
 
