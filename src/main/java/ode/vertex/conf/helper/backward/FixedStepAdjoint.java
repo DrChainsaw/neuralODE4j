@@ -1,4 +1,4 @@
-package ode.vertex.conf.helper.forward;
+package ode.vertex.conf.helper.backward;
 
 import lombok.Data;
 import ode.solve.api.FirstOrderSolverConf;
@@ -10,19 +10,19 @@ import org.nd4j.shade.jackson.databind.annotation.JsonDeserialize;
 import org.nd4j.shade.jackson.databind.annotation.JsonSerialize;
 
 /**
- * Serializable configuration for {@link ode.vertex.impl.helper.forward.FixedStep}
+ * Serializable configuration for {@link ode.vertex.impl.helper.backward.BackpropagateAdjoint}
  *
  * @author Christian Skarby
  */
 @Data
-public class FixedStep implements OdeHelperForward{
+public class FixedStepAdjoint implements OdeHelperBackward {
 
     private final FirstOrderSolverConf solverConf;
     @JsonSerialize(using = NDArraySerializer.class)
     @JsonDeserialize(using = NDArrayDeSerializer.class)
     private final INDArray time;
 
-    public FixedStep(
+    public FixedStepAdjoint(
             @JsonProperty("solverConf") FirstOrderSolverConf solverConf,
             @JsonProperty("time") INDArray time) {
         this.solverConf = solverConf;
@@ -30,7 +30,7 @@ public class FixedStep implements OdeHelperForward{
     }
 
     @Override
-    public ode.vertex.impl.helper.forward.OdeHelperForward instantiate() {
-        return new ode.vertex.impl.helper.forward.FixedStep(solverConf.instantiate(), time);
+    public ode.vertex.impl.helper.backward.OdeHelperBackward instantiate() {
+        return new ode.vertex.impl.helper.backward.FixedStepAdjoint(solverConf.instantiate(), time);
     }
 }

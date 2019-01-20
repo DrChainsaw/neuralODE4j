@@ -35,6 +35,10 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         if (time.length() != 2 && time.rank() != 1) {
             throw new IllegalArgumentException("time must be a vector with two elements! Was of shape: " + Arrays.toString(time.shape()) + "!");
         }
+
+        if(time.getDouble(0) > time.getDouble(1)) {
+            throw new IllegalArgumentException("Time must be in increasing order! Got: " + time);
+        }
     }
 
     @Override
@@ -56,6 +60,7 @@ public class SingleStepAdjoint implements OdeHelperBackward {
                 false,
                 input.getLastInputs());
 
+        // TODO: This is only used for computing time gradients. Make it so that it only happens when they are needed
         final INDArray dzt1_dt1 = forward.calculateDerivative(zt1, time.getColumn(1), zt1.dup());
 
         final INDArray dL_dt1 = dL_dzt1.reshape(1, dzt1_dt1.length())

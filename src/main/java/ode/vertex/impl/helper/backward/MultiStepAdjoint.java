@@ -30,6 +30,11 @@ public class MultiStepAdjoint implements OdeHelperBackward {
         if(time.length() <= 2 || !time.isVector()) {
             throw new IllegalArgumentException("time must be a vector of size > 2! Was of shape: " + Arrays.toString(time.shape())+ "!");
         }
+        for(int i = 0; i < time.length()-1; i++) {
+            if(time.getDouble(i) > time.getDouble(i+1)) {
+                throw new IllegalArgumentException("Time must be in ascending order! Got: " + time);
+            }
+        }
     }
 
     @Override
@@ -46,7 +51,9 @@ public class MultiStepAdjoint implements OdeHelperBackward {
 
         Pair<Gradient, INDArray[]> gradients = null;
         final INDArray timeGradient = Nd4j.createUninitialized(time.shape());
-        for (int step = 1; step < time.length(); step++) {
+
+        // Go backwards in time
+        for (int step = (int)time.length()-1; step > 0; step--) {
             final INDArray ztStep = getStep(ztIndexer,zt, step);
             final INDArray dL_dztStep = getStep(dL_dztIndexer, dL_dzt, step);
 
@@ -74,7 +81,8 @@ public class MultiStepAdjoint implements OdeHelperBackward {
 
     private void assertSizeVsTime(INDArray array) {
         if(array.size(0) + 1 != time.length()) {
-            throw new IllegalArgumentException("Must have one element less in first dimension compared to time!");
+            throw new IllegalArgumentException("Must have one element less in first dimension compared to time! Input: "
+            + array.size(0) + ", time: " + time.length());
         }
     }
 

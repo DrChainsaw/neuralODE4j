@@ -3,7 +3,7 @@ package ode.vertex.conf.helper.forward;
 import org.nd4j.shade.jackson.annotation.JsonTypeInfo;
 
 /**
- * Configuration of an {@link ode.vertex.impl.helper.forward.OdeHelperForward}
+ * Serializable configuration of an {@link ode.vertex.impl.helper.forward.OdeHelperForward}
  *
  * @author Christian Skarby
  */
