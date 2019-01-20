@@ -60,7 +60,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
         augmentedDynamics.updateFrom(zAug);
 
         // Note: Will also update z
-        forwardPass.calculateDerivative(augmentedDynamics.z(), t, augmentedDynamics.z());
+        forwardPass.calculateDerivative(augmentedDynamics.z().dup(), t, augmentedDynamics.z());
 
         try (WorkspacesCloseable ws = graphInfo.workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.ACTIVATION_GRAD)) {
 

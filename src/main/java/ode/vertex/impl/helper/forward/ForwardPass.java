@@ -64,7 +64,7 @@ public class ForwardPass implements FirstOrderEquation {
             INDArray input = inputs[i];
             final INDArray z = flatArray.get(NDArrayIndex.interval(lastInd, lastInd + input.length()));
             lastInd += input.length();
-            inputs[i].assign(z.reshape(input.shape()));
+            inputs[i] = z.reshape(input.shape());
         }
     }
 
