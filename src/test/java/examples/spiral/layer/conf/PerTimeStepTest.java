@@ -9,10 +9,12 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.Test;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import static junit.framework.TestCase.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 /**
  * Test cases for {@link PerTimeStep}
@@ -51,6 +53,36 @@ public class PerTimeStepTest {
         final INDArray actual = network.output(input);
 
         assertEquals("Incorrect output!", expected, actual);
+    }
+
+    /**
+     * Smoke test for backpropagation. Only test that something was calculated.
+     */
+    @Test
+    public void backprop() {
+        final long nrofInputs = 4;
+        final long nrofTimeSteps = 10;
+        final MultiLayerNetwork network = new MultiLayerNetwork(new NeuralNetConfiguration.Builder()
+                .list()
+                .setInputType(InputType.recurrent(nrofInputs, nrofTimeSteps))
+                .layer(new PerTimeStep.Builder()
+                        .addLayer(new DenseLayer.Builder().nOut(nrofInputs).hasBias(false).activation(new ActivationIdentity()).build())
+                        .addLayer(new DenseLayer.Builder().nOut(nrofInputs).hasBias(false).activation(new ActivationIdentity()).build())
+                        .build())
+                .layer(new RnnLossLayer.Builder().activation(new ActivationIdentity()).hasBias(false).build())
+                .build());
+        network.init();
+        network.initGradientsView();
+
+        final long batchSize = 3;
+        final INDArray input = Nd4j.randn(new long[] {batchSize, nrofInputs, nrofTimeSteps});
+        final INDArray label =  Nd4j.randn(input.shape());
+
+        final INDArray prevGrad = network.getGradientsViewArray().dup();
+
+        network.fit(new DataSet(input, label));
+
+        assertNotEquals("Expected gradients to be calculated!", prevGrad, network.getGradientsViewArray());
     }
 
 }

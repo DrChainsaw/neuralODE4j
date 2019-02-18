@@ -3,6 +3,7 @@ package examples.spiral.layer.impl;
 
 import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.gradient.DefaultGradient;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.layers.BaseLayer;
 import org.deeplearning4j.nn.workspace.ArrayType;
@@ -36,7 +37,29 @@ public class PerTimeStep extends BaseLayer<examples.spiral.layer.conf.PerTimeSte
 
     @Override
     public Pair<Gradient, INDArray> backpropGradient(INDArray epsilon, LayerWorkspaceMgr workspaceMgr) {
-        return null;
+        INDArray lossGradient = null;
+        final INDArray gradView = getGradientsViewArray().dup().assign(0);
+        final long nrofSteps = input.size(TIME_DIM);
+
+        for(int i = 0; i < nrofSteps; i++) {
+            INDArray epsStep = epsilon.tensorAlongDimension(i, BATCH_DIM, SIZE_DIM);
+            long gradViewIndex = 0;
+            for(Layer layer: layers) {
+                Pair<Gradient, INDArray> grads = layer.backpropGradient(epsStep, workspaceMgr);
+                epsStep = grads.getSecond();
+                INDArray paramGrad = grads.getFirst().gradient();
+                gradView.get(NDArrayIndex.all(), NDArrayIndex.interval(gradViewIndex, gradViewIndex + paramGrad.length())).addi(paramGrad);
+                gradViewIndex = paramGrad.length();
+            }
+
+            if(lossGradient == null) {
+                lossGradient = workspaceMgr.createUninitialized(ArrayType.ACTIVATION_GRAD, epsStep.size(BATCH_DIM), epsStep.size(SIZE_DIM), nrofSteps);
+            }
+            lossGradient.tensorAlongDimension(i, BATCH_DIM, SIZE_DIM).assign(epsStep);
+        }
+
+        getGradientsViewArray().assign(gradView);
+        return new Pair<>(new DefaultGradient(getGradientsViewArray()), lossGradient);
     }
 
     @Override
@@ -48,7 +71,7 @@ public class PerTimeStep extends BaseLayer<examples.spiral.layer.conf.PerTimeSte
         for(int i = 0; i < nrofSteps; i++) {
             INDArray activation = input.tensorAlongDimension(i, BATCH_DIM, SIZE_DIM);
             for(Layer layer: layers) {
-                activation = layer.activate(activation, true, workspaceMgr);
+                activation = layer.activate(activation, training, workspaceMgr);
             }
 
             if(output == null) {
@@ -57,6 +80,15 @@ public class PerTimeStep extends BaseLayer<examples.spiral.layer.conf.PerTimeSte
             output.tensorAlongDimension(i, BATCH_DIM, SIZE_DIM).assign(activation);
         }
         return output;
+    }
+
+    @Override
+    public long numParams() {
+        long numPars = 0;
+        for(Layer layer: layers) {
+            numPars += layer.numParams();
+        }
+        return numPars;
     }
 
     @Override
