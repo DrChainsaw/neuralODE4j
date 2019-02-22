@@ -12,9 +12,10 @@ public interface ModelFactory {
     /**
      * Create the model to use
      * @param nrofSamples The number of samples in each spiral
+     * @param noiseSigma Noise std for training spirals
      * @return a {@link ComputationGraph} for the model
      */
-    ComputationGraph create(long nrofSamples);
+    ComputationGraph create(long nrofSamples, double noiseSigma);
 
     /**
      * Return the name of the model built to use e.g. for saving models

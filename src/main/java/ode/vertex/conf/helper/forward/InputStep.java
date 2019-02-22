@@ -45,6 +45,10 @@ public class InputStep implements OdeHelperForward {
 
     @Override
     public InputType getOutputType(ComputationGraphConfiguration conf, InputType... vertexInputs) throws InvalidInputTypeException {
+        if(vertexInputs.length <= timeInputIndex) {
+            throw new InvalidInputTypeException("Time input index was not part of input types!!");
+        }
+
         final InputType timeInput = vertexInputs[timeInputIndex];
         if(timeInput.arrayElementsPerExample() > 2) {
             return new OutputTypeAddTimeAsDimension(timeInputIndex, new OutputTypeFromConfig()).getOutputType(conf, vertexInputs);

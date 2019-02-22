@@ -20,10 +20,12 @@ public class RnnEncoderBlock implements Block {
 
     private final long nrofLatentDims;
     private final long nrofHidden;
+    private final String inputName;
 
-    public RnnEncoderBlock(long nrofLatentDims, long nrofHidden) {
+    public RnnEncoderBlock(long nrofLatentDims, long nrofHidden, String inputName) {
         this.nrofLatentDims = nrofLatentDims;
         this.nrofHidden = nrofHidden;
+        this.inputName = inputName;
     }
 
     @Override
@@ -33,10 +35,10 @@ public class RnnEncoderBlock implements Block {
                         .nOut(nrofHidden)
                         .activation(new ActivationTanH())
                         .build(), "reverse")
-                .addVertex("encLastStep", new LastTimeStepVertex("encRnn"), "encRnn")
+                .addVertex("encLastStep", new LastTimeStepVertex(inputName), "encRnn")
                 .addLayer("encOut", new DenseLayer.Builder()
                 .activation(new ActivationIdentity())
-                .nOut(nrofLatentDims)
+                .nOut(2*nrofLatentDims)
                 .build(), "encLastStep");
 
         return "encOut";

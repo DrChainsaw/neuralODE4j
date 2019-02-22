@@ -1,16 +1,137 @@
 package examples.spiral;
 
+import com.beust.jcommander.Parameter;
+import examples.spiral.vertex.conf.SampleGaussianVertex;
+import ode.solve.conf.DormandPrince54Solver;
+import ode.solve.conf.SolverConfig;
+import ode.vertex.conf.OdeVertex;
+import ode.vertex.conf.helper.InputStep;
+import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
+import org.deeplearning4j.nn.conf.graph.MergeVertex;
+import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
+import org.deeplearning4j.nn.conf.graph.SubsetVertex;
+import org.deeplearning4j.nn.conf.layers.DenseLayer;
+import org.deeplearning4j.nn.conf.layers.LossLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.deeplearning4j.nn.modelimport.keras.preprocessors.ReshapePreprocessor;
+import org.nd4j.linalg.activations.impl.ActivationELU;
+import org.nd4j.linalg.activations.impl.ActivationIdentity;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.nd4j.linalg.primitives.Triple;
 
+/**
+ * Model used for spiral generation using neural ODE. Equivalent to model used in
+ * https://github.com/rtqichen/torchdiffeq/blob/master/examples/latent_ode.py
+ *
+ * @author Christian Skarby
+ */
 class OdeNetModel implements ModelFactory {
 
+    @Parameter(names = "-nrofLatentDims", description = "Number of time steps per spiral when training")
+    private long nrofLatentDims = 4;
+
+    private double noiseSigma;
+    private long nrofSamples;
+
     @Override
-    public ComputationGraph create(long nrofSamples) {
-        return null;
+    public ComputationGraph create(long nrofSamples, double noiseSigma) {
+        this.noiseSigma = noiseSigma;
+        this.nrofSamples = nrofSamples;
+
+        Block enc = new RnnEncoderBlock(nrofLatentDims, 20, "spiral");
+        Block dec = new DenseDecoderBlock(20, nrofSamples, 2);
+
+        final GraphBuilder builder = LayerUtil.initGraphBuilder(666, nrofSamples);
+        builder.addInputs("spiral", "time");
+
+        String next = enc.add("spiral", builder);
+
+        // Add sampling of a gaussian with the encoded mean and log(var)
+        final String qz0_mean = "qz0_mean";
+        final String qz0_logvar = "qz0_logvar";
+        builder
+                //First split prev into mean and log(var) since this is how SampleGaussianVertex assumes input is structured
+                .addVertex(qz0_mean, new SubsetVertex(0, (int) nrofLatentDims - 1), next)
+                .addVertex(qz0_logvar, new SubsetVertex((int) nrofLatentDims, (int) nrofLatentDims * 2 - 1), next)
+                .addVertex("z0", new SampleGaussianVertex(666), qz0_mean, qz0_logvar);
+
+        next = addLatentOde("z0", "time", builder);
+        next = dec.add(next, builder);
+        //final String actualOutput = next;
+        // Steps after this is just for ELBO calculation
+        addLoss(next, qz0_mean, qz0_logvar, builder);
+
+        final ComputationGraph graph = new ComputationGraph(builder.build());
+        graph.init();
+
+        return graph;
     }
 
     @Override
     public String name() {
         return "odenet";
+    }
+
+    private String addLatentOde(String prev, String time, GraphBuilder builder) {
+        builder.addVertex("latentOde", new OdeVertex.Builder("fc1",
+                new DenseLayer.Builder()
+                        .nOut(20)
+                        .activation(new ActivationELU()).build())
+                .addLayer("fc2", new DenseLayer.Builder()
+                        .nOut(20)
+                        .activation(new ActivationELU()).build(), "fc1")
+                .addLayer("fc3", new DenseLayer.Builder()
+                        .nOut(nrofLatentDims)
+                        .activation(new ActivationIdentity()).build(), "fc2")
+                .odeConf(new InputStep(
+                        new DormandPrince54Solver(new SolverConfig(1e-9, 1e-7, 1e-20, 1e2)),
+                        1))
+                .build(), prev, time);
+        return "latentOde";
+    }
+
+    private void addLoss(
+            String decOut,
+            String qz0_mean,
+            String qz0_logvar,
+            GraphBuilder builder) {
+        // First we need to concatenate the following into one single array:
+        // 1. The decoded output
+        // 2. qz0_mean
+        // 3. qz0_logvar
+        // This is because the API to the loss function only takes on single input INDArray.
+        builder
+                // Since 1 above is 3D and the other two are 2D, the first step is to "flatten" 1 into 2D using an ReshapePreprocessor
+                .addVertex("flattenDec", new PreprocessorVertex(new ReshapePreprocessor(
+                        new long[]{2, nrofSamples},
+                        new long[]{nrofLatentDims * nrofSamples / 2})), decOut)
+                .addVertex("merge", new MergeVertex(), "flattenDec", qz0_mean, qz0_logvar)
+                .addLayer("loss", new LossLayer.Builder()
+                                .activation(new ActivationIdentity())
+                                .lossFunction(new NormElboLoss(noiseSigma, new NormElboLoss.ExtractQzZero() {
+                                    @Override
+                                    public Triple<INDArray, INDArray, INDArray> extractPredMeanLogvar(INDArray result) {
+                                        final long predSize = result.size(1) - 2 * nrofLatentDims;
+                                        return new Triple<>(
+                                                // Here we "unpack" the result of the merge above.
+                                                result.get(NDArrayIndex.all(), NDArrayIndex.interval(0, predSize)),
+                                                result.get(NDArrayIndex.all(), NDArrayIndex.interval(predSize, predSize + nrofLatentDims)),
+                                                result.get(NDArrayIndex.all(), NDArrayIndex.interval(predSize + nrofLatentDims, predSize + 2 * nrofLatentDims))
+                                        );
+                                    }
+
+                                    @Override
+                                    public INDArray combinePredMeanLogvarEpsilon(INDArray predEps, INDArray meanEps, INDArray logvarEps) {
+                                        return Nd4j.hstack(
+                                                predEps.reshape(predEps.size(0), nrofLatentDims * nrofSamples / 2),
+                                                meanEps,
+                                                logvarEps);
+                                    }
+                                }))
+                                .build()
+                        , "merge")
+                .setOutputs("loss"); // Not really output, just used for loss calculation
     }
 }

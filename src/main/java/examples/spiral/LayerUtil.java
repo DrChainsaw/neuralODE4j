@@ -25,7 +25,6 @@ class LayerUtil {
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(new Adam(0.01))
                 .graphBuilder()
-                .setInputTypes(InputType.recurrent(2, nrofSamples))
-                .addInputs("spiral", "time");
+                .setInputTypes(InputType.recurrent(2, nrofSamples), InputType.feedForward(nrofSamples));
     }
 }
