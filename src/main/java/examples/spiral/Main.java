@@ -5,12 +5,14 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
+import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Main class for spiral example. Reimplementation of https://github.com/rtqichen/torchdiffeq/blob/master/examples/latent_ode.py
@@ -75,7 +77,14 @@ class Main {
     }
 
     private void run() {
+        final SpiralFactory spiralFactory = new SpiralFactory(0, 0.3, 0, 6*Math.PI, 1000);
+        final MultiDataSetIterator iterator = new SpiralIterator(
+                new SpiralIterator.Generator(spiralFactory, noiseSigma, nrofTimeStepsForTraining, new Random(666)),
+                trainBatchSize);
 
+        for(int i = 0; i < 2000; i++) {
+            model.fit(iterator);
+        }
 
     }
 
