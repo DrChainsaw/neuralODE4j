@@ -24,6 +24,7 @@ public class PlotDecodedOutput extends BaseTrainingListener {
         this.plot = plot;
         this.outputName = outputName;
         this.batchNrToPlot = batchNrToPlot;
+        plot.createSeries(outputName);
     }
 
     @Override

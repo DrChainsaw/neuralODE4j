@@ -9,6 +9,7 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
+import org.jetbrains.annotations.NotNull;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
 import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;
@@ -105,20 +106,9 @@ class Main {
         log.info("Models will be saved in: " + savedir.getAbsolutePath());
         savedir.mkdirs();
 
-        final Plot<Double, Double> outputPlot = new RealTimePlot<>("Training Output", savedir.getAbsolutePath());
-        outputPlot.createSeries("True output");
-        outputPlot.createSeries("decodedOutput");
-        final INDArray toPlot = iterator.next().getLabels(0);
         final int batchNrToPlot = 0;
-        for (long i = 0; i < toPlot.size(1) / 2; i++) {
-            outputPlot.plotData("True output", toPlot.getDouble(batchNrToPlot, i), toPlot.getDouble(batchNrToPlot, i + toPlot.size(1) / 2));
-        }
-
+        final Plot<Double, Double> outputPlot = initTrainingPlot(savedir, batchNrToPlot);
         final Plot<Integer, Double> meanAndLogVarPlot = new RealTimePlot<>("Mean and log(var) of z", savedir.getAbsolutePath());
-        for(int i = 0; i < nrofLatentDims; i++) {
-            meanAndLogVarPlot.createSeries("qz0_mean_" + i);
-            meanAndLogVarPlot.createSeries("qz0_logvar_" + i);
-        }
 
         model.addListeners(
                 new ZeroGrad(),
@@ -134,9 +124,20 @@ class Main {
                 }),
                 // Get names from model factory instead?
                 new PlotDecodedOutput(outputPlot, "decodedOutput", batchNrToPlot),
-                new PlotActivations(meanAndLogVarPlot, "qz0_mean"),
-                new PlotActivations(meanAndLogVarPlot, "qz0_logvar"));
+                new PlotActivations(meanAndLogVarPlot, "qz0_mean", nrofLatentDims),
+                new PlotActivations(meanAndLogVarPlot, "qz0_logvar", nrofLatentDims));
 
+    }
+
+    @NotNull
+    private Plot<Double, Double> initTrainingPlot(File savedir, int batchNrToPlot) {
+        final Plot<Double, Double> outputPlot = new RealTimePlot<>("Training Output", savedir.getAbsolutePath());
+        outputPlot.createSeries("True output");
+        final INDArray toPlot = iterator.next().getLabels(0);
+        for (long i = 0; i < toPlot.size(1) / 2; i++) {
+            outputPlot.plotData("True output", toPlot.getDouble(batchNrToPlot, i), toPlot.getDouble(batchNrToPlot, i + toPlot.size(1) / 2));
+        }
+        return outputPlot;
     }
 
 

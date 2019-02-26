@@ -19,18 +19,26 @@ public class PlotActivations extends BaseTrainingListener {
 
     private int iteration = 0;
 
-    public PlotActivations(Plot<Integer, Double> plot, String activationName) {
+    public PlotActivations(Plot<Integer, Double> plot, String activationName, long nrofElemsToPlot) {
         this.plot = plot;
         this.activationName = activationName;
+
+        for (int i = 0; i < nrofElemsToPlot; i++) {
+            plot.createSeries(getPlotLabel(i));
+        }
     }
 
     @Override
     public void onForwardPass(Model model, Map<String, INDArray> activations) {
         final INDArray toPlot = activations.get(activationName).mean(0);
+
         for(int i = 0; i < toPlot.length(); i++) {
-            plot.plotData(activationName+"_"+ i, iteration, toPlot.getDouble(i));
+            plot.plotData(getPlotLabel(i), iteration, toPlot.getDouble(i));
         }
         iteration++;
     }
 
+    private String getPlotLabel(int i) {
+        return activationName + "_" + i;
+    }
 }
