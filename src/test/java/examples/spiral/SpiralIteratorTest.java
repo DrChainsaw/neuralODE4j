@@ -32,9 +32,9 @@ public class SpiralIteratorTest {
 
         final long[] expectedShapeSpiral = {batchSize, 2, nrofSamplesTrain};
         assertArrayEquals("Incorrect shape of spiral!", expectedShapeSpiral, mds.getFeatures(0).shape());
-        assertArrayEquals("Incorret shape of label!", expectedShapeSpiral, mds.getLabels(0).shape());
+        assertArrayEquals("Incorrect shape of label!", expectedShapeSpiral, mds.getLabels(0).shape());
 
-        final long[] expectedShapeTime = {batchSize, nrofSamplesTrain};
-        assertArrayEquals("Incorrect shape of spiral!", expectedShapeTime, mds.getFeatures(1).shape());
+        final long[] expectedShapeTime = {1, nrofSamplesTrain};
+        assertArrayEquals("Incorrect shape of time!", expectedShapeTime, mds.getFeatures(1).shape());
     }
 }

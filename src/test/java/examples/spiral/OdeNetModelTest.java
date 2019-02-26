@@ -27,7 +27,7 @@ public class OdeNetModelTest {
 
         final long nrofTimeSteps = 10;
         final long batchSize = 3;
-        final ComputationGraph model = factory.create(10, 0.3);
+        final ComputationGraph model = factory.create(10, 0.3, 4);
         model.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 2, nrofTimeSteps}), Nd4j.linspace(0, 3, nrofTimeSteps)},
                 new INDArray[]{Nd4j.randn(batchSize,2 * nrofTimeSteps)}));

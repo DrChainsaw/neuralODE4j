@@ -41,6 +41,22 @@ public interface Plot<X extends Number, Y extends Number> {
     void plotData(String label, X x, Y y);
 
     /**
+     * Plot some data belonging to a certain label. Will be appended to an existing series of such exists, either in
+     * an existing window or in serialized format in the plotDir. If no series with the given label exists it will
+     * be created in the window of this plot instance.
+     * @param label series label
+     * @param x points on x axis
+     * @param y points on y axis
+     */
+    void plotData(String label, List<X> x, List<Y> y);
+
+    /**
+     * Clears the data for the given label
+     * @param label series label
+     */
+    void clearData(String label);
+
+    /**
      * Serialize the data for the given label.
      * @param label series label
      * @throws IOException

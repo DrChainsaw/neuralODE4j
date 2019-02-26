@@ -1,6 +1,5 @@
 package examples.spiral;
 
-import com.beust.jcommander.Parameter;
 import examples.spiral.vertex.conf.SampleGaussianVertex;
 import ode.solve.conf.DormandPrince54Solver;
 import ode.solve.conf.SolverConfig;
@@ -17,6 +16,7 @@ import org.deeplearning4j.nn.modelimport.keras.preprocessors.ReshapePreprocessor
 import org.nd4j.linalg.activations.impl.ActivationELU;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.primitives.Triple;
@@ -29,18 +29,17 @@ import org.nd4j.linalg.primitives.Triple;
  */
 class OdeNetModel implements ModelFactory {
 
-    @Parameter(names = "-nrofLatentDims", description = "Number of time steps per spiral when training")
-    private long nrofLatentDims = 4;
-
     private double noiseSigma;
     private long nrofSamples;
+    private long nrofLatentDims;
 
     @Override
-    public ComputationGraph create(long nrofSamples, double noiseSigma) {
+    public ComputationGraph create(long nrofSamples, double noiseSigma, long nrofLatentDims) {
         this.noiseSigma = noiseSigma;
         this.nrofSamples = nrofSamples;
+        this.nrofLatentDims = nrofLatentDims;
 
-        Block enc = new RnnEncoderBlock(nrofLatentDims, 20, "spiral");
+        Block enc = new RnnEncoderBlock(nrofLatentDims, 25, "spiral");
         Block dec = new DenseDecoderBlock(20, nrofSamples, 2);
 
         final GraphBuilder builder = LayerUtil.initGraphBuilder(666, nrofSamples);
@@ -56,6 +55,7 @@ class OdeNetModel implements ModelFactory {
                 .addVertex(qz0_mean, new SubsetVertex(0, (int) nrofLatentDims - 1), next)
                 .addVertex(qz0_logvar, new SubsetVertex((int) nrofLatentDims, (int) nrofLatentDims * 2 - 1), next)
                 .addVertex("z0", new SampleGaussianVertex(666), qz0_mean, qz0_logvar);
+                //.addVertex("z0", new ElementWiseVertex(ElementWiseVertex.Op.Add), qz0_mean, qz0_logvar);
 
         next = addLatentOde("z0", "time", builder);
         next = dec.add(next, builder);
@@ -133,5 +133,11 @@ class OdeNetModel implements ModelFactory {
                                 .build()
                         , "merge")
                 .setOutputs("loss"); // Not really output, just used for loss calculation
+    }
+
+    @Override
+    public MultiDataSetPreProcessor getPreProcessor() {
+        return new LabelsPreProcessor(new ReshapePreprocessor(new long[]{2, nrofSamples},
+                new long[]{nrofLatentDims * nrofSamples / 2}));
     }
 }

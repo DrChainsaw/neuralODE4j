@@ -56,6 +56,7 @@ public class NormElboLoss implements ILossFunction{
         final INDArray predGrad = logNormalPdfGradient(labels, predMeanVar.getFirst());
         final INDArray meanGrad = normalKlGradMu1(predMeanVar.getSecond());
         final INDArray logvarGrad = normalKlGradLv1(predMeanVar.getThird());
+
         return activationFn.backprop(output, extract.combinePredMeanLogvarEpsilon(predGrad, meanGrad, logvarGrad)).getFirst();
     }
 
@@ -82,10 +83,14 @@ public class NormElboLoss implements ILossFunction{
 
         final INDArray logPx = logNormalPdf(labels, predMeanVar.getFirst()).sum(sumDims);
         final INDArray analyticKl = normalKl(predMeanVar.getSecond(), predMeanVar.getThird()).sum(1);
+
         return analyticKl.subi(logPx);
     }
 
+
     private INDArray logNormalPdf(INDArray labels, INDArray output) {
+        // Expression from original repo.
+        // Similar to log-likelihood assuming parameters are from a gaussian distribution, but not 100% same?
         return Transforms.pow(output.rsub(labels), 2, false)
                 .divi(Math.exp(logNoiseVar))
                 .addi(log2pi)
@@ -95,13 +100,13 @@ public class NormElboLoss implements ILossFunction{
 
     private INDArray logNormalPdfGradient(INDArray labels, INDArray output) {
         // 2 from derivative of exponent and -0.5 constant cancel out
-        return output.rsub(labels).divi(Math.exp(logNoiseVar));
+        return output.sub(labels).divi(Math.exp(logNoiseVar));
     }
 
     private INDArray normalKl(INDArray mu1, INDArray lv1 ) {
         final double mu2 = 0;
         final INDArray v1 = Transforms.exp(lv1);
-        final double v2 = 1; // Original implementation aims for zero variance!
+        final double v2 = 1;
         final INDArray lstd1 = lv1.div(2);
         final double lstd2 = 0;
         return lstd1.rsubi(lstd2).addi(
@@ -111,17 +116,17 @@ public class NormElboLoss implements ILossFunction{
 
     private INDArray normalKlGradMu1(INDArray mu1) {
         final double mu2 = 0;
-        final double v2 = 1; // Original implementation aims for zero variance!
+        final double v2 = 1;
         return mu1.sub(mu2).muli(v2);
     }
 
     private INDArray normalKlGradLv1(INDArray lv1) {
-        final double lv2 = 0; // Original implementation aims for zero variance!
+        final double lv2 = 0;
         return Transforms.exp(lv1.sub(lv2)).subi(1).divi(2);
     }
 
     @Override
     public String name() {
-        return "NormalElboLoss";
+        return "NormalElboLoss(" + logNoiseVar +")";
     }
 }

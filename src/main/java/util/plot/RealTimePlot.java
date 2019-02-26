@@ -13,10 +13,7 @@ import org.knowm.xchart.style.Styler.ChartTheme;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -61,6 +58,16 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
 
             }
 
+            plotData(xyChart, swingWrapper);
+        }
+
+        private void addData(List<X> x, List<Y> y, XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
+            xData.addAll(x);
+            yData.addAll(y);
+            plotData(xyChart, swingWrapper);
+        }
+
+        private void plotData(XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
             if (!xyChart.getSeriesMap().containsKey(series)) {
                 xyChart.addSeries(series, xData, yData, null);
             } else {
@@ -86,6 +93,13 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
                 e.printStackTrace();
             }
         }
+
+        private void clear(XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
+            xData.clear();
+            yData.clear();
+            //xyChart.removeSeries(series);
+            //repaint(swingWrapper);
+        }
     }
 
     /**
@@ -108,11 +122,20 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
 
     @Override
     public void plotData(String label, X x, Y y) {
-        DataXY<X, Y> data = plotSeries.get(label);
-        if (data == null) {
-            data = getOrCreateSeries(label);
-        }
+        final DataXY<X, Y> data = getOrCreateSeries(label);
         data.addPoint(x, y, xyChart, swingWrapper);
+    }
+
+    @Override
+    public void plotData(String label, List<X> x, List<Y> y) {
+        final DataXY<X, Y> data = getOrCreateSeries(label);
+        data.addData(x, y, xyChart, swingWrapper);
+    }
+
+    @Override
+    public void clearData(String label) {
+        final DataXY<X, Y> data = getOrCreateSeries(label);
+        data.clear(xyChart, swingWrapper);
     }
 
     @Override

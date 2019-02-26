@@ -47,9 +47,9 @@ public class NormElboLossTest {
         final INDArray resultConc = Nd4j.concat(1, labels.mul(3.45), Nd4j.scalar(1.23), Nd4j.scalar(2.34));
 
         final Pair<Double, INDArray> scoreAndGrad = loss.computeGradientAndScore(labels, resultConc, new ActivationIdentity(), null, false);
-        assertEquals("Incorrect loss!",1836.94921875, scoreAndGrad.getFirst(), 1e-5);
+        assertEquals("Incorrect loss!",1836.949, scoreAndGrad.getFirst(), 1e-3); // Numerical precision with float on GPU vs CPU
 
-        final double[] expectedGrad = {27.22222137451172, -54.44444274902344, 81.66666412353516, -108.88888549804688, 136.11109924316406, 1.2300000190734863, 4.69061803817749};
+        final double[] expectedGrad = {-27.22222137451172, 54.44444274902344, -81.66666412353516, 108.88888549804688, -136.11109924316406, 1.2300000190734863, 4.69061803817749};
         assertArrayEquals("Incorrect loss gradient!", expectedGrad, scoreAndGrad.getSecond().toDoubleVector(), 1e-5);
     }
 
@@ -67,7 +67,7 @@ public class NormElboLossTest {
             @Override
             public Triple<INDArray, INDArray, INDArray> extractPredMeanLogvar(INDArray result) {
                 return new Triple<>(
-                        result.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 2*nrofSamples)).reshape(batchSize, nrofSamples, 2),
+                        result.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 2*nrofSamples)),
                         result.get(NDArrayIndex.all(), NDArrayIndex.interval(2*nrofSamples, 2*nrofSamples + nrofLatentDims)),
                         result.get(NDArrayIndex.all(), NDArrayIndex.interval(2*nrofSamples+nrofLatentDims, 2*nrofSamples + 2*nrofLatentDims))
                 );
@@ -80,8 +80,6 @@ public class NormElboLossTest {
             }
         });
 
-
-
         final SpiralIterator.Generator gen = new SpiralIterator.Generator(
                 new SpiralFactory(0, 0.3, 0, 2*Math.PI, 200),
                 0.3, nrofSamples, new Random(666));
@@ -92,8 +90,10 @@ public class NormElboLossTest {
                 Nd4j.arange(batchSize*nrofLatentDims).reshape(batchSize, nrofLatentDims),
                 Nd4j.arange(batchSize*nrofLatentDims).reshape(batchSize, nrofLatentDims));
 
-
-        final INDArray score = loss.computeScoreArray(labels, resultConc, new ActivationIdentity(), null);
+        final INDArray score = loss.computeScoreArray(
+                labels.reshape(batchSize, labels.length() / batchSize),
+                resultConc, new ActivationIdentity(),
+                null);
 
         assertEquals("Incorrect size!", batchSize, score.length());
     }

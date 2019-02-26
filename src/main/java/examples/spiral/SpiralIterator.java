@@ -48,10 +48,10 @@ public class SpiralIterator implements MultiDataSetIterator {
                     rng::nextBoolean);
 
             final INDArray trajFeature = Nd4j.createUninitialized(new long[] {batchSize, 2, nrofSamples});
-            final INDArray tFeature = Nd4j.createUninitialized(batchSize, nrofSamples);
-            for(SpiralFactory.Spiral spiral: spirals) {
-                trajFeature.tensorAlongDimension(0, 1,2).assign(spiral.trajectory());
-                tFeature.tensorAlongDimension(0, 1).assign(spiral.theta());
+            final INDArray tFeature = spirals.get(0).theta().dup();
+            tFeature.subi(tFeature.minNumber());
+            for(int i = 0; i < batchSize; i++) {
+                trajFeature.tensorAlongDimension(i, 1,2).assign(spirals.get(i).trajectory());
             }
             trajFeature.addi(Nd4j.randn(trajFeature.shape(), Nd4j.getRandomFactory().getNewRandomInstance(rng.nextLong())).muli(noiseSigma));
             return new org.nd4j.linalg.dataset.MultiDataSet(
