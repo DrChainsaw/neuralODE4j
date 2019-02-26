@@ -127,7 +127,7 @@ class Main {
                 new CheckpointListener.Builder(savedir.getAbsolutePath())
                         .keepLast(1)
                         .deleteExisting(true)
-                        .saveEveryEpoch()
+                        .saveEveryNIterations(20)
                         .build(),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");

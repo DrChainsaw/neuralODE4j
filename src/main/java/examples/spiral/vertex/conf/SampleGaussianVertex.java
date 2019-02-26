@@ -1,5 +1,6 @@
 package examples.spiral.vertex.conf;
 
+import lombok.Data;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
@@ -20,6 +21,7 @@ import java.util.Arrays;
  *
  * @author Christian Skarby
  */
+@Data
 public class SampleGaussianVertex extends GraphVertex {
 
     private final long seed;

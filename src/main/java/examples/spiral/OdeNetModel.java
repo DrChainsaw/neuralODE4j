@@ -15,11 +15,7 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.modelimport.keras.preprocessors.ReshapePreprocessor;
 import org.nd4j.linalg.activations.impl.ActivationELU;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
-import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
-import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.NDArrayIndex;
-import org.nd4j.linalg.primitives.Triple;
 
 /**
  * Model used for spiral generation using neural ODE. Equivalent to model used in
@@ -106,30 +102,12 @@ class OdeNetModel implements ModelFactory {
                 // Since 1 above is 3D and the other two are 2D, the first step is to "flatten" 1 into 2D using an ReshapePreprocessor
                 .addVertex("flattenDec", new PreprocessorVertex(new ReshapePreprocessor(
                         new long[]{2, nrofSamples},
-                        new long[]{nrofLatentDims * nrofSamples / 2})), decOut)
+                        new long[]{2 * nrofSamples})), decOut)
+                // Note: Merge order is determined by PredMeanLogvar2D implementation
                 .addVertex("merge", new MergeVertex(), "flattenDec", qz0_mean, qz0_logvar)
                 .addLayer("loss", new LossLayer.Builder()
                                 .activation(new ActivationIdentity())
-                                .lossFunction(new NormElboLoss(noiseSigma, new NormElboLoss.ExtractQzZero() {
-                                    @Override
-                                    public Triple<INDArray, INDArray, INDArray> extractPredMeanLogvar(INDArray result) {
-                                        final long predSize = result.size(1) - 2 * nrofLatentDims;
-                                        return new Triple<>(
-                                                // Here we "unpack" the result of the merge above.
-                                                result.get(NDArrayIndex.all(), NDArrayIndex.interval(0, predSize)),
-                                                result.get(NDArrayIndex.all(), NDArrayIndex.interval(predSize, predSize + nrofLatentDims)),
-                                                result.get(NDArrayIndex.all(), NDArrayIndex.interval(predSize + nrofLatentDims, predSize + 2 * nrofLatentDims))
-                                        );
-                                    }
-
-                                    @Override
-                                    public INDArray combinePredMeanLogvarEpsilon(INDArray predEps, INDArray meanEps, INDArray logvarEps) {
-                                        return Nd4j.hstack(
-                                                predEps.reshape(predEps.size(0), nrofLatentDims * nrofSamples / 2),
-                                                meanEps,
-                                                logvarEps);
-                                    }
-                                }))
+                                .lossFunction(new NormElboLoss(noiseSigma, new PredMeanLogvar2D(nrofLatentDims)))
                                 .build()
                         , "merge")
                 .setOutputs("loss"); // Not really output, just used for loss calculation

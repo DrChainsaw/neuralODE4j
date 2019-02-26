@@ -1,6 +1,7 @@
 package examples.spiral.vertex.conf;
 
 
+import lombok.Data;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
@@ -8,17 +9,19 @@ import org.deeplearning4j.nn.conf.memory.LayerMemoryReport;
 import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 /**
  * Reverses the operation of a {@link TimeAsBatch} by making 2D input 3D.
  *
  * @author Christian Skarby
  */
+@Data
 public class ReverseTimeAsBatch extends GraphVertex {
 
     private final long nrofTimeSteps;
 
-    public ReverseTimeAsBatch(long nrofTimeSteps) {
+    public ReverseTimeAsBatch(@JsonProperty("nrofTimeSteps") long nrofTimeSteps) {
         this.nrofTimeSteps = nrofTimeSteps;
     }
 

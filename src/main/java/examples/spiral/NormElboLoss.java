@@ -1,5 +1,6 @@
 package examples.spiral;
 
+import lombok.Data;
 import org.nd4j.base.Preconditions;
 import org.nd4j.linalg.activations.IActivation;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -7,12 +8,17 @@ import org.nd4j.linalg.lossfunctions.ILossFunction;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.nd4j.linalg.primitives.Pair;
 import org.nd4j.linalg.primitives.Triple;
+import org.nd4j.shade.jackson.annotation.JsonProperty;
+import org.nd4j.shade.jackson.annotation.JsonTypeInfo;
+
+import java.io.Serializable;
 
 /**
  * Negative Evidence Lower BOund (ELBO) under assumption that the distribution is normal.
  *
  * @author Christian Skarby
  */
+@Data
 public class NormElboLoss implements ILossFunction{
 
     private final static double log2pi = Math.log(2 * Math.PI);
@@ -20,13 +26,14 @@ public class NormElboLoss implements ILossFunction{
     private final double logNoiseVar;
     private final ExtractQzZero extract;
 
-    public interface ExtractQzZero {
+    @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
+    public interface ExtractQzZero extends Serializable {
 
         Triple<INDArray, INDArray, INDArray> extractPredMeanLogvar(INDArray result);
         INDArray combinePredMeanLogvarEpsilon(INDArray predEps, INDArray meanEps, INDArray logvarEps);
     }
 
-    public NormElboLoss(double noiseSigma, ExtractQzZero extract) {
+    public NormElboLoss(@JsonProperty("noiseSigma") double noiseSigma, @JsonProperty("extract") ExtractQzZero extract) {
         this.logNoiseVar = 2*Math.log(noiseSigma);
         this.extract = extract;
     }
