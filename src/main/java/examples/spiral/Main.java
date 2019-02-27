@@ -36,7 +36,7 @@ class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     @Parameter(names = "-trainBatchSize", description = "Batch size to use for training")
-    private int trainBatchSize = 1;
+    private int trainBatchSize = 1000;
 
     @Parameter(names = "-nrofTimeStepsForTraining", description = "Number of time steps per spiral when training")
     private int nrofTimeStepsForTraining = 100;
@@ -149,9 +149,9 @@ class Main {
         for (int i = 0; i < 2000; i++) {
             model.fit(iterator.next());
 
-            //if( i % 100 == 0) {
-            //    drawSample();
-           // }
+            if(i> 0 && i % 100 == 0) {
+                drawSample();
+            }
         }
     }
 
@@ -176,10 +176,7 @@ class Main {
     }
 
     private INDArray getDecodedOutput(INDArray sample, INDArray time) {
-        //final INDArray outputPos = model.outputSingle(sample, time);
-        final String decOut = "decodedOutput";
-        return model.feedForward(new INDArray[]{sample, time}, model.getVertex(decOut).getVertexIndex(), false).get(decOut);
-        //return outputPos.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 2 * time.length())).reshape(1, 2, time.length());
+        return model.output(sample, time)[0];
     }
 
 }
