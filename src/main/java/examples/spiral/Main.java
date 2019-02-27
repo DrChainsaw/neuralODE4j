@@ -11,8 +11,10 @@ import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.jetbrains.annotations.NotNull;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
 import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;
+import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.listen.training.NanScoreWatcher;
@@ -21,7 +23,7 @@ import util.plot.Plot;
 import util.plot.RealTimePlot;
 
 import java.io.File;
-import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -48,8 +50,9 @@ class Main {
     private ComputationGraph model;
     private String modelName;
     private MultiDataSetIterator iterator;
+    private Plot<Double, Double> reconstructionPlot;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         root.setLevel(Level.INFO);
 
@@ -109,6 +112,7 @@ class Main {
         final int batchNrToPlot = 0;
         final Plot<Double, Double> outputPlot = initTrainingPlot(savedir, batchNrToPlot);
         final Plot<Integer, Double> meanAndLogVarPlot = new RealTimePlot<>("Mean and log(var) of z", savedir.getAbsolutePath());
+        this.reconstructionPlot = new RealTimePlot<>("Reconstruction", savedir.getAbsolutePath());
 
         model.addListeners(
                 new ZeroGrad(),
@@ -144,7 +148,38 @@ class Main {
     private void run() {
         for (int i = 0; i < 2000; i++) {
             model.fit(iterator.next());
+
+            //if( i % 100 == 0) {
+            //    drawSample();
+           // }
         }
+    }
+
+    private void drawSample() {
+        log.info("Sampling model...");
+
+        final MultiDataSet mds = iterator.next();
+        final INDArray sample = mds.getFeatures(0).tensorAlongDimension(0,1,2).reshape(1, 2, nrofTimeStepsForTraining);
+
+        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t < 0)", 0)
+                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t < 0)",
+                        getDecodedOutput(sample,  Nd4j.linspace(0, 2*Math.PI, 2000))));
+
+        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t > 0)", 0)
+                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t > 0)",
+                        getDecodedOutput(sample,  Nd4j.linspace(-Math.PI, 0,2000))));
+
+        new PlotDecodedOutput(reconstructionPlot, "Sampled data", 0)
+                .onForwardPass(model, Collections.singletonMap("Sampled data",
+                        sample));
+
+    }
+
+    private INDArray getDecodedOutput(INDArray sample, INDArray time) {
+        //final INDArray outputPos = model.outputSingle(sample, time);
+        final String decOut = "decodedOutput";
+        return model.feedForward(new INDArray[]{sample, time}, model.getVertex(decOut).getVertexIndex(), false).get(decOut);
+        //return outputPos.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 2 * time.length())).reshape(1, 2, time.length());
     }
 
 }

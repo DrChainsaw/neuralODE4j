@@ -108,4 +108,5 @@ public class SpiralIterator implements MultiDataSetIterator {
     public MultiDataSet next() {
         return next(batchSize);
     }
+
 }

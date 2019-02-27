@@ -1,4 +1,4 @@
-package examples.spiral;
+package examples.spiral.loss;
 
 import lombok.Data;
 import org.nd4j.linalg.api.ndarray.INDArray;

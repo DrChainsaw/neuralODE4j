@@ -1,5 +1,8 @@
 package examples.spiral;
 
+import examples.spiral.loss.NormElboLoss;
+import examples.spiral.loss.NormKLDLoss;
+import examples.spiral.loss.NormLogLikelihoodLoss;
 import org.junit.Test;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -25,7 +28,7 @@ public class NormElboLossTest {
     @Test
     public void computeGradientAndScore() {
         final double sigma = 0.3;
-        final NormElboLoss loss = new NormElboLoss(sigma, new NormElboLoss.ExtractQzZero() {
+        final NormElboLoss loss = new NormElboLoss(new NormLogLikelihoodLoss(sigma), new NormKLDLoss(), new NormElboLoss.ExtractQzZero() {
             @Override
             public Triple<INDArray, INDArray, INDArray> extractPredMeanLogvar(INDArray result) {
                 return new Triple<>(
@@ -63,7 +66,7 @@ public class NormElboLossTest {
         final long nrofLatentDims = 4;
         final int batchSize = 10;
 
-        final NormElboLoss loss = new NormElboLoss(sigma, new NormElboLoss.ExtractQzZero() {
+        final NormElboLoss loss = new NormElboLoss(new NormLogLikelihoodLoss(sigma), new NormKLDLoss(), new NormElboLoss.ExtractQzZero() {
             @Override
             public Triple<INDArray, INDArray, INDArray> extractPredMeanLogvar(INDArray result) {
                 return new Triple<>(

@@ -1,5 +1,9 @@
 package examples.spiral;
 
+import examples.spiral.loss.NormElboLoss;
+import examples.spiral.loss.NormKLDLoss;
+import examples.spiral.loss.NormLogLikelihoodLoss;
+import examples.spiral.loss.PredMeanLogvar2D;
 import examples.spiral.vertex.conf.SampleGaussianVertex;
 import ode.solve.conf.DormandPrince54Solver;
 import ode.solve.conf.SolverConfig;
@@ -107,7 +111,10 @@ class OdeNetModel implements ModelFactory {
                 .addVertex("merge", new MergeVertex(), "flattenDec", qz0_mean, qz0_logvar)
                 .addLayer("loss", new LossLayer.Builder()
                                 .activation(new ActivationIdentity())
-                                .lossFunction(new NormElboLoss(noiseSigma, new PredMeanLogvar2D(nrofLatentDims)))
+                                .lossFunction(new NormElboLoss(
+                                        new NormLogLikelihoodLoss(noiseSigma),
+                                        new NormKLDLoss(),
+                                        new PredMeanLogvar2D(nrofLatentDims)))
                                 .build()
                         , "merge")
                 .setOutputs("loss"); // Not really output, just used for loss calculation
