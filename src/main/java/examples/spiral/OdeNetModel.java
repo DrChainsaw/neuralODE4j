@@ -15,6 +15,7 @@ import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
 import org.deeplearning4j.nn.conf.graph.SubsetVertex;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.LossLayer;
+import org.deeplearning4j.nn.conf.layers.RnnLossLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.modelimport.keras.preprocessors.ReshapePreprocessor;
 import org.nd4j.linalg.activations.impl.ActivationELU;
@@ -46,6 +47,7 @@ class OdeNetModel implements ModelFactory {
         builder.addInputs("spiral", "time");
 
         String next = enc.add("spiral", builder);
+        final String qz0_meanAndLogvar = next;
 
         // Add sampling of a gaussian with the encoded mean and log(var)
         final String qz0_mean = "qz0_mean";
@@ -61,7 +63,11 @@ class OdeNetModel implements ModelFactory {
         next = dec.add(next, builder);
         //final String actualOutput = next;
         // Steps after this is just for ELBO calculation
-        addLoss(next, qz0_mean, qz0_logvar, builder);
+        //addLoss(next, qz0_mean, qz0_logvar, builder);
+        String output0 = addReconstructionLoss(next, builder);
+        String output1 = addKldLoss(qz0_meanAndLogvar, builder);
+
+        builder.setOutputs(output0, output1);
 
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
@@ -90,6 +96,23 @@ class OdeNetModel implements ModelFactory {
                         1))
                 .build(), prev, time);
         return "latentOde";
+    }
+
+    private String addReconstructionLoss(String decOut, GraphBuilder builder) {
+        builder.addLayer("reconstruction", new RnnLossLayer.Builder()
+                .activation(new ActivationIdentity())
+                .lossFunction(new NormLogLikelihoodLoss(noiseSigma))
+                .build(), decOut);
+
+        return "reconstruction";
+    }
+
+    private String addKldLoss(String qz0_meanAndLogvar, GraphBuilder builder) {
+        builder.addLayer("kld", new LossLayer.Builder()
+                .activation(new ActivationIdentity())
+                .lossFunction(new NormKLDLoss())
+                .build(), qz0_meanAndLogvar);
+        return "kld";
     }
 
     private void addLoss(
@@ -122,7 +145,8 @@ class OdeNetModel implements ModelFactory {
 
     @Override
     public MultiDataSetPreProcessor getPreProcessor() {
-        return new LabelsPreProcessor(new ReshapePreprocessor(new long[]{2, nrofSamples},
-                new long[]{nrofLatentDims * nrofSamples / 2}));
+        return new AddKLDLabel(0, 1, nrofLatentDims);
+        //return new LabelsPreProcessor(new ReshapePreprocessor(new long[]{2, nrofSamples},
+        //        new long[]{nrofLatentDims * nrofSamples / 2}));
     }
 }

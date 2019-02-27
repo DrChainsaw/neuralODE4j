@@ -36,7 +36,7 @@ class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     @Parameter(names = "-trainBatchSize", description = "Batch size to use for training")
-    private int trainBatchSize = 1000;
+    private int trainBatchSize = 1;
 
     @Parameter(names = "-nrofTimeStepsForTraining", description = "Number of time steps per spiral when training")
     private int nrofTimeStepsForTraining = 100;
@@ -138,8 +138,8 @@ class Main {
         final Plot<Double, Double> outputPlot = new RealTimePlot<>("Training Output", savedir.getAbsolutePath());
         outputPlot.createSeries("True output");
         final INDArray toPlot = iterator.next().getLabels(0);
-        for (long i = 0; i < toPlot.size(1) / 2; i++) {
-            outputPlot.plotData("True output", toPlot.getDouble(batchNrToPlot, i), toPlot.getDouble(batchNrToPlot, i + toPlot.size(1) / 2));
+        for (long i = 0; i < toPlot.size(2); i++) {
+            outputPlot.plotData("True output", toPlot.getDouble(batchNrToPlot, 0, i), toPlot.getDouble(batchNrToPlot, 1, i));
         }
         return outputPlot;
     }

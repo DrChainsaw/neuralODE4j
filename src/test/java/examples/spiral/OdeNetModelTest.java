@@ -37,13 +37,14 @@ public class OdeNetModelTest {
 
         final long nrofTimeSteps = 10;
         final long batchSize = 3;
-        final ComputationGraph model = factory.create(nrofTimeSteps, 0.3, 3);
+        final long nrofLatentDims = 5;
+        final ComputationGraph model = factory.create(nrofTimeSteps, 0.3, nrofLatentDims);
         model.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 2, nrofTimeSteps}), Nd4j.linspace(0, 3, nrofTimeSteps)},
-                new INDArray[]{Nd4j.randn(batchSize, 2 * nrofTimeSteps)}));
+                new INDArray[]{Nd4j.randn(new long[] {batchSize, 2, nrofTimeSteps}), Nd4j.randn(batchSize, nrofLatentDims)}));
         model.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 2, nrofTimeSteps}), Nd4j.linspace(0, 3, nrofTimeSteps)},
-                new INDArray[]{Nd4j.randn(batchSize, 2 * nrofTimeSteps)}));
+                new INDArray[]{Nd4j.randn(new long[] {batchSize, 2, nrofTimeSteps}), Nd4j.randn(batchSize, nrofLatentDims)}));
     }
 
     /**
@@ -73,7 +74,7 @@ public class OdeNetModelTest {
             final long batchSize = 3;
             final INDArray[] input = {Nd4j.randn(new long[]{batchSize, 2, nrofTimeSteps}), Nd4j.linspace(0, 3, nrofTimeSteps)};
 
-            assertEquals("Output not the same!", graph.outputSingle(input), newGraph.outputSingle(input));
+            assertEquals("Output not the same!", graph.output(input)[0], newGraph.output(input)[0]);
 
         } catch (IOException e) {
             e.printStackTrace();
