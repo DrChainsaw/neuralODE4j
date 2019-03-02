@@ -40,6 +40,7 @@ public class ForwardPass implements FirstOrderEquation {
 
     @Override
     public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
+        graph.getConfiguration().setIterationCount(graph.getIterationCount() + 1);
         try (WorkspacesCloseable ws = enterIfNotOpen(ArrayType.ACTIVATIONS)) {
             setInputsFromFlat(y);
             evaluate(inputs, fy);

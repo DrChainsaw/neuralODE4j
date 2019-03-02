@@ -149,7 +149,7 @@ class Main {
         for (int i = 0; i < 2000; i++) {
             model.fit(iterator.next());
 
-            if(i> 0 && i % 100 == 0) {
+            if(i > 0 && i % 100 == 0) {
                 drawSample();
             }
         }

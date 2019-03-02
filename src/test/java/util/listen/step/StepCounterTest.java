@@ -1,6 +1,7 @@
 package util.listen.step;
 
 import ode.solve.api.StepListener;
+import ode.solve.impl.util.StateContainer;
 import org.junit.Test;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -24,8 +25,8 @@ public class StepCounterTest {
 
         for(int i = 0; i < 7; i++) {
             listener.begin(Nd4j.linspace(0, 1, 2), Nd4j.zeros(1));
-            listener.step(Nd4j.ones(1), Nd4j.ones(1), Nd4j.zeros(1), Nd4j.zeros(0));
-            listener.step(Nd4j.ones(1), Nd4j.ones(1), Nd4j.zeros(1), Nd4j.zeros(0));
+            listener.step(new StateContainer(1, new double[] {0}, new double[] {0}), Nd4j.ones(1), Nd4j.zeros(1));
+            listener.step(new StateContainer(1, new double[] {0}, new double[] {0}), Nd4j.ones(1), Nd4j.zeros(1));
             listener.done();
 
             assertEquals("Incorrect number of calls!", (i+1) / 3, probe.nrofCalls);

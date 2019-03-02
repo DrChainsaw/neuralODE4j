@@ -152,7 +152,9 @@ public class OdeVertex extends BaseGraphVertex {
 
         final LayerWorkspaceMgr innerWorkspaceMgr = createWorkspaceMgr(workspaceMgr);
 
+        graph.getConfiguration().setIterationCount(0);
         final INDArray output = odeHelperForward.solve(graph, innerWorkspaceMgr, getInputs());
+        log.info("Nrof func eval forward " + graph.getIterationCount());
 
         parameters.setLastOutput(output.detach());
         return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, output);
@@ -176,7 +178,10 @@ public class OdeVertex extends BaseGraphVertex {
                 parName
         );
 
+        graph.getConfiguration().setIterationCount(0);
         final Pair<Gradient, INDArray[]> gradients = odeHelperBackward.solve(graph, inputArrays, miscPar);
+        log.info("Nrof func eval backward " + graph.getIterationCount());
+
 
         final INDArray[] inputGrads = gradients.getSecond();
         final INDArray[] leveragedGrads = new INDArray[inputGrads.length];

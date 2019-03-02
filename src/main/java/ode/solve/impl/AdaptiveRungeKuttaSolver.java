@@ -170,7 +170,9 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             // local error is small enough: accept the step,
             equation.update();
 
-            listener.step(equation.time(), step, error, equation.getCurrentState());
+            listener.step(equation, step, error);
+
+            equation.shiftDerivative();
 
             return true;
         }

@@ -97,7 +97,7 @@ abstract class AbstractHelperConfTest {
                 LayerWorkspaceMgr.noWorkspaces(),
                 "grad"));
         Nd4j.getExecutioner().commit();
-        assertNotEquals("Expected non-zero param gradient!", 0, output.getFirst().gradient().sumNumber().doubleValue() ,1e-10);
+        assertNotEquals("Expected non-zero param gradient!", 0, output.getFirst().gradient().maxNumber().doubleValue() ,1e-10);
         for(INDArray inputGrad: output.getSecond()) {
             assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.sumNumber().doubleValue() ,1e-10);
         }

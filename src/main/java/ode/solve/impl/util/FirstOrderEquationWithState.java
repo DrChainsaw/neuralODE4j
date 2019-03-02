@@ -11,7 +11,7 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
  *
  * @author Christian Skarby
  */
-public class FirstOrderEquationWithState {
+public class FirstOrderEquationWithState implements SolverState {
 
     private final FirstOrderEquation equation;
     private final INDArray time;
@@ -64,10 +64,12 @@ public class FirstOrderEquationWithState {
      * @param stage which stage to update
      */
     public void calculateDerivative(long stage) {
+        //System.out.println("\tUpdate stage " + stage + " from " + state.getStateDot(stage));
         equation.calculateDerivative(
                 state.yWorking,
                 time.add(state.timeOffset),
                 state.getStateDot(stage)); // Note, stateDot of the given stage will be updated by this operation
+        //System.out.println("\tto: " + state.getStateDot(stage));
     }
 
     /**
@@ -98,7 +100,7 @@ public class FirstOrderEquationWithState {
 
     /**
      * Return the current time state
-     * @return
+     * @return the current time state
      */
     public INDArray time() {
         return time;
@@ -115,12 +117,18 @@ public class FirstOrderEquationWithState {
     }
 
     /**
-     * Update the current state to the working state. This also includes shifting the derivative so that previous
-     * stage 1 becomes new stage 0.
+     * Update the current state to the working state.
      */
     public void update() {
         time.addi(state.timeOffset);
         state.y.assign(state.yWorking);
+
+    }
+
+    /**
+     * Shift the derivative so that previous stage 1 becomes new stage 0 in preparation for next step.
+     */
+    public void shiftDerivative() {
         state.yDotK.putRow(0, state.yDotK.getRow(state.yDotK.rows()-1));
     }
 }

@@ -1,6 +1,7 @@
 package util.listen.step;
 
 import ode.solve.api.StepListener;
+import ode.solve.impl.util.StateContainer;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -34,13 +35,13 @@ public class MaskTest {
 
     private void testMask(ProbeStepListener probeStepListener, StepListener mask, INDArray masked, INDArray notMasked) {
         mask.begin(masked, Nd4j.zeros(0));
-        mask.step(Nd4j.zeros(0), Nd4j.zeros(0), Nd4j.zeros(0), Nd4j.zeros(0));
+        mask.step(new StateContainer(0, new double[] {0}, new double[] {0}), Nd4j.zeros(0), Nd4j.zeros(0));
         mask.done();
 
         probeStepListener.assertNrofCalls(0,0,0);
 
         mask.begin(notMasked, Nd4j.zeros(0));
-        mask.step(Nd4j.zeros(0), Nd4j.zeros(0), Nd4j.zeros(0), Nd4j.zeros(0));
+        mask.step(new StateContainer(1, new double[] {0}, new double[] {0}), Nd4j.zeros(0), Nd4j.zeros(0));
         mask.done();
 
         probeStepListener.assertNrofCalls(1,1,1);

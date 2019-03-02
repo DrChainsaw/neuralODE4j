@@ -25,7 +25,7 @@ public class AggStepListenerTest {
         aggStepListener.addListeners(second,third);
 
         aggStepListener.begin(Nd4j.linspace(0,1 ,2), Nd4j.zeros(1));
-        aggStepListener.step(Nd4j.zeros(1), Nd4j.zeros(1), Nd4j.zeros(1), Nd4j.zeros(1));
+        aggStepListener.step(new StateContainer(0, new double[] {0}, new double[] {0}), Nd4j.zeros(1), Nd4j.zeros(1));
         aggStepListener.done();
         first.assertNrofCalls(1,1,1);
         second.assertNrofCalls(1,1,1);
@@ -34,7 +34,7 @@ public class AggStepListenerTest {
         aggStepListener.clearListeners(second);
 
         aggStepListener.begin(Nd4j.linspace(0,1 ,2), Nd4j.zeros(1));
-        aggStepListener.step(Nd4j.zeros(1), Nd4j.zeros(1), Nd4j.zeros(1), Nd4j.zeros(1));
+        aggStepListener.step(new StateContainer(0, new double[] {0}, new double[] {0}), Nd4j.zeros(1), Nd4j.zeros(1));
         aggStepListener.done();
         first.assertNrofCalls(2,2,2);
         second.assertNrofCalls(1,1,1);
@@ -43,7 +43,7 @@ public class AggStepListenerTest {
         aggStepListener.clearListeners(third, first);
 
         aggStepListener.begin(Nd4j.linspace(0,1 ,2), Nd4j.zeros(1));
-        aggStepListener.step(Nd4j.zeros(1), Nd4j.zeros(1), Nd4j.zeros(1), Nd4j.zeros(1));
+        aggStepListener.step(new StateContainer(0, new double[] {0}, new double[] {0}), Nd4j.zeros(1), Nd4j.zeros(1));
         aggStepListener.done();
         first.assertNrofCalls(2,2,2);
         second.assertNrofCalls(1,1,1);
@@ -53,7 +53,7 @@ public class AggStepListenerTest {
         aggStepListener.clearListeners();
 
         aggStepListener.begin(Nd4j.linspace(0,1 ,2), Nd4j.zeros(1));
-        aggStepListener.step(Nd4j.zeros(1), Nd4j.zeros(1), Nd4j.zeros(1), Nd4j.zeros(1));
+        aggStepListener.step(new StateContainer(0, new double[] {0}, new double[] {0}), Nd4j.zeros(1), Nd4j.zeros(1));
         aggStepListener.done();
         first.assertNrofCalls(2,2,2);
         second.assertNrofCalls(1,1,1);

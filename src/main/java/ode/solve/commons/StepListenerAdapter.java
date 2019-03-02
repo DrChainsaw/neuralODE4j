@@ -1,6 +1,7 @@
 package ode.solve.commons;
 
 import ode.solve.api.StepListener;
+import ode.solve.impl.util.StateContainer;
 import org.apache.commons.math3.exception.MaxCountExceededException;
 import org.apache.commons.math3.ode.sampling.StepHandler;
 import org.apache.commons.math3.ode.sampling.StepInterpolator;
@@ -22,10 +23,12 @@ public class StepListenerAdapter implements StepHandler {
     @Override
     public void handleStep(StepInterpolator interpolator, boolean isLast) throws MaxCountExceededException {
         wrappedListener.step(
-                Nd4j.create(1).assign(interpolator.getCurrentTime()),
+                new StateContainer(
+                        interpolator.getCurrentTime(),
+                        interpolator.getInterpolatedState(),
+                        interpolator.getInterpolatedDerivatives()),
                 Nd4j.create(1).assign(interpolator.getCurrentTime() - interpolator.getPreviousTime()),
-                null, // error not observable :(
-                Nd4j.create(interpolator.getInterpolatedState())
+                null // error not observable :(
         );
     }
 }

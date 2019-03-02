@@ -52,7 +52,6 @@ public class Interpolation {
         for(int i = 1; i < inputs.length; i++) {
             output.addi(inputs[i].mul(factors[i]));
         }
-        output.mul(3);
         return output;
     }
 

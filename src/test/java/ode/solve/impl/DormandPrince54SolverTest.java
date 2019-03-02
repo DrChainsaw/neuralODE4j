@@ -5,6 +5,7 @@ import ode.solve.api.FirstOrderSolver;
 import ode.solve.api.StepListener;
 import ode.solve.commons.FirstOrderSolverAdapter;
 import ode.solve.conf.SolverConfig;
+import ode.solve.impl.util.SolverState;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -103,8 +104,8 @@ public class DormandPrince54SolverTest {
         }
 
         @Override
-        public void step(INDArray currTime, INDArray step, INDArray error, INDArray y) {
-            times.add(currTime.detach());
+        public void step(SolverState solverState, INDArray step, INDArray error) {
+            times.add(solverState.time().detach());
         }
 
         @Override
