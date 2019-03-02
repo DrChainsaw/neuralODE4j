@@ -1,5 +1,7 @@
 package examples.spiral;
 
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.Parameters;
 import examples.spiral.loss.NormElboLoss;
 import examples.spiral.loss.NormKLDLoss;
 import examples.spiral.loss.NormLogLikelihoodLoss;
@@ -28,7 +30,12 @@ import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
  *
  * @author Christian Skarby
  */
+@Parameters(commandDescription = "Configuration for spiral generating VAE using latent ODE")
 class OdeNetModel implements ModelFactory {
+
+    @Parameter(names = "-dontInterpolateOdeForward", description = "Don't use interpolation when solving latent ODE in forward " +
+            "direction if set. Default is to use interpolation as this is the method used in original implementation" )
+    private boolean interpolateOdeForward = true;
 
     private double noiseSigma;
     private long nrofSamples;
@@ -92,8 +99,8 @@ class OdeNetModel implements ModelFactory {
                         .nOut(nrofLatentDims)
                         .activation(new ActivationIdentity()).build(), "fc2")
                 .odeConf(new InputStep(
-                        new DormandPrince54Solver(new SolverConfig(1e-9, 1e-7, 1e-20, 1e2)),
-                        1))
+                        new DormandPrince54Solver(new SolverConfig(1e-12, 1e-6, 1e-20, 1e2)),
+                        1, interpolateOdeForward))
                 .build(), prev, time);
         return "latentOde";
     }

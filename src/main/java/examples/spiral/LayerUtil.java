@@ -21,7 +21,7 @@ class LayerUtil {
     public static ComputationGraphConfiguration.GraphBuilder initGraphBuilder(long seed, long nrofSamples) {
         return new NeuralNetConfiguration.Builder()
                 .seed(seed)
-                .weightInit(WeightInit.UNIFORM)
+                .weightInit(WeightInit.RELU_UNIFORM)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(new Adam(0.01))
                 .graphBuilder()
