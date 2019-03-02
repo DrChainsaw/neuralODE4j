@@ -23,15 +23,21 @@ public class InputStep implements OdeHelper {
 
     private final FirstOrderSolverConf solverConf;
     private final int timeInputIndex;
+    private final boolean interpolateForwardIfMultiStep;
 
     public InputStep(FirstOrderSolverConf solverConf, int timeInputIndex) {
+        this(solverConf, timeInputIndex, false);
+    }
+
+    public InputStep(FirstOrderSolverConf solverConf, int timeInputIndex, boolean interpolateForwardIfMultiStep) {
         this.solverConf = solverConf;
         this.timeInputIndex = timeInputIndex;
+        this.interpolateForwardIfMultiStep = interpolateForwardIfMultiStep;
     }
 
     @Override
     public OdeHelperForward forward() {
-        return new ode.vertex.conf.helper.forward.InputStep(solverConf, timeInputIndex);
+        return new ode.vertex.conf.helper.forward.InputStep(solverConf, timeInputIndex, interpolateForwardIfMultiStep);
     }
 
     @Override

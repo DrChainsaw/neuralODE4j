@@ -14,7 +14,7 @@ public class FixedStepTest extends AbstractHelperConfTest{
 
     @Override
     OdeHelperForward create() {
-        return new FixedStep(new DormandPrince54Solver(), Nd4j.linspace(0,3,4));
+        return new FixedStep(new DormandPrince54Solver(), Nd4j.linspace(0,3,4), false);
     }
 
     @Override

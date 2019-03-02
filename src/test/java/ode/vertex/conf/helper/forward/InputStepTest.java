@@ -14,7 +14,7 @@ public class InputStepTest extends AbstractHelperConfTest {
 
     @Override
     OdeHelperForward create() {
-        return new InputStep(new DormandPrince54Solver(), 1);
+        return new InputStep(new DormandPrince54Solver(), 1, false);
     }
 
     @Override

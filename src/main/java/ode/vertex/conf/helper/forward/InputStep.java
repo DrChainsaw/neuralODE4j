@@ -20,17 +20,20 @@ public class InputStep implements OdeHelperForward {
 
     private final FirstOrderSolverConf solverConf;
     private final int timeInputIndex;
+    private final boolean interpolateIfMultiStep;
 
     public InputStep(
             @JsonProperty("solverConf") FirstOrderSolverConf solverConf,
-            @JsonProperty("timeInputIndex") int timeInputIndex) {
+            @JsonProperty("timeInputIndex") int timeInputIndex,
+            @JsonProperty("interpolateIfMultiStep") boolean interpolateIfMultiStep) {
         this.solverConf = solverConf;
         this.timeInputIndex = timeInputIndex;
+        this.interpolateIfMultiStep = interpolateIfMultiStep;
     }
 
     @Override
     public ode.vertex.impl.helper.forward.OdeHelperForward instantiate() {
-        return new ode.vertex.impl.helper.forward.InputStep(solverConf.instantiate(), timeInputIndex);
+        return new ode.vertex.impl.helper.forward.InputStep(solverConf.instantiate(), timeInputIndex, interpolateIfMultiStep);
     }
 
     @Override
@@ -40,7 +43,7 @@ public class InputStep implements OdeHelperForward {
 
     @Override
     public InputStep clone() {
-        return new InputStep(solverConf.clone(), timeInputIndex);
+        return new InputStep(solverConf.clone(), timeInputIndex, interpolateIfMultiStep);
     }
 
     @Override

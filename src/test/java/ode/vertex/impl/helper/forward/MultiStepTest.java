@@ -3,6 +3,7 @@ package ode.vertex.impl.helper.forward;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
+import ode.solve.impl.SingleSteppingMultiStepSolver;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.junit.Test;
@@ -34,7 +35,7 @@ public class MultiStepTest {
 
         final FirstOrderSolver solver = new DormandPrince54Solver(new SolverConfig(1e-10, 1e-10, 1e-10, 100));
         final OdeHelperForward helper = new MultiStep(
-                solver,
+                new SingleSteppingMultiStepSolver(solver),
                 t);
 
         final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new INDArray[]{input}).reshape(expected.shape());

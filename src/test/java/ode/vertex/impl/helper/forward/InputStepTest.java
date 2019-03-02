@@ -34,7 +34,7 @@ public class InputStepTest {
         final FirstOrderSolver solver = new DormandPrince54Solver(new SolverConfig(1e-10, 1e-10, 1e-10, 100));
         final OdeHelperForward helper = new InputStep(
                 solver,
-                1);
+                1, false);
 
         final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new INDArray[]{input, Nd4j.linspace(0, 1, 2)});
 
@@ -58,7 +58,7 @@ public class InputStepTest {
         final FirstOrderSolver solver = new DormandPrince54Solver(new SolverConfig(1e-10, 1e-10, 1e-10, 100));
         final OdeHelperForward helper = new InputStep(
                 solver,
-                1);
+                1, false);
 
         final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new INDArray[]{input, t}).reshape(expected.shape());
 

@@ -17,20 +17,26 @@ public class InputStep implements OdeHelperForward {
 
     private final FirstOrderSolver solver;
     private final int timeInputIndex;
+    private final boolean interpolateIfMultiStep;
 
-    public InputStep(FirstOrderSolver solver, int timeInputIndex) {
+    public InputStep(FirstOrderSolver solver, int timeInputIndex, boolean interpolateIfMultiStep) {
         this.solver = solver;
         this.timeInputIndex = timeInputIndex;
+        this.interpolateIfMultiStep = interpolateIfMultiStep;
     }
 
     @Override
     public INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, INDArray[] inputs) {
         final List<INDArray> notTimeInputs = new ArrayList<>();
-        for(int i = 0; i < inputs.length; i++) {
-            if(i != timeInputIndex) {
+        for (int i = 0; i < inputs.length; i++) {
+            if (i != timeInputIndex) {
                 notTimeInputs.add(inputs[i]);
             }
         }
-        return new FixedStep(solver, inputs[timeInputIndex]).solve(graph, wsMgr, notTimeInputs.toArray(new INDArray[0]));
+        return new FixedStep(
+                solver,
+                inputs[timeInputIndex],
+                interpolateIfMultiStep)
+                .solve(graph, wsMgr, notTimeInputs.toArray(new INDArray[0]));
     }
 }

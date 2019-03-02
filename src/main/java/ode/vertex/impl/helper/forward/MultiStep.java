@@ -2,8 +2,7 @@ package ode.vertex.impl.helper.forward;
 
 import com.google.common.primitives.Longs;
 import ode.solve.api.FirstOrderEquation;
-import ode.solve.api.FirstOrderSolver;
-import ode.solve.impl.SingleSteppingMultiStepSolver;
+import ode.solve.api.FirstOrderMultiStepSolver;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -18,11 +17,11 @@ import java.util.Arrays;
  */
 public class MultiStep implements OdeHelperForward {
 
-    private final FirstOrderSolver solver;
+    private final FirstOrderMultiStepSolver solver;
     private final INDArray time;
 
-    public MultiStep(FirstOrderSolver solver, INDArray time) {
-        this.solver = new SingleSteppingMultiStepSolver(solver);
+    public MultiStep(FirstOrderMultiStepSolver solver, INDArray time) {
+        this.solver = solver;
         this.time = time;
         if(time.length() <= 2 || !time.isVector()) {
             throw new IllegalArgumentException("time must be a vector of size > 2! Was of shape: " + Arrays.toString(time.shape())+ "!");

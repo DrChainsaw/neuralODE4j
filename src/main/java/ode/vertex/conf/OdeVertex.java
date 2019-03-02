@@ -153,7 +153,7 @@ public class OdeVertex extends GraphVertex {
 
         private String first;
         private String last;
-        private OdeHelperForward odeForwardConf = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2));
+        private OdeHelperForward odeForwardConf = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2), true);
         private OdeHelperBackward odeBackwardConf = new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.arange(2));
         
         public Builder(String name, Layer layer) {

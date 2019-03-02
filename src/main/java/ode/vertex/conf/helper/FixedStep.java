@@ -16,15 +16,21 @@ public class FixedStep implements OdeHelper {
 
     private final FirstOrderSolverConf solver;
     private final INDArray time;
+    private final boolean interpolateForwardIfMultiStep;
 
     public FixedStep(FirstOrderSolverConf solver, INDArray time) {
+        this(solver, time, false);
+    }
+
+    public FixedStep(FirstOrderSolverConf solver, INDArray time, boolean interpolateForwardIfMultiStep) {
         this.solver = solver;
         this.time = time.dup();
+        this.interpolateForwardIfMultiStep = interpolateForwardIfMultiStep;
     }
 
     @Override
     public OdeHelperForward forward() {
-        return new ode.vertex.conf.helper.forward.FixedStep(solver, time);
+        return new ode.vertex.conf.helper.forward.FixedStep(solver, time, interpolateForwardIfMultiStep);
     }
 
     @Override

@@ -24,17 +24,20 @@ public class FixedStep implements OdeHelperForward{
     @JsonSerialize(using = NDArraySerializer.class)
     @JsonDeserialize(using = NDArrayDeSerializer.class)
     private final INDArray time;
+    private final boolean interpolateIfMultiStep;
 
     public FixedStep(
             @JsonProperty("solverConf") FirstOrderSolverConf solverConf,
-            @JsonProperty("time") INDArray time) {
+            @JsonProperty("time") INDArray time,
+            @JsonProperty("interpolateIfMultiStep") boolean interpolateIfMultiStep) {
         this.solverConf = solverConf;
         this.time = time;
+        this.interpolateIfMultiStep = interpolateIfMultiStep;
     }
 
     @Override
     public ode.vertex.impl.helper.forward.OdeHelperForward instantiate() {
-        return new ode.vertex.impl.helper.forward.FixedStep(solverConf.instantiate(), time);
+        return new ode.vertex.impl.helper.forward.FixedStep(solverConf.instantiate(), time, interpolateIfMultiStep);
     }
 
     @Override
@@ -44,7 +47,7 @@ public class FixedStep implements OdeHelperForward{
 
     @Override
     public FixedStep clone() {
-        return new FixedStep(solverConf.clone(), time.dup());
+        return new FixedStep(solverConf.clone(), time.dup(), interpolateIfMultiStep);
     }
 
     @Override
