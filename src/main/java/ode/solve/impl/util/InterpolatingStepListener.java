@@ -9,6 +9,8 @@ import org.nd4j.linalg.indexing.conditions.And;
 import org.nd4j.linalg.indexing.conditions.GreaterThan;
 import org.nd4j.linalg.indexing.conditions.LessThan;
 
+import java.util.Arrays;
+
 /**
  * Samples {@link SolverState} at given time indexes using an {@link Interpolation}. Useful to extract multiple time
  * steps from a single time step solver. Advantage compared to calling the solver once per time step pair is fewer
@@ -25,8 +27,8 @@ public class InterpolatingStepListener implements StepListener {
 
     // TODO: Get this from somewhere else, maybe SolverState
     private final static double[] DPS_C_MID = {
-            6025192743d/30085553152d/2d,0,51252292925d/65400821598d/2d,-2691868925d/45128329728d/2d,
-                    187940372067d/1594534317056d/2d,-1776094331/19743644256d/2d,11237099/235043384d/2d};
+            6025192743d / 30085553152d / 2d, 0, 51252292925d / 65400821598d / 2d, -2691868925d / 45128329728d / 2d,
+            187940372067d / 1594534317056d / 2d, -1776094331 / 19743644256d / 2d, 11237099 / 235043384d / 2d};
 
     private final class State {
         private Interpolation interpolation = new Interpolation();
@@ -38,19 +40,22 @@ public class InterpolatingStepListener implements StepListener {
      * Create an {@link InterpolatingStepListener}. Output for the each wanted time will be assigned along dimension 0
      * of the provided yInterpol. In other words, output for wantedTimes[x] can be accessed through
      * yInterpol.get(NDArrayIndex.point(x), NDArrayIndex.all(), NDArrayIndex.all(), ...)
+     *
      * @param wantedTimes Time samples for which output is desired.
-     * @param yInterpol Will contain output from the provided {@link SolverState} at the desired times.
+     * @param yInterpol   Will contain output from the provided {@link SolverState} at the desired times.
      */
     public InterpolatingStepListener(INDArray wantedTimes, INDArray yInterpol) {
-        if(wantedTimes.length() != yInterpol.size(0)) {
-            throw new IllegalArgumentException("Must have one wanted time per element in dimension 0 of yInterpol");
+        if (wantedTimes.length() != yInterpol.size(0)) {
+            throw new IllegalArgumentException("Must have one wanted time per element in dimension 0 of yInterpol! " +
+                    "wantedTimes shape: " + Arrays.toString(wantedTimes.shape()) + ", yInterpol shape: " +
+                    Arrays.toString(yInterpol.shape()));
         }
 
         this.wantedTimeInds = wantedTimes;
         this.yInterpol = yInterpol;
 
         this.yInterpolAccess = new INDArrayIndex[yInterpol.rank()];
-        for(int dim = 0; dim < yInterpolAccess.length; dim++) {
+        for (int dim = 0; dim < yInterpolAccess.length; dim++) {
             yInterpolAccess[dim] = NDArrayIndex.all();
         }
     }
@@ -62,7 +67,7 @@ public class InterpolatingStepListener implements StepListener {
         this.state.y0 = y0;
 
         // Edge case: The first wanted time index is the start time -> user wants the starting state to be added to output
-        if(state.t0.equalsWithEps(wantedTimeInds.getScalar(0), 1e-10)) {
+        if (state.t0.equalsWithEps(wantedTimeInds.getScalar(0), 1e-10)) {
             yInterpolAccess[0] = NDArrayIndex.point(0);
             yInterpol.put(yInterpolAccess, state.y0);
         }
@@ -76,7 +81,7 @@ public class InterpolatingStepListener implements StepListener {
                         new LessThan(solverState.time().getDouble(0)))
         );
 
-        if(timeInds.sumNumber().doubleValue() > 0) {
+        if (timeInds.sumNumber().doubleValue() > 0) {
             fitInterpolationCoeffs(solverState, step);
             doInterpolation(timeInds, solverState.time());
         }
@@ -87,7 +92,7 @@ public class InterpolatingStepListener implements StepListener {
 
     private void fitInterpolationCoeffs(SolverState solverState, INDArray step) {
         final INDArray[] yDotStages = new INDArray[DPS_C_MID.length];
-        for(int i = 0; i < yDotStages.length; i++) {
+        for (int i = 0; i < yDotStages.length; i++) {
             yDotStages[i] = solverState.getStateDot(i);
         }
 
@@ -102,13 +107,13 @@ public class InterpolatingStepListener implements StepListener {
                 solverState.getCurrentState(),
                 yMid,
                 yDotStages[0],
-                yDotStages[yDotStages.length-1],
+                yDotStages[yDotStages.length - 1],
                 step);
     }
 
     private INDArray scaledDotProduct(INDArray output, double[] factors, INDArray[] inputs, INDArray scale) {
         output.assign((inputs[0].mul(factors[0])).mul(scale));
-        for(int i = 1; i < inputs.length; i++) {
+        for (int i = 1; i < inputs.length; i++) {
             output.addi(inputs[i].mul(factors[i]).mul(scale));
         }
         return output;
@@ -118,7 +123,7 @@ public class InterpolatingStepListener implements StepListener {
         final int startInd = timeInds.argMax().getInt(0);
         final int stopInd = startInd + timeInds.sumNumber().intValue();
 
-        for(int i = startInd; i < stopInd; i++) {
+        for (int i = startInd; i < stopInd; i++) {
             yInterpolAccess[0] = NDArrayIndex.point(i);
             yInterpol.put(yInterpolAccess,
                     state.interpolation.interpolate(state.t0.getDouble(0), t1.getDouble(0), wantedTimeInds.getDouble(i)));
@@ -129,9 +134,9 @@ public class InterpolatingStepListener implements StepListener {
     public void done() {
 
         // Edge case: User wants last time step to be added to interpolation
-        if(state.t0.equalsWithEps(wantedTimeInds.getScalar(wantedTimeInds.length()-1), 1e-10)) {
-           yInterpolAccess[0] = NDArrayIndex.point(wantedTimeInds.length()-1);
-           yInterpol.put(yInterpolAccess, state.y0);
+        if (state.t0.equalsWithEps(wantedTimeInds.getScalar(wantedTimeInds.length() - 1), 1e-10)) {
+            yInterpolAccess[0] = NDArrayIndex.point(wantedTimeInds.length() - 1);
+            yInterpol.put(yInterpolAccess, state.y0);
         }
     }
 }

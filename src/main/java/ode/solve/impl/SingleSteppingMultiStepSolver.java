@@ -1,6 +1,7 @@
 package ode.solve.impl;
 
 import ode.solve.api.FirstOrderEquation;
+import ode.solve.api.FirstOrderMultiStepSolver;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.api.StepListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -13,11 +14,11 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
  *
  * @author Christian Skarby
  */
-public class MultiStepSolver implements FirstOrderSolver {
+public class SingleSteppingMultiStepSolver implements FirstOrderMultiStepSolver {
 
     private final FirstOrderSolver solver;
 
-    public MultiStepSolver(FirstOrderSolver solver) {
+    public SingleSteppingMultiStepSolver(FirstOrderSolver solver) {
         this.solver = solver;
     }
 

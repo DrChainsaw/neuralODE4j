@@ -11,11 +11,11 @@ import org.nd4j.linalg.factory.Nd4j;
 import static junit.framework.TestCase.assertEquals;
 
 /**
- * Test cases for {@link MultiStepSolver}
+ * Test cases for {@link SingleSteppingMultiStepSolver}
  *
  * @author Christian Skarby
  */
-public class MultiStepSolverTest {
+public class SingleSteppingMultiStepSolverTest {
 
     /**
      * Test that solving {@link ode.solve.CircleODE} in multiple steps gives the same result as if all steps are done
@@ -33,7 +33,7 @@ public class MultiStepSolverTest {
         final INDArray yMulti = Nd4j.repeat(ySingle,nrofSteps-1).reshape(nrofSteps-1, y0.length());
 
         actualSolver.integrate(circle, t.getColumns(0, nrofSteps-1), y0, ySingle);
-        new MultiStepSolver(actualSolver).integrate(circle, t, y0, yMulti);
+        new SingleSteppingMultiStepSolver(actualSolver).integrate(circle, t, y0, yMulti);
 
         assertEquals("Incorrect solution!", ySingle, yMulti.getRow(nrofSteps-2));
     }
