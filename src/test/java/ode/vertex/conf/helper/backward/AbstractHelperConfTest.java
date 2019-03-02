@@ -87,7 +87,7 @@ abstract class AbstractHelperConfTest {
      * Test that helper can be instantiated and that it does something
      */
     @Test
-    public void instantiateAndSolveConvMultiStep() {
+    public void instantiateAndSolveConvMultiStep() throws InterruptedException {
         final int nrofTimeSteps = 7;
         final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps).instantiate();
         final ComputationGraph graph = createGraph();
@@ -97,6 +97,7 @@ abstract class AbstractHelperConfTest {
                 LayerWorkspaceMgr.noWorkspaces(),
                 "grad"));
         Nd4j.getExecutioner().commit();
+        Thread.sleep(20); // Sometimes one must wait for the executioner to finish??
         assertNotEquals("Expected non-zero param gradient!", 0, output.getFirst().gradient().maxNumber().doubleValue() ,1e-10);
         for(INDArray inputGrad: output.getSecond()) {
             assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.sumNumber().doubleValue() ,1e-10);
