@@ -5,7 +5,6 @@ import ode.solve.impl.AdaptiveRungeKuttaSolver;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
-import org.nd4j.linalg.ops.transforms.Transforms;
 
 /**
  * Combines a {@link FirstOrderEquation} with the state needed to evaluate it
@@ -35,7 +34,7 @@ public class FirstOrderEquationWithState implements SolverState {
             // yWorking = y + (stepCoeffPerStage*step) . yDot[0:startState, :]) where . is dot product
             timeOffset.assign(step);
             yWorking.assign(y);
-                    yWorking.addi((stepCoeffPerStage.mul(Transforms.abs(step))).mmul(
+                    yWorking.addi((stepCoeffPerStage.mul(step)).mmul(
                                     yDotK.get(NDArrayIndex.interval(0, stepCoeffPerStage.length()), NDArrayIndex.all())
                             ).reshape(y.shape()));
         }

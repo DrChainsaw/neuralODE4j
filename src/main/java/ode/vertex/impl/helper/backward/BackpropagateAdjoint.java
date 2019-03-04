@@ -77,7 +77,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
             augmentedDynamics.transferTo(fzAug);
 
-            return fzAug.negi();
+            return fzAug;
         }
     }
 
