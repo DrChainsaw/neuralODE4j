@@ -17,7 +17,6 @@ import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.learning.config.IUpdater;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 /**
@@ -118,21 +117,24 @@ public class OdeVertex extends GraphVertex {
 
         innerGraph.init(paramsView, false); // This does not update any parameters, just sets them
 
-        // Crappy code! ParamTable might not have deterministic iter order!
-        IUpdater updater = innerGraph.getLayer(0).getConfig().getUpdaterByParam(innerGraph.getLayer(0).paramTable().keySet().iterator().next()).clone();
-        for(org.deeplearning4j.nn.graph.vertex.GraphVertex vertex: graph.getVertices()) {
-            if(vertex != null && vertex.hasLayer()) {
-                String parname = vertex.paramTable(false).keySet().iterator().next();
-                updater = vertex.getConfig().getUpdaterByParam(parname).clone();
+        // Edge case: "outer" graph has no layers, if so, use the config from one of the layers of the OdeVertex
+        boolean atLeastOneLayer = false;
+        for(GraphVertex vertex: graph.getConfiguration().getVertices().values()) {
+            if(vertex != this) {
+                atLeastOneLayer |= vertex.numParams(false) > 0;
             }
         }
+
+        final DefaultTrainingConfig trainingConfig = new DefaultTrainingConfig(
+                atLeastOneLayer ? graph : innerGraph,
+                name);
 
         return new ode.vertex.impl.OdeVertex(
                 new ode.vertex.impl.OdeVertex.BaseGraphVertexInputs(graph, name, idx),
                 innerGraph,
                 odeForwardConf.instantiate(),
                 odeBackwardConf.instantiate(),
-                new DefaultTrainingConfig(name, updater));
+                trainingConfig);
     }
 
     @Override
@@ -155,7 +157,7 @@ public class OdeVertex extends GraphVertex {
         private String last;
         private OdeHelperForward odeForwardConf = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2), true);
         private OdeHelperBackward odeBackwardConf = new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.arange(2));
-        
+
         public Builder(String name, Layer layer) {
             graphBuilder
                     .addInputs(inputName)
@@ -186,6 +188,7 @@ public class OdeVertex extends GraphVertex {
 
         /**
          * Set the {@link OdeHelper} to use
+         *
          * @param odeConf ODE configuration
          * @return the Builder for fluent API
          */

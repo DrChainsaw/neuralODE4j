@@ -2,6 +2,7 @@ package ode.vertex.conf;
 
 import org.deeplearning4j.nn.api.TrainingConfig;
 import org.deeplearning4j.nn.conf.GradientNormalization;
+import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.learning.config.IUpdater;
 
 /**
@@ -11,13 +12,13 @@ import org.nd4j.linalg.learning.config.IUpdater;
  */
 public class DefaultTrainingConfig implements TrainingConfig {
 
-
     private final String name;
-    private final IUpdater updater;
+    private ComputationGraph graph;
+    private IUpdater updater;
 
-    public DefaultTrainingConfig(String name, IUpdater updater) {
+    public DefaultTrainingConfig(ComputationGraph graph, String name) {
         this.name = name;
-        this.updater = updater;
+        this.graph = graph;
     }
 
     @Override
@@ -47,6 +48,16 @@ public class DefaultTrainingConfig implements TrainingConfig {
 
     @Override
     public IUpdater getUpdaterByParam(String paramName) {
+        if(updater == null) {
+            for (org.deeplearning4j.nn.graph.vertex.GraphVertex vertex : graph.getVertices()) {
+                if (vertex != null && vertex.hasLayer()) {
+                    String parname = vertex.paramTable(false).keySet().iterator().next();
+                    updater = vertex.getConfig().getUpdaterByParam(parname).clone();
+                    break;
+                }
+            }
+        }
+
         return updater;
     }
 
@@ -64,4 +75,4 @@ public class DefaultTrainingConfig implements TrainingConfig {
     public void setPretrain(boolean pretrain) {
 
     }
-}
+    }

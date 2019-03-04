@@ -20,6 +20,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Adam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.listen.training.ZeroGrad;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
 
@@ -95,6 +96,7 @@ public class LatentOdeTest {
                 .onForwardPass(graph, Collections.singletonMap("Ground truth", label));
 
         graph.addListeners(
+                new ZeroGrad(),
                 new ScoreIterationListener(1),
                 new PlotDecodedOutput(linePlot, decoded, 0));
         for (int i = 0; i < 2000; i++) {
