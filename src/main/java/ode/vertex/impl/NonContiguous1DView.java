@@ -24,7 +24,8 @@ public class NonContiguous1DView {
     }
 
     public void addView(INDArray viewSlice) {
-        if(viewSlice.isColumnVectorOrScalar()) {
+        // Apparently there are non-scalars of length 1...
+        if(viewSlice.isColumnVectorOrScalar() && viewSlice.length() != 1) {
             throw new IllegalArgumentException("Must be vector or scalar! Had shape: " + Arrays.toString(viewSlice.shape()));
         }
         length += viewSlice.length();

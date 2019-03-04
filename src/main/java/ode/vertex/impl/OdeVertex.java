@@ -200,6 +200,10 @@ public class OdeVertex extends BaseGraphVertex {
 
     private LayerWorkspaceMgr createWorkspaceMgr(final LayerWorkspaceMgr outerWsMgr) {
 
+        if(outerWsMgr == LayerWorkspaceMgr.noWorkspacesImmutable()) {
+            return outerWsMgr;
+        }
+
         return new ComputationGraph(graph.getConfiguration()) {
             LayerWorkspaceMgr spyWsConfigs() {
                 // A little bit too many methods to comfortably decorate. Try to copy config instead

@@ -99,9 +99,16 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
         ratio.assign(equation.getStateDot(0));
         ratio.divi(scal);
         final INDArray yDotOnScale2 = ratio.muli(ratio).sum();
+        System.out.println("scale: " + scal);
+        System.out.println("y0: " + equation.getCurrentState());
+        System.out.println("f0: " + equation.getStateDot(0));
+        System.out.println("d0: " + sqrt(yOnScale2));
+        System.out.println("d1: " + sqrt(yDotOnScale2));
 
         final INDArray step = ((yOnScale2.getDouble(0) < 1.0e-10) || (yDotOnScale2.getDouble(0) < 1.0e-10)) ?
                 MIN_H : sqrt(yOnScale2.divi(yDotOnScale2)).muli(0.01);
+
+        System.out.println("First step size: " + step);
 
         final boolean backward = t.argMax().getInt(0) == 0;
         if (backward) {

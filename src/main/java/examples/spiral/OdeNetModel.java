@@ -2,6 +2,7 @@ package examples.spiral;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import examples.spiral.loss.NormLogLikelihoodLoss;
 import examples.spiral.vertex.conf.SampleGaussianVertex;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.conf.graph.SubsetVertex;
@@ -30,7 +31,7 @@ class OdeNetModel implements ModelFactory {
         final Block enc = new RnnEncoderBlock(nrofLatentDims, 25, "spiral");
         final Block dec = new DenseDecoderBlock(20, nrofSamples, 2);
         final Block ode = new LatentOdeBlock("time", interpolateOdeForward, nrofLatentDims);
-        final Block outReconstruction = new ReconstructionLossBlock(noiseSigma);
+        final Block outReconstruction = new ReconstructionLossBlock(new NormLogLikelihoodLoss(noiseSigma));
         final Block outKld = new KldLossBlock();
 
         final GraphBuilder builder = LayerUtil.initGraphBuilder(666, nrofSamples);

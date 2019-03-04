@@ -41,26 +41,35 @@ public class MultiStepAdjoint implements OdeHelperBackward {
     public Pair<Gradient, INDArray[]> solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
         final INDArray zt = alignInShapeToTimeFirst(input.getLastOutput());
         final INDArray dL_dzt = alignInShapeToTimeFirst(input.getLossGradient());
+        final INDArray dL_dzt_time = alignInShapeToTimeFirst(input.getLossGradientTime().dup());
 
         assertSizeVsTime(zt);
         assertSizeVsTime(dL_dzt);
 
         final INDArrayIndex[] timeIndexer = createIndexer(time);
+        timeIndexer[1] = NDArrayIndex.interval(time.length()-2, time.length());
         final INDArrayIndex[] ztIndexer = createIndexer(input.getLastOutput());
         final INDArrayIndex[] dL_dztIndexer= createIndexer(input.getLossGradient());
 
         Pair<Gradient, INDArray[]> gradients = null;
-        final INDArray timeGradient = Nd4j.createUninitialized(time.shape());
+        final INDArray timeGradient = Nd4j.zeros(time.shape());
+        double lastTime = 0;
 
         // Go backwards in time
         for (int step = (int)time.length()-1; step > 0; step--) {
             final INDArray ztStep = getStep(ztIndexer,zt, step);
+            final INDArray dL_dzt_timeStep = getStep(dL_dztIndexer, dL_dzt_time, step);
+
             final INDArray dL_dztStep = getStep(dL_dztIndexer, dL_dzt, step);
+            if(gradients != null) {
+                dL_dztStep.addi(gradients.getSecond()[0]);
+            }
 
             final InputArrays stepInput = new InputArrays(
                     input.getLastInputs(),
                     ztStep,
                     dL_dztStep,
+                    dL_dzt_timeStep,
                     input.getRealGradientView()
             );
             timeIndexer[1] = NDArrayIndex.interval(step - 1, step+1);
@@ -69,10 +78,13 @@ public class MultiStepAdjoint implements OdeHelperBackward {
 
             if(timeIndex != -1) {
                 timeGradient.put(timeIndexer, gradients.getSecond()[timeIndex]);
+                lastTime -= timeGradient.get(timeIndexer).getDouble(1);
             }
         }
 
         if(timeIndex != -1 && gradients != null) {
+            timeIndexer[1] = NDArrayIndex.point(0);
+            timeGradient.put(timeIndexer, lastTime);
             gradients.getSecond()[timeIndex] = timeGradient;
         }
 

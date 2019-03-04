@@ -2,12 +2,22 @@ package ode.vertex.impl.helper.backward;
 
 import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
+import ode.vertex.conf.OdeVertex;
+import ode.vertex.conf.helper.InputStep;
 import ode.vertex.impl.NonContiguous1DView;
+import org.deeplearning4j.nn.api.OptimizationAlgorithm;
+import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.distribution.ConstantDistribution;
+import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
+import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.primitives.Pair;
@@ -83,7 +93,7 @@ public class MultiStepAdjointTest {
         assertArrayEquals("Incorrect input gradient shape!", inputArrays.getLastInputs()[0].shape(), inputGrad.shape());
         assertArrayEquals("Incorrect time gradient shape!", time.shape(), timeGrad.shape());
 
-        assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.sumNumber().doubleValue(),1e-10);
+        assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.sumNumber().doubleValue(), 1e-10);
         assertNotEquals("Expected non-zero input gradient!", 0.0, inputGrad.sumNumber().doubleValue(), 1e-10);
         assertNotEquals("Expected non-zero time gradient!", 0.0, timeGrad.sumNumber().doubleValue(), 1e-10);
     }
@@ -104,4 +114,86 @@ public class MultiStepAdjointTest {
                 realGrads
         );
     }
+
+    /**
+     * Test the result vs the result from the original repo. Reimplementation of test_adjoint in
+     * https://github.com/rtqichen/torchdiffeq/blob/master/tests/gradient_tests.py
+     */
+    @Test
+    public void testGradVsReferenceConstantOde() {
+
+        final long nrofTimeSteps = 10;
+        final long nrofDims = 1;
+
+        final ComputationGraphConfiguration.GraphBuilder builder = new NeuralNetConfiguration.Builder()
+                .seed(666)
+                .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+                .graphBuilder()
+                .setInputTypes(InputType.feedForward(nrofDims), InputType.feedForward(nrofTimeSteps));
+
+        String next = "y0";
+        builder.addInputs(next, "time");
+
+        builder.addVertex("ode", new OdeVertex.Builder("0", new DenseLayer.Builder()
+                .activation(new ActivationIdentity())
+                .weightInit(new ConstantDistribution(0.2))
+                .biasInit(3)
+                .nOut(nrofDims)
+                .build())
+                .odeConf(new InputStep(
+                        new ode.solve.conf.DormandPrince54Solver(
+                                new SolverConfig(1e-12, 1e-6, 1e-20,1e2)),
+                        1, true))
+                .build(), next, "time");
+
+        builder.allowNoOutput(true);
+
+        final ComputationGraph graph = new ComputationGraph(builder.build());
+        graph.init();
+        graph.initGradientsView();
+
+        final INDArray time = Nd4j.linspace(1, 8, nrofTimeSteps);
+        final INDArray y0 = time.getScalar(0).dup().reshape(1,1);
+
+        final GraphVertex odevert = graph.getVertex("ode");
+
+        odevert.setInputs(y0, time);
+        final INDArray ys = odevert.doForward(true, LayerWorkspaceMgr.noWorkspacesImmutable());
+
+        // From original repo
+        final double[] expectedYs = {1.0000,  3.6929,  6.8391, 10.5147, 14.8090, 19.8261, 25.6876, 32.5355,
+                40.5361, 49.8832};
+        assertArrayEquals("Incorrect ys: ", expectedYs, ys.reshape(nrofTimeSteps).toDoubleVector(), 1e-3);
+
+        final INDArray lossgrad = Nd4j.linspace(0, nrofTimeSteps-1, nrofTimeSteps);
+        for(int i = 0; i < lossgrad.length()/2; i++) {
+            lossgrad.getScalar(i*2).negi();
+        }
+
+        odevert.setEpsilon(lossgrad.reshape(ys.shape()));
+        Pair<Gradient, INDArray[]> grads = odevert.doBackward(false, LayerWorkspaceMgr.noWorkspacesImmutable());
+
+        System.out.println("pargrad: " + grads.getFirst().gradient());
+        System.out.println("ysGrad: " + grads.getSecond()[0]);
+        System.out.println("timeGrad: " + grads.getSecond()[1]);
+
+        final double expectedYsGrad = 20.9211;
+        assertEquals("Incorrect loss gradient: ", expectedYsGrad, grads.getSecond()[0].getDouble(0),1e-3);
+
+        final double[] expectedParsGrad = { 1232.8964,    79.6053};
+        assertArrayEquals("Incorrect paramter gradient: ", expectedParsGrad, grads.getFirst().gradient().toDoubleVector(), 1e-3);
+
+        final double[] expectedTimeGrad = {-66.9474,   3.7386,  -8.7356,  15.3088, -23.8472,  34.8261, -48.8251,
+                66.5498, -88.8578, 116.7898};
+        assertArrayEquals("Incorrect time grad!", expectedTimeGrad, grads.getSecond()[1].toDoubleVector(),1e-3);
+        /* Expectation:
+        ygrad:  tensor(20.9211, device='cuda:0')
+        agrad:  tensor(1232.8964, device='cuda:0')
+        bgrad:  tensor(79.6053, device='cuda:0')
+        tgrad:  tensor([-66.9474,   3.7386,  -8.7356,  15.3088, -23.8472,  34.8261, -48.8251,
+                66.5498, -88.8578, 116.7898], device='cuda:0')
+                */
+    }
+
+
 }

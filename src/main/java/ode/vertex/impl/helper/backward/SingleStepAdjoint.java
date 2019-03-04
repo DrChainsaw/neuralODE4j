@@ -50,6 +50,8 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         // dL/dt1 = -dL / dz(t1) dot dz(t1) / dt1
 
         final INDArray dL_dzt1 = input.getLossGradient();
+        // Not sure why this is not same as the above. Pytorch treats them differently in original repo
+        final INDArray dL_dzt1_time = input.getLossGradientTime();
         final INDArray zt1 = input.getLastOutput();
         final NonContiguous1DView realParamGrads = input.getRealGradientView();
 
@@ -61,15 +63,20 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         // TODO: This is only used for computing time gradients. Make it so that it only happens when they are needed
         final INDArray dzt1_dt1 = forward.calculateDerivative(zt1, time.getColumn(1), zt1.dup());
 
-        final INDArray dL_dt1 = dL_dzt1.reshape(1, dzt1_dt1.length())
-                .mmul(dzt1_dt1.reshape(dzt1_dt1.length(), 1)).muli(-1);
+        final INDArray dL_dt1 = dL_dzt1_time.reshape(1, dzt1_dt1.length())
+                .mmul(dzt1_dt1.reshape(dzt1_dt1.length(), 1));
+        System.out.println("dL_dzt1:  " + dL_dzt1_time);
+        System.out.println("dzt1_dt1: " + dzt1_dt1);
+        System.out.println("dL_dt1:   " + dL_dt1);
 
         final INDArray zAug = Nd4j.create(1, zt1.length() + dL_dzt1.length() + graph.numParams() + dL_dt1.length());
+        final INDArray paramAdj = Nd4j.zeros(realParamGrads.length());
+        realParamGrads.assignTo(paramAdj);
 
         final NDArrayIndexAccumulator accumulator = new NDArrayIndexAccumulator(zAug);
         accumulator.increment(zt1.reshape(new long[]{1, zt1.length()}))
                 .increment(dL_dzt1.reshape(new long[]{1, dL_dzt1.length()}))
-                .increment(Nd4j.zeros(realParamGrads.length()).reshape(new long[]{1, Nd4j.zeros(realParamGrads.length()).length()}))
+                .increment(paramAdj.reshape(new long[]{1, paramAdj.length()}))
                 .increment(dL_dt1.reshape(new long[]{1, dL_dt1.length()}));
 
         final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(

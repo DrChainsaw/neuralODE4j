@@ -1,5 +1,6 @@
 package examples.spiral;
 
+import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.DormandPrince54Solver;
 import ode.solve.conf.SolverConfig;
 import ode.vertex.conf.OdeVertex;
@@ -19,11 +20,19 @@ class LatentOdeBlock implements Block {
     private final String timeName;
     private final boolean interpolateOdeForward;
     private final long nrofLatentDims;
+    private final FirstOrderSolverConf solverConf;
 
     LatentOdeBlock(String timeName, boolean interpolateOdeForward, long nrofLatentDims) {
+        this(timeName, interpolateOdeForward, nrofLatentDims,
+                new DormandPrince54Solver(
+                        new SolverConfig(1e-12, 1e-6, 1e-20, 1e2)));
+    }
+
+    LatentOdeBlock(String timeName, boolean interpolateOdeForward, long nrofLatentDims, FirstOrderSolverConf solverConf) {
         this.timeName = timeName;
         this.interpolateOdeForward = interpolateOdeForward;
         this.nrofLatentDims = nrofLatentDims;
+        this.solverConf = solverConf;
     }
 
     @Override
@@ -39,7 +48,7 @@ class LatentOdeBlock implements Block {
                         .nOut(nrofLatentDims)
                         .activation(new ActivationIdentity()).build(), "fc2")
                 .odeConf(new InputStep(
-                        new DormandPrince54Solver(new SolverConfig(1e-12, 1e-6, 1e-20, 1e2)),
+                        solverConf,
                         1, interpolateOdeForward))
                 .build(), prev, timeName);
         return "latentOde";
