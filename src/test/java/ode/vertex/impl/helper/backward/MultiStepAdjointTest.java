@@ -117,10 +117,25 @@ public class MultiStepAdjointTest {
 
     /**
      * Test the result vs the result from the original repo. Reimplementation of test_adjoint in
-     * https://github.com/rtqichen/torchdiffeq/blob/master/tests/gradient_tests.py
+     * https://github.com/rtqichen/torchdiffeq/blob/master/tests/gradient_tests.py.
+     *
+     * Numbers below from the following test ODE:
+     *
+     * class Linear1DODE(torch.nn.Module):
+     *
+     *     def __init__(self, device):
+     *         super(Linear1DODE, self).__init__()
+     *         self.a = torch.nn.Parameter(torch.tensor(0.2).to(device))
+     *         self.b = torch.nn.Parameter(torch.tensor(3.0).to(device))
+     *
+     *     def forward(self, t, y):
+     *         return self.a * y + self.b
+     *
+     *     def y_exact(self, t):
+     *         return t
      */
     @Test
-    public void testGradVsReferenceConstantOde() {
+    public void testGradVsReferenceLinear1dOde() {
 
         final long nrofTimeSteps = 10;
         final long nrofDims = 1;
@@ -173,26 +188,15 @@ public class MultiStepAdjointTest {
         odevert.setEpsilon(lossgrad.reshape(ys.shape()));
         Pair<Gradient, INDArray[]> grads = odevert.doBackward(false, LayerWorkspaceMgr.noWorkspacesImmutable());
 
-        System.out.println("pargrad: " + grads.getFirst().gradient());
-        System.out.println("ysGrad: " + grads.getSecond()[0]);
-        System.out.println("timeGrad: " + grads.getSecond()[1]);
-
         final double expectedYsGrad = 20.9211;
         assertEquals("Incorrect loss gradient: ", expectedYsGrad, grads.getSecond()[0].getDouble(0),1e-3);
 
         final double[] expectedParsGrad = { 1232.8964,    79.6053};
-        assertArrayEquals("Incorrect paramter gradient: ", expectedParsGrad, grads.getFirst().gradient().toDoubleVector(), 1e-3);
+        assertArrayEquals("Incorrect parameter gradient: ", expectedParsGrad, grads.getFirst().gradient().toDoubleVector(), 1e-3);
 
         final double[] expectedTimeGrad = {-66.9474,   3.7386,  -8.7356,  15.3088, -23.8472,  34.8261, -48.8251,
                 66.5498, -88.8578, 116.7898};
         assertArrayEquals("Incorrect time grad!", expectedTimeGrad, grads.getSecond()[1].toDoubleVector(),1e-3);
-        /* Expectation:
-        ygrad:  tensor(20.9211, device='cuda:0')
-        agrad:  tensor(1232.8964, device='cuda:0')
-        bgrad:  tensor(79.6053, device='cuda:0')
-        tgrad:  tensor([-66.9474,   3.7386,  -8.7356,  15.3088, -23.8472,  34.8261, -48.8251,
-                66.5498, -88.8578, 116.7898], device='cuda:0')
-                */
     }
 
 

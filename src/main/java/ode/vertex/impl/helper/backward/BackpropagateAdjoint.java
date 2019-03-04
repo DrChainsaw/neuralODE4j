@@ -14,7 +14,6 @@ import org.nd4j.linalg.primitives.Pair;
 import org.nd4j.linalg.workspace.WorkspacesCloseable;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -60,9 +59,6 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
     public INDArray calculateDerivative(INDArray zAug, INDArray t, INDArray fzAug) {
         augmentedDynamics.updateFrom(zAug);
 
-        System.out.println("bpadj t: " + t.getDouble(0));
-        System.out.println("\t y0:  " + augmentedDynamics.z().getDouble(0));
-
         // Note: Will also update z
         forwardPass.calculateDerivative(augmentedDynamics.z().dup(), t, augmentedDynamics.z());
 
@@ -72,19 +68,12 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             // why but it seems to have a detrimental effect on the accuracy and general stability
             graphInfo.graph.getFlattenedGradients().assign(0);
 
-            System.out.println("\t y1:  " + augmentedDynamics.z().getDouble(0));
-            System.out.println("\t ya0: " + augmentedDynamics.zAdjoint().getDouble(0));
-            System.out.println("\t pa0: " + Arrays.toString(augmentedDynamics.paramAdjoint().toDoubleVector()));
-
             final List<INDArray> ret = backPropagate(augmentedDynamics.zAdjoint().negi());
 
             // Note: z updated above
             augmentedDynamics.updateZAdjoint(ret);
             graphInfo.realGradients.assignTo(augmentedDynamics.paramAdjoint());
             augmentedDynamics.tAdjoint().assign(0); // Nothing depends on t as of yet.
-
-            System.out.println("\t ya1: " + augmentedDynamics.zAdjoint().getDouble(0));
-            System.out.println("\t pa1: " + Arrays.toString(augmentedDynamics.paramAdjoint().toDoubleVector()));
 
             augmentedDynamics.transferTo(fzAug);
 

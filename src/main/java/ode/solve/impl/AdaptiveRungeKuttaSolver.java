@@ -109,8 +109,6 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             throw new IllegalArgumentException("time must be size 2! Was: " + t);
         }
 
-        System.out.println("********** Adaptive RK solver begin ************");
-
         try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(wsConf, this.getClass().getSimpleName())) {
 
             final FirstOrderEquationWithState equationState = new FirstOrderEquationWithState(
@@ -136,7 +134,6 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
         final INDArray error = Nd4j.create(1);
         // Alg variable used for new steps
         final INDArray step = stepPolicy.initializeStep(equation, t);
-        System.out.println("First step: " + step.getDouble(0));
 
         // Alg variable for where next step starts
         final TimeLimit timeLimit = t.argMax().getInt(0) == 1 ?
@@ -147,14 +144,11 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
         // main integration loop
         boolean isLastStep;
-        int cnt = 0;
         do {
-            System.out.println("************ DOPRI step " + cnt + " ****************");
-            cnt++;
+
             isLastStep = timeLimit.isLastStep(step);
             // next stages
             for (long k = 1; k < stages; ++k) {
-                System.out.println("***** stage " + k +" step " + step.getDouble(0) + " ******'");
                 equation.step(tableu.a[(int) k - 1], step);
                 equation.calculateDerivative(k);
             }

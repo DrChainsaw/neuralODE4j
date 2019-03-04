@@ -65,9 +65,6 @@ public class SingleStepAdjoint implements OdeHelperBackward {
 
         final INDArray dL_dt1 = dL_dzt1_time.reshape(1, dzt1_dt1.length())
                 .mmul(dzt1_dt1.reshape(dzt1_dt1.length(), 1));
-        System.out.println("dL_dzt1:  " + dL_dzt1_time);
-        System.out.println("dzt1_dt1: " + dzt1_dt1);
-        System.out.println("dL_dt1:   " + dL_dt1);
 
         final INDArray zAug = Nd4j.create(1, zt1.length() + dL_dzt1.length() + graph.numParams() + dL_dt1.length());
         final INDArray paramAdj = Nd4j.zeros(realParamGrads.length());
