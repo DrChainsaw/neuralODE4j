@@ -35,7 +35,7 @@ public class ForwardPass implements FirstOrderEquation {
         this.graph = graph;
         this.workspaceMgr = workspaceMgr;
         this.training = training;
-        this.inputs = startInputs;
+        this.inputs = startInputs.clone();
     }
 
     @Override

@@ -118,9 +118,10 @@ public class MultiStepAdjointTest {
     /**
      * Test the result vs the result from the original repo. Reimplementation of test_adjoint in
      * https://github.com/rtqichen/torchdiffeq/blob/master/tests/gradient_tests.py.
-     *
+     * <br><br>
      * Numbers below from the following test ODE:
-     *
+     * <br><br>
+     * <pre>
      * class Linear1DODE(torch.nn.Module):
      *
      *     def __init__(self, device):
@@ -133,6 +134,7 @@ public class MultiStepAdjointTest {
      *
      *     def y_exact(self, t):
      *         return t
+     * </pre>
      */
     @Test
     public void testGradVsReferenceLinear1dOde() {
@@ -191,7 +193,7 @@ public class MultiStepAdjointTest {
         final double expectedYsGrad = 20.9211;
         assertEquals("Incorrect loss gradient: ", expectedYsGrad, grads.getSecond()[0].getDouble(0),1e-3);
 
-        final double[] expectedParsGrad = { 1232.8964,    79.6053};
+        final double[] expectedParsGrad = { -1232.8964,    -79.6053}; // Note: Gradients in DL4J have opposite sign compared to pytorch
         assertArrayEquals("Incorrect parameter gradient: ", expectedParsGrad, grads.getFirst().gradient().toDoubleVector(), 1e-3);
 
         final double[] expectedTimeGrad = {-66.9474,   3.7386,  -8.7356,  15.3088, -23.8472,  34.8261, -48.8251,

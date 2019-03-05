@@ -43,7 +43,7 @@ public class MultiStep implements OdeHelperForward {
 
         final INDArray z0 = inputs[0].dup();
         final INDArray zt = Nd4j.createUninitialized(Longs.concat(new long[]{time.length() - 1}, z0.shape()));
-        solver.integrate(equation, time, inputs[0], zt);
+        solver.integrate(equation, time, inputs[0].dup(), zt);
 
         return alignOutShape(zt, z0);
     }

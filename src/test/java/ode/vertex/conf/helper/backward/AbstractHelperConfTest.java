@@ -98,9 +98,9 @@ abstract class AbstractHelperConfTest {
                 "grad"));
         Nd4j.getExecutioner().commit();
         Thread.sleep(20); // Sometimes one must wait for the executioner to finish??
-        assertNotEquals("Expected non-zero param gradient!", 0, output.getFirst().gradient().maxNumber().doubleValue() ,1e-10);
+        assertNotEquals("Expected non-zero param gradient!", 0, output.getFirst().gradient().amaxNumber().doubleValue() ,1e-10);
         for(INDArray inputGrad: output.getSecond()) {
-            assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.sumNumber().doubleValue() ,1e-10);
+            assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.amaxNumber().doubleValue() ,1e-10);
         }
     }
 

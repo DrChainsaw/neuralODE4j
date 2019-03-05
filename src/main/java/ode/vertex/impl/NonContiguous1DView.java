@@ -88,4 +88,9 @@ public class NonContiguous1DView {
         view.clear();
         length = 0;
     }
+
+    @Override
+    public String toString() {
+        return view.toString();
+    }
 }

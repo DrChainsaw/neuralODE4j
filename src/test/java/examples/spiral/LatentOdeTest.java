@@ -12,7 +12,6 @@ import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.MultiDataSet;
@@ -24,7 +23,10 @@ import util.listen.training.ZeroGrad;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
 
+import java.awt.*;
 import java.util.Collections;
+
+import static junit.framework.TestCase.assertTrue;
 
 /**
  * Test cases for {@link LatentOdeBlock}, {@link DenseDecoderBlock} and {@link ReconstructionLossBlock} together
@@ -36,7 +38,7 @@ public class LatentOdeTest {
     /**
      * Test that the latent ODE can (over)fit to a simple line (it can't as of now...)
      */
-    @Test @Ignore
+    @Test
     public void fitLine() {
         final long nrofTimeSteps = 10;
         final long nrofLatentDims = 3;
@@ -81,26 +83,31 @@ public class LatentOdeTest {
         final INDArray time = Nd4j.linspace(0, 3, nrofTimeSteps);
         final INDArray label = Nd4j.hstack(time, Nd4j.linspace(0, 9, nrofTimeSteps)).reshape(1, 2, nrofTimeSteps);
 
+        if(GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices().length > 0) {
+            ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+            root.setLevel(Level.INFO);
 
-        final MultiDataSet mds = new MultiDataSet(new INDArray[]{z0, time}, new INDArray[]{label});
-        //final MultiDataSet mds = new MultiDataSet(new INDArray[]{z0}, new INDArray[]{label});
+            final Plot<Double, Double> linePlot = new RealTimePlot<>("Decoded output", "");
+            linePlot.createSeries("Ground truth");
+            linePlot.createSeries(decoded);
 
-        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        root.setLevel(Level.INFO);
+            new PlotDecodedOutput(linePlot, "Ground truth", 0)
+                    .onForwardPass(graph, Collections.singletonMap("Ground truth", label));
 
-        final Plot<Double, Double> linePlot = new RealTimePlot<>("Decoded output", "");
-        linePlot.createSeries("Ground truth");
-        linePlot.createSeries(decoded);
-
-        new PlotDecodedOutput(linePlot, "Ground truth", 0)
-                .onForwardPass(graph, Collections.singletonMap("Ground truth", label));
+            graph.addListeners(new PlotDecodedOutput(linePlot, decoded, 0));
+        }
 
         graph.addListeners(
                 new ZeroGrad(),
-                new ScoreIterationListener(1),
-                new PlotDecodedOutput(linePlot, decoded, 0));
-        for (int i = 0; i < 2000; i++) {
+                new ScoreIterationListener(1));
+
+        final MultiDataSet mds = new MultiDataSet(new INDArray[]{z0, time}, new INDArray[]{label});
+        boolean success = false;
+        for(int i = 0; i < 300; i++) {
             graph.fit(mds);
+            success = graph.score() < 200;
+            if(success) break;
         }
+        assertTrue("Model failed to train properly! Score after 300 iters: " + graph.score() +"!", success);
     }
 }
