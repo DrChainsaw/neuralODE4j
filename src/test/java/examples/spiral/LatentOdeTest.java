@@ -36,12 +36,12 @@ import static junit.framework.TestCase.assertTrue;
 public class LatentOdeTest {
 
     /**
-     * Test that the latent ODE can (over)fit to a simple line (it can't as of now...)
+     * Test that the latent ODE can (over)fit to a simple line
      */
     @Test
     public void fitLine() {
         final long nrofTimeSteps = 10;
-        final long nrofLatentDims = 3;
+        final long nrofLatentDims = 20;
 
         final ComputationGraphConfiguration.GraphBuilder builder = new NeuralNetConfiguration.Builder()
                 .seed(666)
@@ -50,7 +50,7 @@ public class LatentOdeTest {
                 .updater(new Adam(0.01))
                 .graphBuilder()
                 .setInputTypes(InputType.feedForward(nrofLatentDims), InputType.feedForward(nrofTimeSteps));
-                //.setInputTypes(InputType.recurrent(nrofLatentDims, nrofTimeSteps));
+        //.setInputTypes(InputType.recurrent(nrofLatentDims, nrofTimeSteps));
 
         String next = "z0";
         builder.addInputs(next, "time");
@@ -69,7 +69,7 @@ public class LatentOdeTest {
 //        .activation(new ActivationTanH())
 //        .build(), next); next = "rnn";
 
-        next = new DenseDecoderBlock(4, nrofTimeSteps, 2).add(next, builder);
+        next = new DenseDecoderBlock(20, nrofTimeSteps, 2).add(next, builder);
         final String decoded = next;
         next = new ReconstructionLossBlock(new NormLogLikelihoodLoss(0.3)).add(next, builder);
         builder.setOutputs(next);
@@ -83,7 +83,8 @@ public class LatentOdeTest {
         final INDArray time = Nd4j.linspace(0, 3, nrofTimeSteps);
         final INDArray label = Nd4j.hstack(time, Nd4j.linspace(0, 9, nrofTimeSteps)).reshape(1, 2, nrofTimeSteps);
 
-        if(GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices().length > 0) {
+        if (GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices().length > 0
+                || GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance()) {
             ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
             root.setLevel(Level.INFO);
 
@@ -103,11 +104,11 @@ public class LatentOdeTest {
 
         final MultiDataSet mds = new MultiDataSet(new INDArray[]{z0, time}, new INDArray[]{label});
         boolean success = false;
-        for(int i = 0; i < 300; i++) {
+        for (int i = 0; i < 300; i++) {
             graph.fit(mds);
-            success = graph.score() < 200;
-            if(success) break;
+            success = graph.score() < 100;
+            if (success) break;
         }
-        assertTrue("Model failed to train properly! Score after 300 iters: " + graph.score() +"!", success);
+        assertTrue("Model failed to train properly! Score after 300 iters: " + graph.score() + "!", success);
     }
 }
