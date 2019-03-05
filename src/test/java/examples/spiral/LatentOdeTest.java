@@ -83,8 +83,10 @@ public class LatentOdeTest {
         final INDArray time = Nd4j.linspace(0, 3, nrofTimeSteps);
         final INDArray label = Nd4j.hstack(time, Nd4j.linspace(0, 9, nrofTimeSteps)).reshape(1, 2, nrofTimeSteps);
 
-        if (GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices().length > 0
-                || GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance()) {
+        if (GraphicsEnvironment.isHeadless()
+                || GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance()
+                || GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices() != null
+                || GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices().length > 0) {
             ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
             root.setLevel(Level.INFO);
 
