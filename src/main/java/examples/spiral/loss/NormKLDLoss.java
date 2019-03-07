@@ -36,8 +36,8 @@ public class NormKLDLoss implements ILossFunction {
         final INDArray output = activationFn.getActivation(preOutput.dup(), true);
 
         long size = output.size(1) / 2;
-        INDArray mean = output.get(NDArrayIndex.all(), NDArrayIndex.interval(0, size));
-        INDArray logVar = output.get(NDArrayIndex.all(), NDArrayIndex.interval(size, 2 * size));
+        INDArray mean = output.get(NDArrayIndex.all(), NDArrayIndex.interval(0, size)).dup();
+        INDArray logVar = output.get(NDArrayIndex.all(), NDArrayIndex.interval(size, 2 * size)).dup();
 
         final INDArray meanGrad = normalKlGradMu1(mean);
         final INDArray logvarGrad = normalKlGradLv1(logVar);
@@ -57,8 +57,9 @@ public class NormKLDLoss implements ILossFunction {
         final INDArray output = activationFn.getActivation(preOutput.dup(), true);
 
         long size = output.size(1) / 2;
-        INDArray mean = output.get(NDArrayIndex.all(), NDArrayIndex.interval(0, size));
-        INDArray logVar = output.get(NDArrayIndex.all(), NDArrayIndex.interval(size, 2 * size));
+        INDArray mean = output.get(NDArrayIndex.all(), NDArrayIndex.interval(0, size)).dup();
+        INDArray logVar = output.get(NDArrayIndex.all(), NDArrayIndex.interval(size, 2 * size)).dup();
+
         return normalKl(mean, logVar).sum(1);
     }
 
