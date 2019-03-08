@@ -90,7 +90,7 @@ class SpiralFactory {
     List<Spiral> sample(long nrofSpirals, long nrofSamples, DoubleSupplier startSupplier, BooleanSupplier cwOrCc) {
         final List<Spiral> output = new ArrayList<>();
         for(int i = 0; i < nrofSpirals; i++) {
-            Spiral base = cwOrCc.getAsBoolean() ? baseCw : baseCw;
+            Spiral base = cwOrCc.getAsBoolean() ? baseCw : baseCc;
             long start = (long)Math.min(base.theta.length() - nrofSamples, startSupplier.getAsDouble() * base.theta.length());
 
             output.add(new SpiralFragment(
