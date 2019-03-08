@@ -18,22 +18,24 @@ public class PlotDecodedOutput extends BaseTrainingListener {
 
     private final Plot<Double, Double> plot;
     private final String outputName;
+    private final String plotLabel;
     private final int batchNrToPlot;
 
     public PlotDecodedOutput(Plot<Double, Double> plot, String outputName, int batchNrToPlot) {
         this.plot = plot;
         this.outputName = outputName;
         this.batchNrToPlot = batchNrToPlot;
-        plot.createSeries(outputName);
+        this.plotLabel = outputName + " " + batchNrToPlot;
+        plot.createSeries(plotLabel);
     }
 
     @Override
     public void onForwardPass(Model model, Map<String, INDArray> activations) {
         final INDArray toPlot = activations.get(outputName).tensorAlongDimension(batchNrToPlot, 1,2);
-        plot.clearData(outputName);
+        plot.clearData(plotLabel);
         final List<Double> x = toDoubleList(toPlot, 0);
         final List<Double> y = toDoubleList(toPlot, 1);
-        plot.plotData(outputName, x, y);
+        plot.plotData(plotLabel, x, y);
     }
 
     private static List<Double> toDoubleList(INDArray toPlot, int row) {

@@ -86,7 +86,7 @@ public class NormElboLossTest {
         final SpiralIterator.Generator gen = new SpiralIterator.Generator(
                 new SpiralFactory(0, 0.3, 0, 2*Math.PI, 200),
                 0.3, nrofSamples, new Random(666));
-        final INDArray labels = gen.generate(batchSize).getFeatures(0);
+        final INDArray labels = gen.generate(batchSize).getMds().getFeatures(0);
 
         final INDArray resultConc = Nd4j.hstack(
                 labels.reshape(batchSize, labels.length() / batchSize),

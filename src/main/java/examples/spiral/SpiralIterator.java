@@ -1,5 +1,6 @@
 package examples.spiral;
 
+import lombok.Data;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
@@ -7,6 +8,7 @@ import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.CompositeMultiDataSetPreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -20,8 +22,14 @@ public class SpiralIterator implements MultiDataSetIterator {
 
     private final Generator generator;
     private final int batchSize;
-    private MultiDataSet current;
+    private SpiralSet current;
     private MultiDataSetPreProcessor preProcessor = new CompositeMultiDataSetPreProcessor(); // Noop
+
+    @Data
+    public static class SpiralSet {
+        private final MultiDataSet mds;
+        private final List<SpiralFactory.Spiral> spirals;
+    }
 
     /**
      * Generates {@link MultiDataSet}s from a {@link SpiralFactory}.
@@ -40,7 +48,7 @@ public class SpiralIterator implements MultiDataSetIterator {
             this.rng = rng;
         }
 
-        MultiDataSet generate(int batchSize) {
+        SpiralSet generate(int batchSize) {
             final List<SpiralFactory.Spiral> spirals = factory.sample(
                     batchSize,
                     nrofSamples,
@@ -54,9 +62,10 @@ public class SpiralIterator implements MultiDataSetIterator {
                 trajFeature.tensorAlongDimension(i, 1,2).assign(spirals.get(i).trajectory());
             }
             trajFeature.addi(Nd4j.randn(trajFeature.shape(), Nd4j.getRandomFactory().getNewRandomInstance(rng.nextLong())).muli(noiseSigma));
-            return new org.nd4j.linalg.dataset.MultiDataSet(
+            return new SpiralSet(new org.nd4j.linalg.dataset.MultiDataSet(
                     new INDArray[] {trajFeature, tFeature},
-                    new INDArray[] {trajFeature});
+                    new INDArray[] {trajFeature}),
+                    Collections.unmodifiableList(spirals));
         }
     }
 
@@ -67,11 +76,11 @@ public class SpiralIterator implements MultiDataSetIterator {
 
     @Override
     public MultiDataSet next(int num) {
-        if(current == null || num != current.getFeatures(0).size(0)) {
+        if(current == null || num != current.getMds().getFeatures(0).size(0)) {
             current = generator.generate(num);
-            preProcessor.preProcess(current);
+            preProcessor.preProcess(current.getMds());
         }
-        return current;
+        return current.getMds();
     }
 
     @Override
@@ -109,4 +118,7 @@ public class SpiralIterator implements MultiDataSetIterator {
         return next(batchSize);
     }
 
+    public SpiralSet getCurrent() {
+        return current;
+    }
 }

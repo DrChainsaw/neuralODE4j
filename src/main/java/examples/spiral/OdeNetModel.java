@@ -19,7 +19,7 @@ import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
 class OdeNetModel implements ModelFactory {
 
     @Parameter(names = "-dontInterpolateOdeForward", description = "Don't use interpolation when solving latent ODE in forward " +
-            "direction if set. Default is to use interpolation as this is the method used in original implementation" )
+            "direction if set. Default is to use interpolation as this is the method used in original implementation")
     private boolean interpolateOdeForward = true;
 
     private long nrofLatentDims;
@@ -29,7 +29,7 @@ class OdeNetModel implements ModelFactory {
         this.nrofLatentDims = nrofLatentDims;
 
         final Block enc = new RnnEncoderBlock(nrofLatentDims, 25, "spiral");
-        final Block dec = new DenseDecoderBlock(20, nrofSamples, 2);
+        final Block dec = new DenseDecoderBlock(20, 2);
         final Block ode = new LatentOdeBlock("time", interpolateOdeForward, nrofLatentDims);
         final Block outReconstruction = new ReconstructionLossBlock(new NormLogLikelihoodLoss(noiseSigma));
         final Block outKld = new KldLossBlock();
@@ -47,8 +47,8 @@ class OdeNetModel implements ModelFactory {
                 //First split prev into mean and log(var) since this is how SampleGaussianVertex assumes input is structured
                 .addVertex(qz0_mean, new SubsetVertex(0, (int) nrofLatentDims - 1), next)
                 .addVertex(qz0_logvar, new SubsetVertex((int) nrofLatentDims, (int) nrofLatentDims * 2 - 1), next)
-                .addVertex("z0", new SampleGaussianVertex(666), qz0_mean, qz0_logvar);
-                //.addVertex("z0", new ElementWiseVertex(ElementWiseVertex.Op.Add), qz0_mean, qz0_logvar);
+                .addVertex("z0", new SampleGaussianVertex(667), qz0_mean, qz0_logvar);
+        //.addVertex("z0", new ElementWiseVertex(ElementWiseVertex.Op.Add), qz0_mean, qz0_logvar);
 
         next = ode.add("z0", builder);
         next = dec.add(next, builder);

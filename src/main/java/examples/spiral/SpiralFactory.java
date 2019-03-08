@@ -38,12 +38,31 @@ class SpiralFactory {
             }
         }
 
+        void plotBase(Plot<Double, Double> plot, String series) {
+            plot(plot, series);
+        }
+
         INDArray trajectory() {
             return trajectory;
         }
 
         INDArray theta() {
             return theta;
+        }
+    }
+
+    static class SpiralFragment extends Spiral {
+
+        private final Spiral base;
+
+        public SpiralFragment(Spiral base, INDArray trajectory, INDArray theta) {
+            super(trajectory, theta);
+            this.base = base;
+        }
+
+        @Override
+        void plotBase(Plot<Double, Double> plot, String series) {
+            base.plotBase(plot, series);
         }
     }
 
@@ -71,9 +90,11 @@ class SpiralFactory {
     List<Spiral> sample(long nrofSpirals, long nrofSamples, DoubleSupplier startSupplier, BooleanSupplier cwOrCc) {
         final List<Spiral> output = new ArrayList<>();
         for(int i = 0; i < nrofSpirals; i++) {
-            Spiral base = cwOrCc.getAsBoolean() ? baseCw : baseCc;
+            Spiral base = cwOrCc.getAsBoolean() ? baseCw : baseCw;
             long start = (long)Math.min(base.theta.length() - nrofSamples, startSupplier.getAsDouble() * base.theta.length());
-            output.add(new Spiral(
+
+            output.add(new SpiralFragment(
+                    base,
                     base.trajectory.get(NDArrayIndex.all(), NDArrayIndex.interval(start, start + nrofSamples)),
                     base.theta.get(NDArrayIndex.all(), NDArrayIndex.interval(start, start + nrofSamples)))
             );

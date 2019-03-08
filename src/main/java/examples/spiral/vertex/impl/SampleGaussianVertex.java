@@ -39,7 +39,11 @@ public class SampleGaussianVertex extends BaseGraphVertex {
         final INDArray mean = getInputs()[0];
         final INDArray logVar = getInputs()[1];
 
-        lastEps = workspaceMgr.leverageTo(ArrayType.INPUT, rng.get(mean.shape()));
+        if(training) {
+            lastEps = workspaceMgr.leverageTo(ArrayType.INPUT, rng.get(mean.shape()));
+        } else {
+            lastEps = rng.get(mean.shape());
+        }
 
         return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, lastEps.mul(Transforms.exp(logVar.mul(0.5))).addi(mean));
     }

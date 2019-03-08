@@ -1,9 +1,10 @@
 package examples.spiral;
 
-import examples.spiral.vertex.conf.ReverseTimeAsBatch;
 import examples.spiral.vertex.conf.TimeAsBatch;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
+import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
+import org.deeplearning4j.nn.conf.preprocessor.FeedForwardToRnnPreProcessor;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
 
@@ -15,29 +16,25 @@ import org.nd4j.linalg.activations.impl.ActivationReLU;
 public class DenseDecoderBlock implements Block {
 
     private final long nrofHidden;
-    private final long nrofTimeSteps;
     private final long nrofOutputs;
 
-    public DenseDecoderBlock(long nrofHidden, long nrofTimeSteps, long nrofOutputs) {
+    public DenseDecoderBlock(long nrofHidden, long nrofOutputs) {
         this.nrofHidden = nrofHidden;
-        this.nrofTimeSteps = nrofTimeSteps;
         this.nrofOutputs = nrofOutputs;
     }
 
     @Override
     public String add(String prev, ComputationGraphConfiguration.GraphBuilder builder) {
-        // TODO: Replace with RnnToFF preprocessor (added automatically)
-        builder.addVertex("timeAsBatch", new TimeAsBatch(), prev)
+        builder
                 .addLayer("dec0", new DenseLayer.Builder()
                         .nOut(nrofHidden)
                         .activation(new ActivationReLU())
-                        .build(), "timeAsBatch")
+                        .build(), prev)
                 .addLayer("dec1", new DenseLayer.Builder()
                         .nOut(nrofOutputs)
                         .activation(new ActivationIdentity())
                         .build(), "dec0")
-                // TODO: Replace with FfToRnn preprocessor
-                .addVertex("decodedOutput", new ReverseTimeAsBatch(nrofTimeSteps), "dec1");
+                .addVertex("decodedOutput", new PreprocessorVertex(new FeedForwardToRnnPreProcessor()), "dec1");
 
         return "decodedOutput";
     }

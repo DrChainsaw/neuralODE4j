@@ -75,10 +75,20 @@ public class InterpolatingStepListener implements StepListener {
 
     @Override
     public void step(SolverState solverState, INDArray step, INDArray error) {
+        final INDArray greaterThanTime;
+        final INDArray lessThanTime;
+        if(step.getDouble(0) > 0) {
+            greaterThanTime = state.t0;
+            lessThanTime = solverState.time();
+        } else {
+            greaterThanTime = solverState.time();
+            lessThanTime = state.t0;
+        }
+
         final INDArray timeInds = wantedTimeInds.cond(
                 new And(
-                        new GreaterThan(state.t0.getDouble(0)),
-                        new LessThan(solverState.time().getDouble(0)))
+                        new GreaterThan(greaterThanTime.getDouble(0)),
+                        new LessThan(lessThanTime.getDouble(0)))
         );
 
         if (timeInds.sumNumber().doubleValue() > 0) {
@@ -96,15 +106,25 @@ public class InterpolatingStepListener implements StepListener {
             yDotStages[i] = solverState.getStateDot(i);
         }
 
+        final INDArray state0;
+        final INDArray state1;
+        if(step.getDouble(0) > 0) {
+            state0 = state.y0;
+            state1 = solverState.getCurrentState();
+        } else {
+            state0 = solverState.getCurrentState();
+            state1 = state.y0;
+        }
+
         final INDArray yMid = state.y0.add(scaledDotProduct(
-                Nd4j.createUninitialized(state.y0.shape()),
+                Nd4j.createUninitialized(state0.shape()),
                 DPS_C_MID,
                 yDotStages,
                 step));
 
         state.interpolation.fitCoeffs(
-                state.y0,
-                solverState.getCurrentState(),
+                state0,
+                state1,
                 yMid,
                 yDotStages[0],
                 yDotStages[yDotStages.length - 1],
@@ -119,14 +139,26 @@ public class InterpolatingStepListener implements StepListener {
         return output;
     }
 
-    private void doInterpolation(INDArray timeInds, INDArray t1) {
+    private void doInterpolation(INDArray timeInds, INDArray tNew) {
         final int startInd = timeInds.argMax().getInt(0);
         final int stopInd = startInd + timeInds.sumNumber().intValue();
 
         for (int i = startInd; i < stopInd; i++) {
             yInterpolAccess[0] = NDArrayIndex.point(i);
+
+            final double t0;
+            final double t1;
+            final double tWanted = wantedTimeInds.getDouble(i);
+            if(state.t0.getDouble(0) < wantedTimeInds.getDouble(i)) {
+                t0 = state.t0.getDouble(0);
+                t1 = tNew.getDouble(0);
+            } else {
+                t0 = tNew.getDouble(0);
+                t1 = state.t0.getDouble(0);
+            }
+
             yInterpol.put(yInterpolAccess,
-                    state.interpolation.interpolate(state.t0.getDouble(0), t1.getDouble(0), wantedTimeInds.getDouble(i)));
+                    state.interpolation.interpolate(t0, t1, tWanted));
         }
     }
 

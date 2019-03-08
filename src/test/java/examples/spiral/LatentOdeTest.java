@@ -69,7 +69,7 @@ public class LatentOdeTest {
 //        .activation(new ActivationTanH())
 //        .build(), next); next = "rnn";
 
-        next = new DenseDecoderBlock(20, nrofTimeSteps, 2).add(next, builder);
+        next = new DenseDecoderBlock(20, 2).add(next, builder);
         final String decoded = next;
         next = new ReconstructionLossBlock(new NormLogLikelihoodLoss(0.3)).add(next, builder);
         builder.setOutputs(next);

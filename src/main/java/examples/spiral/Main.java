@@ -9,11 +9,9 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
-import org.jetbrains.annotations.NotNull;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
-import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +21,7 @@ import util.plot.Plot;
 import util.plot.RealTimePlot;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Main class for spiral example. Reimplementation of https://github.com/rtqichen/torchdiffeq/blob/master/examples/latent_ode.py
@@ -49,7 +44,7 @@ class Main {
 
     private ComputationGraph model;
     private String modelName;
-    private MultiDataSetIterator iterator;
+    private SpiralIterator iterator;
     private Plot<Double, Double> reconstructionPlot;
 
     public static void main(String[] args) {
@@ -109,15 +104,14 @@ class Main {
         log.info("Models will be saved in: " + savedir.getAbsolutePath());
         savedir.mkdirs();
 
-        final int batchNrToPlot = 0;
-        final Plot<Double, Double> outputPlot = initTrainingPlot(savedir, batchNrToPlot);
+        setupOutputPlotting(savedir);
+
         final Plot<Integer, Double> meanAndLogVarPlot = new RealTimePlot<>("Mean and log(var) of z", savedir.getAbsolutePath());
         this.reconstructionPlot = new RealTimePlot<>("Reconstruction", savedir.getAbsolutePath());
 
         model.addListeners(
                 new ZeroGrad(),
                 new PerformanceListener(1, true),
-                // Does not do anything yet. Some uf the used vertices are not yet serializable
                 new CheckpointListener.Builder(savedir.getAbsolutePath())
                         .keepLast(1)
                         .deleteExisting(true)
@@ -127,21 +121,37 @@ class Main {
                     throw new IllegalStateException("NaN score!");
                 }),
                 // Get names from model factory instead?
-                new PlotDecodedOutput(outputPlot, "decodedOutput", batchNrToPlot),
                 new PlotActivations(meanAndLogVarPlot, "qz0_mean", nrofLatentDims),
                 new PlotActivations(meanAndLogVarPlot, "qz0_logvar", nrofLatentDims));
 
     }
 
-    @NotNull
-    private Plot<Double, Double> initTrainingPlot(File savedir, int batchNrToPlot) {
+    private void setupOutputPlotting(File savedir) {
+        // Runnable stuff is because xychart is not thread safe and generates NPEs if one tries to plot
+        // to more than one time series at the time
+        final List<Runnable> plotInits = new ArrayList<>();
         final Plot<Double, Double> outputPlot = new RealTimePlot<>("Training Output", savedir.getAbsolutePath());
-        outputPlot.createSeries("True output");
-        final INDArray toPlot = iterator.next().getLabels(0);
-        for (long i = 0; i < toPlot.size(2); i++) {
-            outputPlot.plotData("True output", toPlot.getDouble(batchNrToPlot, 0, i), toPlot.getDouble(batchNrToPlot, 1, i));
+        for (int batchNrToPlot = 0; batchNrToPlot < Math.min(trainBatchSize, 4); batchNrToPlot++) {
+            plotInits.add(initTrainingPlot(outputPlot, batchNrToPlot));
+            model.addListeners(new PlotDecodedOutput(outputPlot, "decodedOutput", batchNrToPlot));
         }
-        return outputPlot;
+        for(Runnable r: plotInits) {
+            r.run();
+        }
+    }
+
+    private Runnable initTrainingPlot(Plot<Double, Double> outputPlot, int batchNrToPlot) {
+        final String label = "True output " + batchNrToPlot;
+        outputPlot.createSeries(label);
+        return new Runnable() {
+            @Override
+            public void run() {
+                final INDArray toPlot = iterator.next().getLabels(0);
+                for (long i = 0; i < toPlot.size(2); i++) {
+                    outputPlot.plotData(label, toPlot.getDouble(batchNrToPlot, 0, i), toPlot.getDouble(batchNrToPlot, 1, i));
+                }
+            }
+        };
     }
 
 
@@ -149,7 +159,7 @@ class Main {
         for (int i = 0; i < 2000; i++) {
             model.fit(iterator.next());
 
-            if(i > 0 && i % 100 == 0) {
+            if (i > 0 && i % 100 == 0) {
                 drawSample();
             }
         }
@@ -158,25 +168,45 @@ class Main {
     private void drawSample() {
         log.info("Sampling model...");
 
-        final MultiDataSet mds = iterator.next();
-        final INDArray sample = mds.getFeatures(0).tensorAlongDimension(0,1,2).reshape(1, 2, nrofTimeStepsForTraining);
+        final int toSample = 0;
 
-        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t < 0)", 0)
-                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t < 0)",
-                        getDecodedOutput(sample,  Nd4j.linspace(0, 2*Math.PI, 2000))));
+        final SpiralIterator.SpiralSet spiralSet = iterator.getCurrent();
+        final MultiDataSet mds = spiralSet.getMds();
+        final INDArray sample = mds.getFeatures(0);
 
-        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t > 0)", 0)
-                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t > 0)",
-                        getDecodedOutput(sample,  Nd4j.linspace(-Math.PI, 0,2000))));
-
-        new PlotDecodedOutput(reconstructionPlot, "Sampled data", 0)
+        new PlotDecodedOutput(reconstructionPlot, "Sampled data", toSample)
                 .onForwardPass(model, Collections.singletonMap("Sampled data",
                         sample));
 
+        reconstructionPlot.clearData("True trajectory");
+        spiralSet.getSpirals().get(toSample).plotBase(reconstructionPlot, "True trajectory");
+
+        final TimeVae timeVae = new TimeVae(model, "z0", "latentOde");
+
+        final INDArray z0 = timeVae.encode(sample).tensorAlongDimension(0, 1).reshape(1, nrofLatentDims);
+
+        final INDArray tsPos = Nd4j.linspace(0, 2 * Math.PI, 2000);
+        //final INDArray tsNeg = Nd4j.linspace(0, -Math.PI, 2000);
+
+        final INDArray zsPos = timeVae.timeDependency(z0, tsPos);
+        //final INDArray zsNeg = timeVae.timeDependency(z0, tsNeg);
+
+        final INDArray xsPos = timeVae.decode(zsPos);
+        //final INDArray xsNeg = flip(timeVae.decode(zsNeg));
+
+        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t < 0)", toSample)
+                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t < 0)",
+                        xsPos));
+
+        // Seems like forward pass with backwards time does not work
+//        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t > 0)", toSample)
+//                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t > 0)",
+//                        xsNeg));
     }
 
-    private INDArray getDecodedOutput(INDArray sample, INDArray time) {
-        return model.output(sample, time)[0];
-    }
-
+//    private INDArray flip(INDArray array) {
+//        final INDArray x = array.tensorAlongDimension(0, 2);
+//        final INDArray y = array.tensorAlongDimension(1, 2);
+//        return Nd4j.vstack(Nd4j.reverse(x.reshape(x.length())), Nd4j.reverse(y.reshape(y.length()))).reshape(array.shape());
+//    }
 }
