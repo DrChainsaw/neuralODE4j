@@ -55,21 +55,21 @@ public class MultiStepAdjointTest {
                 "dummy"));
 
         final INDArray parGrad = gradients.getFirst().getGradientFor("dummy");
-        assertEquals("Incorect gradients view!", graph.getGradientsViewArray(), parGrad);
+        assertEquals("Incorrect gradients view!", graph.getGradientsViewArray(), parGrad);
         assertEquals("Incorrect number of input gradients!", 1, gradients.getSecond().length);
 
         final INDArray inputGrad = gradients.getSecond()[0];
         assertArrayEquals("Incorrect input gradient shape!", inputArrays.getLastInputs()[0].shape(), inputGrad.shape());
 
-        assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.sumNumber().doubleValue(), 1e-10);
-        assertNotEquals("Expected non-zero input gradient!", 0.0, inputGrad.sumNumber().doubleValue(), 1e-10);
+        assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.maxNumber().doubleValue(), 1e-10);
+        assertNotEquals("Expected non-zero input gradient!", 0.0, inputGrad.maxNumber().doubleValue(), 1e-10);
     }
 
     /**
      * Smoke test for backwards solve without time gradients
      */
     @Test
-    public void solveWithTime() {
+    public void solveWithTime() throws InterruptedException {
         final int nrofInputs = 5;
         final int nrofTimeSteps = 7;
         final ComputationGraph graph = SingleStepAdjointTest.getTestGraph(nrofInputs);
@@ -85,6 +85,9 @@ public class MultiStepAdjointTest {
                 LayerWorkspaceMgr.noWorkspacesImmutable(),
                 "dummy"));
 
+        Nd4j.getExecutioner().commit();
+        Thread.sleep(100); // Sometimes one must wait for the executioner to finish??
+
         final INDArray parGrad = gradients.getFirst().getGradientFor("dummy");
         assertEquals("Incorect gradients view!", graph.getGradientsViewArray(), parGrad);
         assertEquals("Incorrect number of input gradients!", 2, gradients.getSecond().length);
@@ -94,9 +97,9 @@ public class MultiStepAdjointTest {
         assertArrayEquals("Incorrect input gradient shape!", inputArrays.getLastInputs()[0].shape(), inputGrad.shape());
         assertArrayEquals("Incorrect time gradient shape!", time.shape(), timeGrad.shape());
 
-        assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.sumNumber().doubleValue(), 1e-10);
-        assertNotEquals("Expected non-zero input gradient!", 0.0, inputGrad.sumNumber().doubleValue(), 1e-10);
-        assertNotEquals("Expected non-zero time gradient!", 0.0, timeGrad.sumNumber().doubleValue(), 1e-10);
+        assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.maxNumber().doubleValue(), 1e-10);
+        assertNotEquals("Expected non-zero input gradient!", 0.0, inputGrad.maxNumber().doubleValue(), 1e-10);
+        assertNotEquals("Expected non-zero time gradient!", 0.0, timeGrad.maxNumber().doubleValue(), 1e-10);
     }
 
     @NotNull
@@ -104,7 +107,7 @@ public class MultiStepAdjointTest {
         final int batchSize = 3;
         final INDArray input = Nd4j.arange(batchSize * nrofInputs).reshape(batchSize, nrofInputs);
         final INDArray output = Nd4j.arange(batchSize * nrofInputs * nrofTimeSteps).reshape(batchSize, nrofInputs, nrofTimeSteps);
-        final INDArray epsilon = Nd4j.ones(batchSize, nrofInputs, nrofTimeSteps).assign(666);
+        final INDArray epsilon = Nd4j.ones(batchSize, nrofInputs, nrofTimeSteps);
         final NonContiguous1DView realGrads = new NonContiguous1DView();
         realGrads.addView(graph.getGradientsViewArray());
 

@@ -52,7 +52,7 @@ public class AdaptiveRungeKuttaStepPolicyTest {
                 true, 5, scale, t.getDouble(0), y0.toDoubleVector(), yDot,
                 y1, yDot1);
 
-        final FirstOrderEquationWithState eqState = new FirstOrderEquationWithState(equation, t.getColumn(0), y0, 5);
+        final FirstOrderEquationWithState eqState = new FirstOrderEquationWithState(equation, t.getColumn(0), y0, new double [5]);
         final INDArray stepAct = new AdaptiveRungeKuttaStepPolicy(
                 new SolverConfigINDArray(absTol, relTol, 1e-20, 1e20), 5)
                 .initializeStep(eqState, t);

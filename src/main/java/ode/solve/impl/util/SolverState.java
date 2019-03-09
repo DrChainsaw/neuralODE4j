@@ -27,4 +27,10 @@ public interface SolverState {
      * @return the current time state
      */
     INDArray time();
+
+    /**
+     * Return coefficients for calculating midpoints for the given solver
+     * @return coefficients for calculating midpoints for the given solver
+     */
+    double[] getInterpolationMidpoints();
 }

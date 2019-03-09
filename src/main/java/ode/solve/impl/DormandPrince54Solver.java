@@ -42,7 +42,10 @@ public class DormandPrince54Solver implements FirstOrderSolver {
                     })
                     .c(new double[]{
                             1.0 / 5.0, 3.0 / 10.0, 4.0 / 5.0, 8.0 / 9.0, 1.0, 1.0
-                    });
+                    })
+                    .cMid(new double[]{
+                            6025192743d / 30085553152d / 2d, 0, 51252292925d / 65400821598d / 2d, -2691868925d / 45128329728d / 2d,
+                            187940372067d / 1594534317056d / 2d, -1776094331 / 19743644256d / 2d, 11237099 / 235043384d / 2d});
 
     private final AdaptiveRungeKuttaSolver solver;
 

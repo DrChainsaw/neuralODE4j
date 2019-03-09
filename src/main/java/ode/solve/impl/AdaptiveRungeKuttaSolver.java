@@ -115,7 +115,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
                     equation,
                     t.getScalar(0).dup(),
                     yOut.assign(y0),
-                    tableu.c.length() + 1);
+                    tableu.cMid);
 
             listener.begin(t, y0);
 

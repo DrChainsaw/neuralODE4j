@@ -38,4 +38,9 @@ public class StateContainer implements SolverState {
     public INDArray time() {
         return currentTime;
     }
+
+    @Override
+    public double[] getInterpolationMidpoints() {
+        return new double[0];
+    }
 }

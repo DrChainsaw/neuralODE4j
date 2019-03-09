@@ -25,11 +25,6 @@ public class InterpolatingStepListener implements StepListener {
     private final INDArrayIndex[] yInterpolAccess;
     private State state;
 
-    // TODO: Get this from somewhere else, maybe SolverState
-    private final static double[] DPS_C_MID = {
-            6025192743d / 30085553152d / 2d, 0, 51252292925d / 65400821598d / 2d, -2691868925d / 45128329728d / 2d,
-            187940372067d / 1594534317056d / 2d, -1776094331 / 19743644256d / 2d, 11237099 / 235043384d / 2d};
-
     private final class State {
         private Interpolation interpolation = new Interpolation();
         private INDArray y0;
@@ -101,7 +96,7 @@ public class InterpolatingStepListener implements StepListener {
     }
 
     private void fitInterpolationCoeffs(SolverState solverState, INDArray step) {
-        final INDArray[] yDotStages = new INDArray[DPS_C_MID.length];
+        final INDArray[] yDotStages = new INDArray[solverState.getInterpolationMidpoints().length];
         for (int i = 0; i < yDotStages.length; i++) {
             yDotStages[i] = solverState.getStateDot(i);
         }
@@ -111,7 +106,7 @@ public class InterpolatingStepListener implements StepListener {
 
         final INDArray yMid = state.y0.add(scaledDotProduct(
                 Nd4j.createUninitialized(state0.shape()),
-                DPS_C_MID,
+                solverState.getInterpolationMidpoints(),
                 yDotStages,
                 step));
 
