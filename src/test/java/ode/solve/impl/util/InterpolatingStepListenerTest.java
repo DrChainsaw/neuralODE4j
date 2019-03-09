@@ -7,7 +7,6 @@ import ode.solve.api.FirstOrderSolver;
 import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
 import ode.solve.impl.SingleSteppingMultiStepSolver;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -49,7 +48,7 @@ public class InterpolatingStepListenerTest {
      * Verify that the result from using an {@link InterpolatingStepListener} is equivalent to using a
      * {@link SingleSteppingMultiStepSolver} when solving the {@link CircleODE} when using the same input.
      */
-    @Test @Ignore
+    @Test
     public void iterpolateCircleBackward() {
         final Pair<INDArray, INDArray> multiAndInterp = solveCircleMultiInterpol(true);
 

@@ -77,7 +77,7 @@ public class InterpolatingStepListener implements StepListener {
     public void step(SolverState solverState, INDArray step, INDArray error) {
         final INDArray greaterThanTime;
         final INDArray lessThanTime;
-        if(step.getDouble(0) > 0) {
+        if (step.getDouble(0) > 0) {
             greaterThanTime = state.t0;
             lessThanTime = solverState.time();
         } else {
@@ -106,15 +106,8 @@ public class InterpolatingStepListener implements StepListener {
             yDotStages[i] = solverState.getStateDot(i);
         }
 
-        final INDArray state0;
-        final INDArray state1;
-        if(step.getDouble(0) > 0) {
-            state0 = state.y0;
-            state1 = solverState.getCurrentState();
-        } else {
-            state0 = solverState.getCurrentState();
-            state1 = state.y0;
-        }
+        final INDArray state0 = state.y0;
+        final INDArray state1 = solverState.getCurrentState();
 
         final INDArray yMid = state.y0.add(scaledDotProduct(
                 Nd4j.createUninitialized(state0.shape()),
@@ -146,19 +139,8 @@ public class InterpolatingStepListener implements StepListener {
         for (int i = startInd; i < stopInd; i++) {
             yInterpolAccess[0] = NDArrayIndex.point(i);
 
-            final double t0;
-            final double t1;
-            final double tWanted = wantedTimeInds.getDouble(i);
-            if(state.t0.getDouble(0) < wantedTimeInds.getDouble(i)) {
-                t0 = state.t0.getDouble(0);
-                t1 = tNew.getDouble(0);
-            } else {
-                t0 = tNew.getDouble(0);
-                t1 = state.t0.getDouble(0);
-            }
-
             yInterpol.put(yInterpolAccess,
-                    state.interpolation.interpolate(t0, t1, tWanted));
+                    state.interpolation.interpolate(state.t0.getDouble(0), tNew.getDouble(0), wantedTimeInds.getDouble(i)));
         }
     }
 
