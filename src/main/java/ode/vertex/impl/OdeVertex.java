@@ -255,7 +255,7 @@ public class OdeVertex extends BaseGraphVertex {
                 final INDArray grad = parNameAndGradView.getValue();
 
                 if (!nonGradientParamNames.contains(parName)) {
-                    parameters.realGradients().addView(grad.reshape(grad.length()));
+                    parameters.realGradients().addView(grad);
                 }
             }
         }

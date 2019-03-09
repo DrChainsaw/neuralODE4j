@@ -20,6 +20,7 @@ import org.junit.Test;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.primitives.Pair;
 
 import static junit.framework.TestCase.assertEquals;
@@ -122,25 +123,47 @@ public class MultiStepAdjointTest {
      * Numbers below from the following test ODE:
      * <br><br>
      * <pre>
-     * class Linear1DODE(torch.nn.Module):
+     *     class Linear1DODE(torch.nn.Module):
      *
      *     def __init__(self, device):
      *         super(Linear1DODE, self).__init__()
-     *         self.a = torch.nn.Parameter(torch.tensor(0.2).to(device))
-     *         self.b = torch.nn.Parameter(torch.tensor(3.0).to(device))
+     *         self.a = torch.nn.Parameter(torch.tensor([0.2, 0.2, 0.2, 0.2]).reshape(2,2).to(device))
+     *         self.b = torch.nn.Parameter(torch.tensor([3.0, 3.0]).reshape(1,2).to(device))
      *
      *     def forward(self, t, y):
-     *         return self.a * y + self.b
+     *         return y.matmul(self.a)+ self.b
      *
      *     def y_exact(self, t):
      *         return t
+     * Test code (to set same inputs as below):
+     *         f, y0, t_points, _ = construct_problem(TEST_DEVICE, ode='linear1D')
+     *
+     *         y0 = torch.linspace(-1.23,2.34,4).reshape(2, 2).type_as(y0)
+     *         y0.requires_grad = True
+     *
+     *         print('t: ', t_points)
+     *         print('y0: ', y0)
+     *
+     *         params = (list(f.parameters()))
+     *         optimizer = torch.optim.SGD(params, lr=0.0001)
+     *
+     *
+     *         optimizer.zero_grad()
+     *         func = lambda y0, t_points: torchdiffeq.odeint_adjoint(f, y0, t_points, method='dopri5')
+     *         ys = func(y0, t_points).permute(1, 2, 0)
+     *
+     *         gradys = torch.linspace(3,  13, ys.numel()).type_as(ys).reshape(ys.size())
+     *         for i in range (0, int(gradys.size()[0]/2)):
+     *             gradys[i*2, :, i*2+1] = -gradys[i*2,:,i*2+1]
+     *
+     *         ys.backward(gradys)
      * </pre>
      */
     @Test
     public void testGradVsReferenceLinear1dOde() {
 
         final long nrofTimeSteps = 10;
-        final long nrofDims = 1;
+        final long nrofDims = 2;
 
         final ComputationGraphConfiguration.GraphBuilder builder = new NeuralNetConfiguration.Builder()
                 .seed(666)
@@ -170,7 +193,7 @@ public class MultiStepAdjointTest {
         graph.initGradientsView();
 
         final INDArray time = Nd4j.linspace(1, 8, nrofTimeSteps);
-        final INDArray y0 = time.getScalar(0).dup().reshape(1,1);
+        final INDArray y0 = Nd4j.linspace(-1.23, 2.34, 2*nrofDims).reshape(2, nrofDims);
 
         final GraphVertex odevert = graph.getVertex("ode");
 
@@ -178,28 +201,43 @@ public class MultiStepAdjointTest {
         final INDArray ys = odevert.doForward(true, LayerWorkspaceMgr.noWorkspacesImmutable());
 
         // From original repo
-        final double[] expectedYs = {1.0000,  3.6929,  6.8391, 10.5147, 14.8090, 19.8261, 25.6876, 32.5355,
-                40.5361, 49.8832};
-        assertArrayEquals("Incorrect ys: ", expectedYs, ys.reshape(nrofTimeSteps).toDoubleVector(), 1e-3);
+        final double[][][] expectedYs = {{{-1.23, 1.2753194351313588, 4.694932254437282, 9.36250433337755, 15.73345986285669, 24.429438907671752, 36.29894018833409, 52.50011823313958, 74.61376567400269, 104.79757535834692},
+                {-0.040000000000000036, 2.4653194351313603, 5.884932254437281, 10.552504333377543, 16.92345986285671, 25.61943890767168, 37.488940188334105, 53.69011823313958, 75.8037656740027, 105.98757535834685}},
+                {{1.15, 4.523878831433274, 9.129023844467975, 15.414778231911933, 23.994455416185012, 35.70520942482531, 51.689701681157864, 73.50760277718506, 103.28774415967294, 143.93586077027197},
+                        {2.34, 5.7138788314332745, 10.319023844467976, 16.604778231911936, 25.184455416185003, 36.89520942482521, 52.879701681157854, 74.69760277718505, 104.47774415967294, 145.12586077027197}}};
 
-        final INDArray lossgrad = Nd4j.linspace(0, nrofTimeSteps-1, nrofTimeSteps);
-        for(int i = 0; i < lossgrad.length()/2; i++) {
-            lossgrad.getScalar(i*2).negi();
+        for(int i = 0; i < expectedYs.length; i++) {
+            for(int j = 0; j < expectedYs.length; j++) {
+                assertArrayEquals("Incorrect ys: ",
+                        expectedYs[i][j],
+                        ys.reshape(ys.size(0), nrofDims, nrofTimeSteps).getRow(i).getRow(j).toDoubleVector(), 1e-3);
+            }
+        }
+
+        final INDArray lossgrad = Nd4j.linspace(3, 13, ys.length()).reshape(ys.shape());
+        for(int i = 0; i < lossgrad.size(0)/2; i++) {
+            lossgrad.get(NDArrayIndex.point(i*2), NDArrayIndex.all(), NDArrayIndex.point(i*2+1)).negi();
         }
 
         odevert.setEpsilon(lossgrad.reshape(ys.shape()));
         Pair<Gradient, INDArray[]> grads = odevert.doBackward(false, LayerWorkspaceMgr.noWorkspacesImmutable());
 
-        final double expectedYsGrad = 20.9211;
-        assertEquals("Incorrect loss gradient: ", expectedYsGrad, grads.getSecond()[0].getDouble(0),1e-3);
+        final double[][] expectedYsGrad =  {{330.3413671858052, 350.8541876986256}, {641.5288548171546, 667.1698804581804}};
+        for(int i = 0; i < expectedYsGrad.length; i++) {
+            assertArrayEquals("Incorrect loss gradient: ",
+                    expectedYsGrad[i],
+                    grads.getSecond()[0].getRow(i).toDoubleVector(), 1e-3);
+        }
 
-        final double[] expectedParsGrad = { -1232.8964,    -79.6053}; // Note: Gradients in DL4J have opposite sign compared to pytorch
-        assertArrayEquals("Incorrect parameter gradient: ", expectedParsGrad, grads.getFirst().gradient().toDoubleVector(), 1e-3);
+        // Note: Order of element 1 and 2 are swapped
+        final double[] expectedParsGrad = {26399.28182908193, 28805.83177942673, 29982.48959443847, 32597.88284962647, 2022.3108828170273, 2197.8094583156044};
+        // Compare one by one due to large dynamic range
+        for(int i = 0; i < expectedParsGrad.length; i ++) {
+            assertEquals("Incorrect parameter gradient for param " + i +"!", 1, grads.getFirst().gradient().getDouble(i) / expectedParsGrad[i], 1e-4);
+        }
 
-        final double[] expectedTimeGrad = {-66.9474,   3.7386,  -8.7356,  15.3088, -23.8472,  34.8261, -48.8251,
-                66.5498, -88.8578, 116.7898};
+        final double[] expectedTimeGrad = {-6617.017543489908, 63.564528808863464, 185.79311916695133, 262.00021152296233, 369.0851188922797, 519.4357040639363,
+                730.3690674996153, 1026.0795986642863, 1440.3518309918456, 2020.3383638791681};
         assertArrayEquals("Incorrect time grad!", expectedTimeGrad, grads.getSecond()[1].toDoubleVector(),1e-3);
     }
-
-
 }

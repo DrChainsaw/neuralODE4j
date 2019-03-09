@@ -88,7 +88,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
             gradients.getSecond()[timeIndex] = timeGradient;
         }
 
-        gradients.getFirst().gradient().negi();
+        gradients.getSecond()[0].addi(getStep(dL_dztIndexer, dL_dzt, 0));
 
         return gradients;
     }

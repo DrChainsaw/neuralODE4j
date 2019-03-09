@@ -5,7 +5,6 @@ import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -18,16 +17,7 @@ public class NonContiguous1DView {
     private final List<INDArray> view = new ArrayList<>();
     private long length = 0;
 
-    public void addView(INDArray array, long begin, long end) {
-        INDArray viewSlice = array.get(NDArrayIndex.interval(begin, end));
-        addView(viewSlice);
-    }
-
     public void addView(INDArray viewSlice) {
-        // Apparently there are non-scalars of length 1...
-        if(viewSlice.isColumnVectorOrScalar() && viewSlice.length() != 1) {
-            throw new IllegalArgumentException("Must be vector or scalar! Had shape: " + Arrays.toString(viewSlice.shape()));
-        }
         length += viewSlice.length();
         view.add(viewSlice);
     }
@@ -48,7 +38,7 @@ public class NonContiguous1DView {
 
         long ptr = 0;
         for(INDArray viewSlice: view) {
-            viewSlice.assign(toAssign.get(NDArrayIndex.interval(ptr, ptr + viewSlice.length())));
+            viewSlice.assign(toAssign.get(NDArrayIndex.interval(ptr, ptr + viewSlice.length())).reshape(viewSlice.shape()));
             ptr += viewSlice.length();
         }
     }
@@ -68,7 +58,7 @@ public class NonContiguous1DView {
 
         long ptr = 0;
         for(INDArray viewSlice: view) {
-            assignTo.put(new INDArrayIndex[] {NDArrayIndex.interval(ptr, ptr + viewSlice.length())}, viewSlice);
+            assignTo.put(new INDArrayIndex[] {NDArrayIndex.interval(ptr, ptr + viewSlice.length())}, viewSlice.reshape(viewSlice.length()));
             ptr += viewSlice.length();
         }
     }
