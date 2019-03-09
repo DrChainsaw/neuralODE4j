@@ -172,7 +172,7 @@ class Main {
                 new CheckpointListener.Builder(savedir.getAbsolutePath())
                         .keepLast(1)
                         .deleteExisting(true)
-                        .saveEveryNIterations(1)
+                        .saveEveryNIterations(20)
                         .build(),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
@@ -243,27 +243,27 @@ class Main {
         final INDArray z0 = timeVae.encode(sample).tensorAlongDimension(0, 1).reshape(1, nrofLatentDims);
 
         final INDArray tsPos = Nd4j.linspace(0, 2 * Math.PI, 2000);
-        //final INDArray tsNeg = Nd4j.linspace(0, -Math.PI, 2000);
+        final INDArray tsNeg = Nd4j.linspace(0, -Math.PI, 2000);
 
         final INDArray zsPos = timeVae.timeDependency(z0, tsPos);
-        //final INDArray zsNeg = timeVae.timeDependency(z0, tsNeg);
+        final INDArray zsNeg = timeVae.timeDependency(z0, tsNeg);
 
         final INDArray xsPos = timeVae.decode(zsPos);
-        //final INDArray xsNeg = flip(timeVae.decode(zsNeg));
+        final INDArray xsNeg = flip(timeVae.decode(zsNeg));
 
         new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t < 0)", toSample)
                 .onForwardPass(model, Collections.singletonMap("Learned trajectory (t < 0)",
                         xsPos));
 
         // Seems like forward pass with backwards time does not work
-//        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t > 0)", toSample)
-//                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t > 0)",
-//                        xsNeg));
+        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t > 0)", toSample)
+                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t > 0)",
+                        xsNeg));
     }
 
-//    private INDArray flip(INDArray array) {
-//        final INDArray x = array.tensorAlongDimension(0, 2);
-//        final INDArray y = array.tensorAlongDimension(1, 2);
-//        return Nd4j.vstack(Nd4j.reverse(x.reshape(x.length())), Nd4j.reverse(y.reshape(y.length()))).reshape(array.shape());
-//    }
+    private INDArray flip(INDArray array) {
+        final INDArray x = array.tensorAlongDimension(0, 2);
+        final INDArray y = array.tensorAlongDimension(1, 2);
+        return Nd4j.vstack(Nd4j.reverse(x.reshape(x.length())), Nd4j.reverse(y.reshape(y.length()))).reshape(array.shape());
+    }
 }

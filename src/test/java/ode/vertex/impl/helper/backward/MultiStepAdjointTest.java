@@ -51,7 +51,7 @@ public class MultiStepAdjointTest {
 
         Pair<Gradient, INDArray[]> gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,
-                LayerWorkspaceMgr.noWorkspaces(),
+                LayerWorkspaceMgr.noWorkspacesImmutable(),
                 "dummy"));
 
         final INDArray parGrad = gradients.getFirst().getGradientFor("dummy");
@@ -82,7 +82,7 @@ public class MultiStepAdjointTest {
 
         Pair<Gradient, INDArray[]> gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,
-                LayerWorkspaceMgr.noWorkspaces(),
+                LayerWorkspaceMgr.noWorkspacesImmutable(),
                 "dummy"));
 
         final INDArray parGrad = gradients.getFirst().getGradientFor("dummy");
@@ -104,7 +104,7 @@ public class MultiStepAdjointTest {
         final int batchSize = 3;
         final INDArray input = Nd4j.arange(batchSize * nrofInputs).reshape(batchSize, nrofInputs);
         final INDArray output = Nd4j.arange(batchSize * nrofInputs * nrofTimeSteps).reshape(batchSize, nrofInputs, nrofTimeSteps);
-        final INDArray epsilon = Nd4j.ones(batchSize, nrofInputs, nrofTimeSteps);
+        final INDArray epsilon = Nd4j.ones(batchSize, nrofInputs, nrofTimeSteps).assign(666);
         final NonContiguous1DView realGrads = new NonContiguous1DView();
         realGrads.addView(graph.getGradientsViewArray());
 
