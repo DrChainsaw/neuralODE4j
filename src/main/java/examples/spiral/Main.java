@@ -5,12 +5,14 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import examples.spiral.listener.PlotActivations;
 import examples.spiral.listener.PlotDecodedOutput;
+import org.apache.commons.io.filefilter.OrFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.deeplearning4j.util.ModelSerializer;
+import org.jetbrains.annotations.NotNull;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
@@ -23,7 +25,12 @@ import util.plot.Plot;
 import util.plot.RealTimePlot;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 /**
@@ -45,8 +52,9 @@ class Main {
     @Parameter(names = "-nrofLatentDims", description = "Number of latent dimensions to use")
     private long nrofLatentDims = 4;
 
-    @Parameter(names = "-loadCheckpoint", description = "Attempt to load latest checkpoint when set to true")
-    private boolean loadCheckpoint = true;
+    @Parameter(names = "-newModel", description = "Load latest checkpoint (if available) if set to false. If true or if " +
+            "no checkpoint exists, a new model will be created")
+    private boolean newModel = false;
 
     private ComputationGraph model;
     private String modelName;
@@ -81,24 +89,50 @@ class Main {
 
         final ModelFactory factory = modelCommands.get(jCommander.getParsedCommand());
 
-        final File saveDir = saveDir(factory.name());
-        String[] files = saveDir.list(new WildcardFileFilter("checkpoint_*_ComputationGraph.zip"));
-        if (files != null && files.length > 0) {
-            final String file = files[files.length - 1];
-            log.info("Restoring model from file: " + file);
-            final ComputationGraph graph = ModelSerializer.restoreComputationGraph(saveDir.getAbsolutePath() + File.separator + file, true);
-            main.init(graph,
-                    factory.name(),
-                    factory.getPreProcessor(main.nrofLatentDims)); // TODO: Get this from model instead
-            return main;
-        }
+        return createModel(main, factory);
+    }
 
+    @NotNull
+    private static Main createModel(Main main, ModelFactory factory) throws IOException {
+        if(!main.newModel) {
+            final File saveDir = saveDir(factory.name());
+            final File[] files = ageOrder(saveDir.listFiles((FilenameFilter)
+                    new OrFileFilter(
+                            new WildcardFileFilter("checkpoint_*_ComputationGraph.zip"),
+                            new WildcardFileFilter("checkpoint_*_ComputationGraph_bck.zip"))));
+            if (files != null && files.length > 0) {
+                final Path modelFile = Paths.get(files[files.length - 1].getAbsolutePath());
+                log.info("Restoring model from file: " + modelFile);
+
+                if(!modelFile.getFileName().toString().matches(".*_bck\\.zip")) {
+                    // Because checkpoint listener deletes all files matching the checkpoint_*_ComputationGraph.zip pattern.
+                    final Path backupFile = Paths.get(modelFile.toString().replace(".", "_bck."));
+                    Files.copy(modelFile, backupFile, StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                final ComputationGraph graph = ModelSerializer.restoreComputationGraph(modelFile.toFile(), true);
+                main.init(graph,
+                        factory.name(),
+                        factory.getPreProcessor(main.nrofLatentDims)); // TODO: Get this from model instead
+                return main;
+            }
+        }
 
         main.init(
                 factory.create(main.nrofTimeStepsForTraining, main.noiseSigma, main.nrofLatentDims),
                 factory.name(),
                 factory.getPreProcessor(main.nrofLatentDims));
         return main;
+    }
+
+    private static File[] ageOrder(File[] files) {
+        Arrays.sort(files, new Comparator<File>() {
+            @Override
+            public int compare(File o1, File o2) {
+                return Long.compare(o1.lastModified(), o2.lastModified());
+            }
+        });
+        return files;
     }
 
     private static File saveDir(String modelName) {
@@ -138,7 +172,7 @@ class Main {
                 new CheckpointListener.Builder(savedir.getAbsolutePath())
                         .keepLast(1)
                         .deleteExisting(true)
-                        .saveEveryNIterations(20)
+                        .saveEveryNIterations(1)
                         .build(),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
