@@ -29,5 +29,5 @@ public interface ModelFactory {
      * Return a {@link MultiDataSetPreProcessor} which needs to be applied to the input
      * @return a {@link MultiDataSetPreProcessor}
      */
-    MultiDataSetPreProcessor getPreProcessor();
+    MultiDataSetPreProcessor getPreProcessor(long nrofLatentDims);
 }

@@ -5,10 +5,12 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import examples.spiral.listener.PlotActivations;
 import examples.spiral.listener.PlotDecodedOutput;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
+import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
@@ -21,6 +23,7 @@ import util.plot.Plot;
 import util.plot.RealTimePlot;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -42,12 +45,15 @@ class Main {
     @Parameter(names = "-nrofLatentDims", description = "Number of latent dimensions to use")
     private long nrofLatentDims = 4;
 
+    @Parameter(names = "-loadCheckpoint", description = "Attempt to load latest checkpoint when set to true")
+    private boolean loadCheckpoint = true;
+
     private ComputationGraph model;
     private String modelName;
     private SpiralIterator iterator;
     private Plot<Double, Double> reconstructionPlot;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         root.setLevel(Level.INFO);
 
@@ -57,7 +63,7 @@ class Main {
         main.run();
     }
 
-    private static Main parseArgs(String[] args) {
+    private static Main parseArgs(String[] args) throws IOException {
 
         final Main main = new Main();
         final Map<String, ModelFactory> modelCommands = new HashMap<>();
@@ -75,11 +81,28 @@ class Main {
 
         final ModelFactory factory = modelCommands.get(jCommander.getParsedCommand());
 
+        final File saveDir = saveDir(factory.name());
+        String[] files = saveDir.list(new WildcardFileFilter("checkpoint_*_ComputationGraph.zip"));
+        if (files != null && files.length > 0) {
+            final String file = files[files.length - 1];
+            log.info("Restoring model from file: " + file);
+            final ComputationGraph graph = ModelSerializer.restoreComputationGraph(saveDir.getAbsolutePath() + File.separator + file, true);
+            main.init(graph,
+                    factory.name(),
+                    factory.getPreProcessor(main.nrofLatentDims)); // TODO: Get this from model instead
+            return main;
+        }
+
+
         main.init(
                 factory.create(main.nrofTimeStepsForTraining, main.noiseSigma, main.nrofLatentDims),
                 factory.name(),
-                factory.getPreProcessor());
+                factory.getPreProcessor(main.nrofLatentDims));
         return main;
+    }
+
+    private static File saveDir(String modelName) {
+        return new File("savedmodels" + File.separator + "spiral" + File.separator + modelName);
     }
 
     private void init(ComputationGraph model, String modelName, MultiDataSetPreProcessor preProcessor) {
@@ -100,7 +123,7 @@ class Main {
     }
 
     private void addListeners() {
-        final File savedir = new File("savedmodels" + File.separator + "spiral" + File.separator + modelName);
+        final File savedir = saveDir(modelName);
         log.info("Models will be saved in: " + savedir.getAbsolutePath());
         savedir.mkdirs();
 
@@ -135,7 +158,7 @@ class Main {
             plotInits.add(initTrainingPlot(outputPlot, batchNrToPlot));
             model.addListeners(new PlotDecodedOutput(outputPlot, "decodedOutput", batchNrToPlot));
         }
-        for(Runnable r: plotInits) {
+        for (Runnable r : plotInits) {
             r.run();
         }
     }

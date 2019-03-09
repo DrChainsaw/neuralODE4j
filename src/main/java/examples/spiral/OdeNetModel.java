@@ -22,11 +22,8 @@ class OdeNetModel implements ModelFactory {
             "direction if set. Default is to use interpolation as this is the method used in original implementation")
     private boolean interpolateOdeForward = true;
 
-    private long nrofLatentDims;
-
     @Override
     public ComputationGraph create(long nrofSamples, double noiseSigma, long nrofLatentDims) {
-        this.nrofLatentDims = nrofLatentDims;
 
         final Block enc = new RnnEncoderBlock(nrofLatentDims, 25, "spiral");
         final Block dec = new DenseDecoderBlock(20, 2);
@@ -72,7 +69,7 @@ class OdeNetModel implements ModelFactory {
 
 
     @Override
-    public MultiDataSetPreProcessor getPreProcessor() {
+    public MultiDataSetPreProcessor getPreProcessor(long nrofLatentDims) {
         return new AddKLDLabel(0, 1, nrofLatentDims);
     }
 }
