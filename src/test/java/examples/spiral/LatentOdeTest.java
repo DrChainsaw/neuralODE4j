@@ -2,6 +2,7 @@ package examples.spiral;
 
 import ch.qos.logback.classic.Level;
 import examples.spiral.listener.PlotDecodedOutput;
+import examples.spiral.listener.SpiralPlot;
 import examples.spiral.loss.NormLogLikelihoodLoss;
 import ode.solve.conf.DormandPrince54Solver;
 import ode.solve.conf.SolverConfig;
@@ -20,11 +21,9 @@ import org.nd4j.linalg.learning.config.Adam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.listen.training.ZeroGrad;
-import util.plot.Plot;
 import util.plot.RealTimePlot;
 
 import java.awt.*;
-import java.util.Collections;
 
 import static junit.framework.TestCase.assertTrue;
 
@@ -50,11 +49,9 @@ public class LatentOdeTest {
                 .updater(new Adam(0.01))
                 .graphBuilder()
                 .setInputTypes(InputType.feedForward(nrofLatentDims), InputType.feedForward(nrofTimeSteps));
-        //.setInputTypes(InputType.recurrent(nrofLatentDims, nrofTimeSteps));
 
         String next = "z0";
         builder.addInputs(next, "time");
-        //builder.addInputs(next);
 
 
         next = new LatentOdeBlock(
@@ -63,11 +60,6 @@ public class LatentOdeTest {
                 nrofLatentDims,
                 new DormandPrince54Solver(new SolverConfig(1e-12, 1e-6, 1e-20, 1e2)))
                 .add(next, builder);
-
-//        builder.addLayer("rnn", new SimpleRnn.Builder()
-//        .nOut(nrofLatentDims)
-//        .activation(new ActivationTanH())
-//        .build(), next); next = "rnn";
 
         next = new DenseDecoderBlock(20, 2).add(next, builder);
         final String decoded = next;
@@ -78,7 +70,6 @@ public class LatentOdeTest {
         graph.init();
 
         final INDArray z0 = Nd4j.ones(1, nrofLatentDims);
-        //final INDArray z0 = Nd4j.ones(1, nrofLatentDims, nrofTimeSteps);
 
         final INDArray time = Nd4j.linspace(0, 3, nrofTimeSteps);
         final INDArray label = Nd4j.hstack(time, Nd4j.linspace(0, 9, nrofTimeSteps)).reshape(1, 2, nrofTimeSteps);
@@ -90,14 +81,11 @@ public class LatentOdeTest {
             ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
             root.setLevel(Level.INFO);
 
-            final Plot<Double, Double> linePlot = new RealTimePlot<>("Decoded output", "");
+            final SpiralPlot linePlot = new SpiralPlot(new RealTimePlot<>("Decoded output", ""));
             linePlot.createSeries("Ground truth");
-            linePlot.createSeries(decoded);
-
-            new PlotDecodedOutput(linePlot, "Ground truth", 0)
-                    .onForwardPass(graph, Collections.singletonMap("Ground truth", label));
 
             graph.addListeners(new PlotDecodedOutput(linePlot, decoded, 0));
+            linePlot.plot("Ground truth", label.tensorAlongDimension(0, 1,2));
         }
 
         graph.addListeners(

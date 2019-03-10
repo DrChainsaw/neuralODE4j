@@ -1,6 +1,6 @@
 package ode.solve.impl.util;
 
-import examples.spiral.listener.PlotDecodedOutput;
+import examples.spiral.listener.SpiralPlot;
 import ode.solve.CircleODE;
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
@@ -12,10 +12,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.primitives.Pair;
-import util.plot.Plot;
 import util.plot.RealTimePlot;
-
-import java.util.Collections;
 
 import static org.junit.Assert.assertArrayEquals;
 
@@ -94,37 +91,29 @@ public class InterpolatingStepListenerTest {
      * @param args not used
      */
     public static void main(String[] args) {
-        final Plot<Double, Double> plot = new RealTimePlot<>("Multi step vs interpol", "");
+        final SpiralPlot plot = new SpiralPlot(new RealTimePlot<>("Multi step vs interpol", ""));
         final Pair<INDArray, INDArray> multiAndInterp = solveCircleMultiInterpol(true);
 
         final INDArray multi = multiAndInterp.getFirst();
         final INDArray interp = multiAndInterp.getSecond();
 
         // To avoid annoying NPE in swing thread due to xychart not being thread safe
-        plot.createSeries("Multi 0");
-        plot.createSeries("Interp 0");
+        plot.createSeries("Multi");
+        plot.createSeries("Interp");
         plot.createSeries("Multi start");
         plot.createSeries("Interp start");
         plot.createSeries("Multi stop");
         plot.createSeries("Interp stop");
 
-        plot(plot, multi, "Multi");
-        plot(plot, interp, "Interp");
+        plot.plot("Multi", multi);
+        plot.plot( "Interp", interp);
 
-        plot.plotData("Multi start", multi.getDouble(0, 0), multi.getDouble(1, 0));
-        plot.plotData("Interp start", interp.getDouble(0, 0), interp.getDouble(1, 0));
+        plot.plot("Multi start", multi.getColumn(0));
+        plot.plot("Interp start", interp.getColumn(0));
 
         final long lastStep = multi.size(1) - 1;
-        plot.plotData("Multi stop", multi.getDouble(0, lastStep), multi.getDouble(1, lastStep));
-        plot.plotData("Interp stop", interp.getDouble(0, lastStep), interp.getDouble(1, lastStep));
+        plot.plot("Multi stop", multi.getColumn(lastStep));
+        plot.plot("Interp stop", interp.getColumn(lastStep));
 
     }
-
-    private static void plot(Plot<Double, Double> plot, INDArray toPlot, String label) {
-        new PlotDecodedOutput(plot, label, 0)
-                .onForwardPass(null, Collections.singletonMap(label,
-                        toPlot.reshape(1, toPlot.rows(), toPlot.columns())));
-
-    }
-
 }

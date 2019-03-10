@@ -5,8 +5,6 @@ import org.deeplearning4j.optimize.api.BaseTrainingListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import util.plot.Plot;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,33 +14,26 @@ import java.util.Map;
  */
 public class PlotDecodedOutput extends BaseTrainingListener {
 
-    private final Plot<Double, Double> plot;
+    private final SpiralPlot plot;
     private final String outputName;
     private final String plotLabel;
     private final int batchNrToPlot;
 
     public PlotDecodedOutput(Plot<Double, Double> plot, String outputName, int batchNrToPlot) {
+        this(new SpiralPlot(plot), outputName, batchNrToPlot);
+    }
+
+    public PlotDecodedOutput(SpiralPlot plot, String outputName, int batchNrToPlot) {
         this.plot = plot;
         this.outputName = outputName;
         this.batchNrToPlot = batchNrToPlot;
         this.plotLabel = outputName + " " + batchNrToPlot;
-        plot.createSeries(plotLabel);
+        this.plot.createSeries(plotLabel);
     }
 
     @Override
     public void onForwardPass(Model model, Map<String, INDArray> activations) {
-        final INDArray toPlot = activations.get(outputName).tensorAlongDimension(batchNrToPlot, 1,2);
-        plot.clearData(plotLabel);
-        final List<Double> x = toDoubleList(toPlot, 0);
-        final List<Double> y = toDoubleList(toPlot, 1);
-        plot.plotData(plotLabel, x, y);
-    }
-
-    private static List<Double> toDoubleList(INDArray toPlot, int row) {
-        final List<Double> out = new ArrayList<>();
-        for(double d: toPlot.getRow(row).toDoubleVector()) {
-            out.add(d);
-        }
-        return out;
+        final INDArray toPlot = activations.get(outputName);
+        plot.plot(plotLabel, toPlot, batchNrToPlot);
     }
 }

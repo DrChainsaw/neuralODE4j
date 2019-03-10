@@ -5,6 +5,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import examples.spiral.listener.PlotActivations;
 import examples.spiral.listener.PlotDecodedOutput;
+import examples.spiral.listener.SpiralPlot;
 import org.apache.commons.io.filefilter.OrFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -220,6 +221,7 @@ class Main {
                 drawSample();
             }
         }
+        drawSample();
     }
 
     private void drawSample() {
@@ -230,13 +232,6 @@ class Main {
         final SpiralIterator.SpiralSet spiralSet = iterator.getCurrent();
         final MultiDataSet mds = spiralSet.getMds();
         final INDArray sample = mds.getFeatures(0);
-
-        new PlotDecodedOutput(reconstructionPlot, "Sampled data", toSample)
-                .onForwardPass(model, Collections.singletonMap("Sampled data",
-                        sample));
-
-        reconstructionPlot.clearData("True trajectory");
-        spiralSet.getSpirals().get(toSample).plotBase(reconstructionPlot, "True trajectory");
 
         final TimeVae timeVae = new TimeVae(model, "z0", "latentOde");
 
@@ -251,14 +246,16 @@ class Main {
         final INDArray xsPos = timeVae.decode(zsPos);
         final INDArray xsNeg = flip(timeVae.decode(zsNeg));
 
-        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t < 0)", toSample)
-                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t < 0)",
-                        xsPos));
+        final SpiralPlot spiralPlot = new SpiralPlot(reconstructionPlot);
+        spiralPlot.createSeries("Sampled data");
+        spiralPlot.createSeries("Learned trajectory (t > 0)");
+        spiralPlot.createSeries("Learned trajectory (t < 0)");
 
-        // Seems like forward pass with backwards time does not work
-        new PlotDecodedOutput(reconstructionPlot, "Learned trajectory (t > 0)", toSample)
-                .onForwardPass(model, Collections.singletonMap("Learned trajectory (t > 0)",
-                        xsNeg));
+        reconstructionPlot.clearData("True trajectory");
+        spiralSet.getSpirals().get(toSample).plotBase(reconstructionPlot, "True trajectory");
+        spiralPlot.plot("Sampled data", sample, toSample);
+        spiralPlot.plot("Learned trajectory (t > 0)", xsPos, toSample);
+        spiralPlot.plot("Learned trajectory (t < 0)", xsNeg, toSample);
     }
 
     private INDArray flip(INDArray array) {
