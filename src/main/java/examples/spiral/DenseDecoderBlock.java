@@ -1,6 +1,5 @@
 package examples.spiral;
 
-import examples.spiral.vertex.conf.TimeAsBatch;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
@@ -9,7 +8,7 @@ import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
 
 /**
- * Simple decoder using {@link DenseLayer}s. Also uses a {@link TimeAsBatch} in order to process 3D input as 2D.
+ * Simple decoder using {@link DenseLayer}s. Also uses a {@link FeedForwardToRnnPreProcessor} as it assumes 3D input.
  *
  * @author Christian Skarby
  */
