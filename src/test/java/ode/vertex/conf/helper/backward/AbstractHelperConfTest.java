@@ -5,6 +5,8 @@ import ode.vertex.impl.helper.backward.OdeHelperBackward.InputArrays;
 import ode.vertex.impl.helper.backward.OdeHelperBackward.MiscPar;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.WorkspaceMode;
+import org.deeplearning4j.nn.conf.distribution.ConstantDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.Convolution2D;
 import org.deeplearning4j.nn.gradient.Gradient;
@@ -87,7 +89,7 @@ abstract class AbstractHelperConfTest {
      * Test that helper can be instantiated and that it does something
      */
     @Test
-    public void instantiateAndSolveConvMultiStep() throws InterruptedException {
+    public void instantiateAndSolveConvMultiStep() {
         final int nrofTimeSteps = 7;
         final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps).instantiate();
         final ComputationGraph graph = createGraph();
@@ -96,8 +98,7 @@ abstract class AbstractHelperConfTest {
                 false,
                 LayerWorkspaceMgr.noWorkspaces(),
                 "grad"));
-        Nd4j.getExecutioner().commit();
-        Thread.sleep(100); // Sometimes one must wait for the executioner to finish??
+
         assertNotEquals("Expected non-zero param gradient!", 0, output.getFirst().gradient().amaxNumber().doubleValue() ,1e-10);
         for(INDArray inputGrad: output.getSecond()) {
             assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.amaxNumber().doubleValue() ,1e-10);
@@ -106,6 +107,9 @@ abstract class AbstractHelperConfTest {
 
     private ComputationGraph createGraph() {
         final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
+                .trainingWorkspaceMode(WorkspaceMode.NONE)
+                .inferenceWorkspaceMode(WorkspaceMode.NONE)
+                .weightInit(new ConstantDistribution(0.01))
                 .graphBuilder()
                 .allowNoOutput(true)
                 .addInputs("input")
@@ -131,7 +135,7 @@ abstract class AbstractHelperConfTest {
         final INDArray input = Nd4j.arange(batchSize * convInput.arrayElementsPerExample()).reshape(shape);
         final INDArray output = Nd4j.arange(batchSize * nrofTimeStepsToUse * convInput.arrayElementsPerExample())
                 .reshape(outputShape);
-        final INDArray epsilon = Nd4j.ones(outputShape);
+        final INDArray epsilon = Nd4j.ones(outputShape).assign(0.01);
         final NonContiguous1DView realGrads = new NonContiguous1DView();
         realGrads.addView(graph.getGradientsViewArray());
 

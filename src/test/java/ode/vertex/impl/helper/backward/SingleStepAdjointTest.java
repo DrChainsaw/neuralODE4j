@@ -4,6 +4,7 @@ import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
 import ode.vertex.impl.gradview.NonContiguous1DView;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.distribution.ConstantDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.gradient.Gradient;
@@ -94,7 +95,7 @@ public class SingleStepAdjointTest {
     private static OdeHelperBackward.InputArrays getTestInputArrays(int nrofInputs, ComputationGraph graph) {
         final INDArray input = Nd4j.arange(nrofInputs);
         final INDArray output = input.add(1);
-        final INDArray epsilon = Nd4j.ones(nrofInputs);
+        final INDArray epsilon = Nd4j.ones(nrofInputs).assign(0.01);
         final NonContiguous1DView realGrads = new NonContiguous1DView();
         realGrads.addView(graph.getGradientsViewArray());
 
@@ -115,10 +116,10 @@ public class SingleStepAdjointTest {
     @NotNull
     static ComputationGraph getTestGraph(int nrofInputs) {
         final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
+                .weightInit(new ConstantDistribution(0.01))
                 .graphBuilder()
                 .setInputTypes(InputType.feedForward(nrofInputs))
                 .addInputs("input")
-
                 .addLayer("dense", new DenseLayer.Builder().nOut(nrofInputs).activation(new ActivationIdentity()).build(), "input")
                 .allowNoOutput(true)
                 .build());

@@ -107,7 +107,7 @@ public class MultiStepAdjointTest {
         final int batchSize = 3;
         final INDArray input = Nd4j.arange(batchSize * nrofInputs).reshape(batchSize, nrofInputs);
         final INDArray output = Nd4j.arange(batchSize * nrofInputs * nrofTimeSteps).reshape(batchSize, nrofInputs, nrofTimeSteps);
-        final INDArray epsilon = Nd4j.ones(batchSize, nrofInputs, nrofTimeSteps);
+        final INDArray epsilon = Nd4j.ones(batchSize, nrofInputs, nrofTimeSteps).assign(0.01);
         final NonContiguous1DView realGrads = new NonContiguous1DView();
         realGrads.addView(graph.getGradientsViewArray());
 
