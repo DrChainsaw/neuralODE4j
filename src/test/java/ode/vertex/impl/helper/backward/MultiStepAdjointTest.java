@@ -236,11 +236,17 @@ public class MultiStepAdjointTest {
         final double[] expectedParsGrad = {26399.28182908193, 28805.83177942673, 29982.48959443847, 32597.88284962647, 2022.3108828170273, 2197.8094583156044};
         // Compare one by one due to large dynamic range
         for(int i = 0; i < expectedParsGrad.length; i ++) {
-            assertEquals("Incorrect parameter gradient for param " + i +"!", 1, grads.getFirst().gradient().getDouble(i) / expectedParsGrad[i], 1e-4);
+            assertEquals("Incorrect parameter gradient for param " + i +"!",
+                    1,
+                    grads.getFirst().gradient().getDouble(i) / expectedParsGrad[i], 1e-4);
         }
 
+        // First element from reference implementation sure looks weird...
         final double[] expectedTimeGrad = {-6617.017543489908, 63.564528808863464, 185.79311916695133, 262.00021152296233, 369.0851188922797, 519.4357040639363,
                 730.3690674996153, 1026.0795986642863, 1440.3518309918456, 2020.3383638791681};
-        assertArrayEquals("Incorrect time grad!", expectedTimeGrad, grads.getSecond()[1].toDoubleVector(),1e-3);
+        // Compare one by one due to large dynamic range
+        for(int i = 0; i < expectedTimeGrad.length; i ++) {
+            assertEquals("Incorrect time gradient for param " + i +"!", 1, grads.getSecond()[1].getDouble(i) / expectedTimeGrad[i], 1e-4);
+        }
     }
 }
