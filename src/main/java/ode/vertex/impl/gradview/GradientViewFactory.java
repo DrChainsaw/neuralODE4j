@@ -1,6 +1,9 @@
 package ode.vertex.impl.gradview;
 
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.nd4j.shade.jackson.annotation.JsonTypeInfo;
+
+import java.io.Serializable;
 
 /**
  * Creates an {@link INDArray1DView} of all gradients in a set of vertices. Reason why this exists is that there are
@@ -10,7 +13,8 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
  *
  * @author Christian Skarby
  */
-public interface GradientViewFactory {
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
+public interface GradientViewFactory extends Serializable {
 
     /**
      * Create a {@link INDArray1DView} of the gradients of the given graph.
@@ -18,4 +22,10 @@ public interface GradientViewFactory {
      * @return INDArray1DView of the gradients
      */
     INDArray1DView create(ComputationGraph graph);
+
+    /**
+     * Clone the factory
+     * @return a clone
+     */
+    GradientViewFactory clone();
 }

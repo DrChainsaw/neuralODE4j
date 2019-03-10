@@ -15,12 +15,12 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
 public class AddKLDLabel implements MultiDataSetPreProcessor {
 
     private final double mean;
-    private final double var;
+    private final double logvar;
     private final long nrofLatentDims;
 
     public AddKLDLabel(double mean, double var, long nrofLatentDims) {
         this.mean = mean;
-        this.var = var;
+        this.logvar = Math.log(var);
         this.nrofLatentDims = nrofLatentDims;
     }
 
@@ -30,7 +30,7 @@ public class AddKLDLabel implements MultiDataSetPreProcessor {
         final long batchSize = label0.size(0);
         final INDArray kldLabel = Nd4j.zeros(batchSize, 2*nrofLatentDims);
         kldLabel.put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(0, nrofLatentDims)}, mean);
-        kldLabel.put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(nrofLatentDims, 2*nrofLatentDims)}, var);
+        kldLabel.put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(nrofLatentDims, 2*nrofLatentDims)}, logvar);
         multiDataSet.setLabels(new INDArray[]{label0, kldLabel});
     }
 }

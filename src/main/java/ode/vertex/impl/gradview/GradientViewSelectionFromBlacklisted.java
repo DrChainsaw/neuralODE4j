@@ -1,14 +1,17 @@
 package ode.vertex.impl.gradview;
 
+import lombok.Data;
 import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.params.BatchNormalizationParamInitializer;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * {@link GradientViewFactory} which selects either a XX or a {@link NonContiguous1DView} based on presence of blacklisted
@@ -16,6 +19,7 @@ import java.util.Map;
  *
  * @author Christian Skarby
  */
+@Data
 public class GradientViewSelectionFromBlacklisted implements GradientViewFactory {
 
     private final List<String> nonGradientParamNames;
@@ -26,7 +30,7 @@ public class GradientViewSelectionFromBlacklisted implements GradientViewFactory
                 BatchNormalizationParamInitializer.GLOBAL_MEAN));
     }
 
-    public GradientViewSelectionFromBlacklisted(List<String> nonGradientParamNames) {
+    public GradientViewSelectionFromBlacklisted(@JsonProperty("nonGradientParamNames") List<String> nonGradientParamNames) {
         this.nonGradientParamNames = nonGradientParamNames;
     }
 
@@ -80,6 +84,24 @@ public class GradientViewSelectionFromBlacklisted implements GradientViewFactory
         } else if (vertex.numParams() > 0) {
             gradView.addView(vertex.getGradientsViewArray());
         }
+    }
+
+    @Override
+    public GradientViewFactory clone() {
+        return new GradientViewSelectionFromBlacklisted(nonGradientParamNames);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof GradientViewSelectionFromBlacklisted)) return false;
+        GradientViewSelectionFromBlacklisted that = (GradientViewSelectionFromBlacklisted) o;
+        return nonGradientParamNames.equals(that.nonGradientParamNames);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nonGradientParamNames);
     }
 
 }

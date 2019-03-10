@@ -111,7 +111,7 @@ class Main {
     }
 
     private void addListeners() {
-        final File savedir = new File("savedmodels" + File.separator + modelName);
+        final File savedir = new File("savedmodels" + File.separator + "MNIST" + File.separator + modelName);
         log.info("Models will be saved in: " + savedir.getAbsolutePath());
         savedir.mkdirs();
         model.addListeners(

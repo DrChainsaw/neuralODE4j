@@ -137,6 +137,10 @@ class Main {
     }
 
     private static File[] ageOrder(File[] files) {
+        if(files == null) {
+            return null;
+        }
+
         Arrays.sort(files, new Comparator<File>() {
             @Override
             public int compare(File o1, File o2) {
@@ -170,7 +174,7 @@ class Main {
 
         final Plot<Integer, Double> meanAndLogVarPlot = new RealTimePlot<>("Mean and log(var) of z", savedir.getAbsolutePath());
 
-        final int saveEveryNIterations = 1;
+        final int saveEveryNIterations = 20;
         model.addListeners(
                 new ZeroGrad(),
                 new PerformanceListener(1, true),
