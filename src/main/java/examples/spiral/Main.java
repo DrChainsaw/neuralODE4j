@@ -3,6 +3,7 @@ package examples.spiral;
 import ch.qos.logback.classic.Level;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import examples.spiral.listener.IterationHook;
 import examples.spiral.listener.PlotActivations;
 import examples.spiral.listener.PlotDecodedOutput;
 import examples.spiral.listener.SpiralPlot;
@@ -96,7 +97,7 @@ class Main {
 
     @NotNull
     private static Main createModel(Main main, ModelFactory factory) throws IOException {
-        if(!main.newModel) {
+        if (!main.newModel) {
             final File saveDir = saveDir(factory.name());
             final File[] files = ageOrder(saveDir.listFiles((FilenameFilter)
                     new OrFileFilter(
@@ -106,7 +107,7 @@ class Main {
                 final Path modelFile = Paths.get(files[files.length - 1].getAbsolutePath());
                 log.info("Restoring model from file: " + modelFile);
 
-                if(!modelFile.getFileName().toString().matches(".*_bck\\.zip")) {
+                if (!modelFile.getFileName().toString().matches(".*_bck\\.zip")) {
                     // Because checkpoint listener deletes all files matching the checkpoint_*_ComputationGraph.zip pattern.
                     final Path backupFile = Paths.get(modelFile.toString().replace(".", "_bck."));
                     Files.copy(modelFile, backupFile, StandardCopyOption.REPLACE_EXISTING);
@@ -161,49 +162,36 @@ class Main {
 
         final Plot<Integer, Double> meanAndLogVarPlot = new RealTimePlot<>("Mean and log(var) of z", savedir.getAbsolutePath());
 
+        final int saveEveryNIterations = 1;
         model.addListeners(
                 new ZeroGrad(),
                 new PerformanceListener(1, true),
                 new CheckpointListener.Builder(savedir.getAbsolutePath())
                         .keepLast(1)
                         .deleteExisting(true)
-                        .saveEveryNIterations(20, true)
+                        .saveEveryNIterations(saveEveryNIterations, true)
                         .build(),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
                 }),
                 // Get names from model factory instead?
                 new PlotActivations(meanAndLogVarPlot, "qz0_mean", nrofLatentDims),
-                new PlotActivations(meanAndLogVarPlot, "qz0_logvar", nrofLatentDims));
-
+                new PlotActivations(meanAndLogVarPlot, "qz0_logvar", nrofLatentDims),
+                new IterationHook(saveEveryNIterations, () -> {
+                    try {
+                        meanAndLogVarPlot.storePlotData();
+                    } catch (IOException e) {
+                        log.error("Could not save plot data! Exception:" + e.getMessage());
+                    }
+                }));
     }
 
     private void setupOutputPlotting(File savedir) {
-        // Runnable stuff is because xychart is not thread safe and generates NPEs if one tries to plot
-        // to more than one time series at the time
-        final List<Runnable> plotInits = new ArrayList<>();
-        final Plot<Double, Double> outputPlot = new RealTimePlot<>("Training Output", savedir.getAbsolutePath());
+        final SpiralPlot outputPlot = new SpiralPlot(new RealTimePlot<>("Training Output", savedir.getAbsolutePath()));
         for (int batchNrToPlot = 0; batchNrToPlot < Math.min(trainBatchSize, 4); batchNrToPlot++) {
-            plotInits.add(initTrainingPlot(outputPlot, batchNrToPlot));
+            outputPlot.plot("True output " + batchNrToPlot, iterator.next().getLabels(0), batchNrToPlot);
             model.addListeners(new PlotDecodedOutput(outputPlot, "decodedOutput", batchNrToPlot));
         }
-        for (Runnable r : plotInits) {
-            r.run();
-        }
-    }
-
-    private Runnable initTrainingPlot(Plot<Double, Double> outputPlot, int batchNrToPlot) {
-        final String label = "True output " + batchNrToPlot;
-        outputPlot.createSeries(label);
-        return new Runnable() {
-            @Override
-            public void run() {
-                final INDArray toPlot = iterator.next().getLabels(0);
-                for (long i = 0; i < toPlot.size(2); i++) {
-                    outputPlot.plotData(label, toPlot.getDouble(batchNrToPlot, 0, i), toPlot.getDouble(batchNrToPlot, 1, i));
-                }
-            }
-        };
     }
 
 
@@ -217,7 +205,7 @@ class Main {
             }
         }
 
-        for(int i = 1; i < 5; i++) {
+        for (int i = 1; i < 5; i++) {
             drawSample(i, new RealTimePlot<>("Reconstruction " + i, saveDir(modelName).getAbsolutePath()));
         }
     }

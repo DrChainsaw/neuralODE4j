@@ -57,6 +57,12 @@ public interface Plot<X extends Number, Y extends Number> {
     void clearData(String label);
 
     /**
+     * Serialize the data for all labels.
+     * @throws IOException
+     */
+    void storePlotData() throws IOException;
+
+    /**
      * Serialize the data for the given label.
      * @param label series label
      * @throws IOException

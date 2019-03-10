@@ -82,10 +82,8 @@ public class LatentOdeTest {
             root.setLevel(Level.INFO);
 
             final SpiralPlot linePlot = new SpiralPlot(new RealTimePlot<>("Decoded output", ""));
-            linePlot.createSeries("Ground truth");
-
-            graph.addListeners(new PlotDecodedOutput(linePlot, decoded, 0));
             linePlot.plot("Ground truth", label.tensorAlongDimension(0, 1,2));
+            graph.addListeners(new PlotDecodedOutput(linePlot, decoded, 0));
         }
 
         graph.addListeners(

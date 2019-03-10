@@ -1,8 +1,16 @@
 
 package util.plot;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import lombok.Data;
 import org.jetbrains.annotations.NotNull;
 import org.knowm.xchart.SwingWrapper;
 import org.knowm.xchart.XYChart;
@@ -11,8 +19,9 @@ import org.knowm.xchart.XYSeries;
 import org.knowm.xchart.style.Styler;
 import org.knowm.xchart.style.Styler.ChartTheme;
 
-import java.io.*;
-import java.lang.reflect.InvocationTargetException;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -35,16 +44,27 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
 
     private final Map<String, DataXY<X, Y>> plotSeries = new HashMap<>();
 
+    @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, property = "@class")
+    @Data
     private static class DataXY<X extends Number, Y extends Number> implements Serializable {
 
         private static final long serialVersionUID = 7526471155622776891L;
         private final String series;
 
-        private final LinkedList<X> xData = new LinkedList<>();
-        private final LinkedList<Y> yData = new LinkedList<>();
+        private final LinkedList<X> xData;
+        private final LinkedList<Y> yData;
 
         DataXY(String series) {
+            this(series, new LinkedList<>(), new LinkedList<>());
+        }
+
+        DataXY(
+                @JsonProperty("series") String series,
+                @JsonProperty("xData") List<X> xData,
+                @JsonProperty("yData") List<Y> yData) {
             this.series = series;
+            this.xData = new LinkedList<>(xData);
+            this.yData = new LinkedList<>(yData);
         }
 
         private void addPoint(X x, Y y, XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
@@ -55,9 +75,7 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
                     xData.remove(i);
                     yData.remove(i);
                 }
-
             }
-
             plotData(xyChart, swingWrapper);
         }
 
@@ -68,38 +86,61 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
         }
 
         private void plotData(XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
-            if (!xyChart.getSeriesMap().containsKey(series)) {
-                xyChart.addSeries(series, xData, yData, null);
-            } else {
-                xyChart.getSeriesMap().get(series).setXYSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Line);
-                xyChart.updateXYSeries(series, xData, yData, null);
-                javax.swing.SwingUtilities.invokeLater(swingWrapper::repaintChart);
-            }
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                if (!xyChart.getSeriesMap().containsKey(series)) {
+                    xyChart.addSeries(series, xData, yData, null);
+                } else {
+                    xyChart.updateXYSeries(series, xData, yData, null);
+                }
+                swingWrapper.repaintChart();
+            });
         }
 
-        private void createSeries(XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
-            if (xData.size() == 0) {
-                xyChart.addSeries(series, Arrays.asList(0), Arrays.asList(1));
-            } else {
-                xyChart.addSeries(series, xData, yData);
-            }
-            repaint(swingWrapper);
+        private void createSeries(final XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                if (xData.size() == 0) {
+                    xyChart.addSeries(series, Arrays.asList(0), Arrays.asList(1));
+                } else {
+                    xyChart.addSeries(series, xData, yData);
+                }
+                swingWrapper.repaintChart();
+            });
         }
 
-        private void repaint(SwingWrapper<XYChart> swingWrapper) {
-            try {
-                javax.swing.SwingUtilities.invokeAndWait(swingWrapper::repaintChart);
-            } catch (InterruptedException | InvocationTargetException e) {
-                e.printStackTrace();
-            }
-        }
 
-        private void clear(XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
+        private void clear() {
             xData.clear();
             yData.clear();
-            //xyChart.removeSeries(series);
-            //repaint(swingWrapper);
         }
+    }
+
+    private class DataXYDeserializer<X extends Number, Y extends Number> extends StdDeserializer<DataXY<X, Y>> {
+
+        public DataXYDeserializer() {
+            this(null);
+        }
+
+        public DataXYDeserializer(Class<?> vc) {
+            super(vc);
+        }
+
+        @Override
+        public DataXY<X, Y> deserialize(JsonParser jp, DeserializationContext ctxt)
+                throws IOException {
+            JsonNode node = jp.getCodec().readTree(jp);
+
+            final List<X> xData = new ArrayList<>();
+            for (JsonNode xNode : node.get("xdata")) {
+                xData.add((X) xNode.numberValue());
+            }
+
+            final List<Y> yData = new ArrayList<>();
+            for (JsonNode xNode : node.get("ydata")) {
+                yData.add((Y) xNode.numberValue());
+            }
+            return new DataXY<>(node.get("series").toString(), xData, yData);
+        }
+
     }
 
     /**
@@ -111,7 +152,7 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
     public RealTimePlot(String title, String plotDir) {
         // Create Chart
         this.title = title;
-        xyChart = new XYChartBuilder().width(1000).height(500).theme(ChartTheme.Matlab).title(title).build();
+        xyChart = new XYChartBuilder().width(800).height(500).theme(ChartTheme.Matlab).title(title).build();
         xyChart.getStyler().setLegendPosition(Styler.LegendPosition.OutsideE);
         xyChart.getStyler().setDefaultSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Line);
 
@@ -135,7 +176,7 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
     @Override
     public void clearData(String label) {
         final DataXY<X, Y> data = getOrCreateSeries(label);
-        data.clear(xyChart, swingWrapper);
+        data.clear();
     }
 
     @Override
@@ -155,16 +196,17 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
     }
 
     @Override
+    public void storePlotData() throws IOException {
+        for (String label : plotSeries.keySet()) {
+            storePlotData(label);
+        }
+    }
+
+    @Override
     public void storePlotData(String label) throws IOException {
         DataXY<X, Y> data = plotSeries.get(label);
         if (data != null) {
-            OutputStream file = new FileOutputStream(createFileName(label));
-            OutputStream buffer = new BufferedOutputStream(file);
-            ObjectOutput output = new ObjectOutputStream(buffer);
-            output.writeObject(data);
-            output.close();
-            buffer.close();
-            file.close();
+            new ObjectMapper().writeValue(new File(createFileName(label)), data);
         }
     }
 
@@ -172,9 +214,11 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
         File dataFile = new File(createFileName(label));
         if (dataFile.exists()) {
             try {
-                TypeReference ref = new TypeReference<DataXY<X, Y>>() {
-                };
-                return new ObjectMapper().readValue(dataFile, ref);
+                final SimpleModule mod = new SimpleModule();
+                mod.addDeserializer(DataXY.class, new DataXYDeserializer<X, Y>());
+                final ObjectMapper mapper = new ObjectMapper().registerModule(mod);
+                return mapper.readValue(dataFile, new TypeReference<DataXY<X, Y>>() {
+                });
             } catch (IOException e) {
                 e.printStackTrace();
             }

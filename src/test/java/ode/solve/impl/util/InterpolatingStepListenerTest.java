@@ -97,14 +97,6 @@ public class InterpolatingStepListenerTest {
         final INDArray multi = multiAndInterp.getFirst();
         final INDArray interp = multiAndInterp.getSecond();
 
-        // To avoid annoying NPE in swing thread due to xychart not being thread safe
-        plot.createSeries("Multi");
-        plot.createSeries("Interp");
-        plot.createSeries("Multi start");
-        plot.createSeries("Interp start");
-        plot.createSeries("Multi stop");
-        plot.createSeries("Interp stop");
-
         plot.plot("Multi", multi);
         plot.plot( "Interp", interp);
 
@@ -114,6 +106,5 @@ public class InterpolatingStepListenerTest {
         final long lastStep = multi.size(1) - 1;
         plot.plot("Multi stop", multi.getColumn(lastStep));
         plot.plot("Interp stop", interp.getColumn(lastStep));
-
     }
 }
