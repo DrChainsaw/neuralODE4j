@@ -7,6 +7,8 @@ import ode.vertex.conf.helper.backward.FixedStepAdjoint;
 import ode.vertex.conf.helper.backward.OdeHelperBackward;
 import ode.vertex.conf.helper.forward.FixedStep;
 import ode.vertex.conf.helper.forward.OdeHelperForward;
+import ode.vertex.impl.gradview.GradientViewSelectionFromBlacklisted;
+import ode.vertex.impl.helper.OdeGraphHelper;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
@@ -119,8 +121,8 @@ public class OdeVertex extends GraphVertex {
 
         // Edge case: "outer" graph has no layers, if so, use the config from one of the layers of the OdeVertex
         boolean atLeastOneLayer = false;
-        for(GraphVertex vertex: graph.getConfiguration().getVertices().values()) {
-            if(vertex != this) {
+        for (GraphVertex vertex : graph.getConfiguration().getVertices().values()) {
+            if (vertex != this) {
                 atLeastOneLayer |= vertex.numParams(false) > 0;
             }
         }
@@ -131,9 +133,13 @@ public class OdeVertex extends GraphVertex {
 
         return new ode.vertex.impl.OdeVertex(
                 new ode.vertex.impl.OdeVertex.BaseGraphVertexInputs(graph, name, idx),
-                innerGraph,
-                odeForwardConf.instantiate(),
-                odeBackwardConf.instantiate(),
+                new OdeGraphHelper(
+                        odeForwardConf.instantiate(),
+                        odeBackwardConf.instantiate(),
+                        new OdeGraphHelper.CompGraphAsOdeFunction(
+                                innerGraph,
+                                new GradientViewSelectionFromBlacklisted())
+                ),
                 trainingConfig);
     }
 

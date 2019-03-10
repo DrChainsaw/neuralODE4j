@@ -2,10 +2,8 @@ package ode.vertex.impl;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import ode.vertex.impl.gradview.GradientViewSelectionFromBlacklisted;
-import ode.vertex.impl.gradview.INDArray1DView;
+import ode.vertex.impl.helper.OdeGraphHelper;
 import ode.vertex.impl.helper.backward.OdeHelperBackward;
-import ode.vertex.impl.helper.forward.OdeHelperForward;
 import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.api.MaskState;
 import org.deeplearning4j.nn.api.TrainingConfig;
@@ -33,35 +31,11 @@ public class OdeVertex extends BaseGraphVertex {
 
     private final static String parName = "params";
 
-    private final ComputationGraph graph;
-    private final OdeHelperForward odeHelperForward;
-    private final OdeHelperBackward odeHelperBackward;
+    private final OdeGraphHelper odeHelper;
     private final TrainingConfig trainingConfig;
-    private final Parameters parameters;
 
-    private static class Parameters {
-
-        private INDArray lastOutput; // z(t1) from paper
-        private INDArray1DView realGradients; // Parts of graph.getFlattenedGradients() which are actually gradients
-
-        private Parameters() {
-
-        }
-
-        private INDArray lastOutput() {
-            return lastOutput;
-        }
-
-        private INDArray1DView realGradients() {
-            return realGradients;
-        }
-
-        private void setLastOutput(INDArray lastOutput) {
-            this.lastOutput = lastOutput;
-        }
-    }
-
-    @AllArgsConstructor @Getter
+    @AllArgsConstructor
+    @Getter
     public static class BaseGraphVertexInputs {
         private final ComputationGraph graph;
         private final String name;
@@ -69,21 +43,16 @@ public class OdeVertex extends BaseGraphVertex {
     }
 
     public OdeVertex(BaseGraphVertexInputs baseGraphVertexInputs,
-                     ComputationGraph innerGraph,
-                     OdeHelperForward odeHelperForward,
-                     OdeHelperBackward odeHelperBackward,
+                     OdeGraphHelper odeHelper,
                      TrainingConfig trainingConfig) {
         super(baseGraphVertexInputs.getGraph(), baseGraphVertexInputs.getName(), baseGraphVertexInputs.getVertexIndex(), null, null);
-        this.graph = innerGraph;
         this.trainingConfig = trainingConfig;
-        this.odeHelperForward = odeHelperForward;
-        this.odeHelperBackward = odeHelperBackward;
-        this.parameters = new Parameters();
+        this.odeHelper = odeHelper;
     }
 
     @Override
     public String toString() {
-        return graph.toString();
+        return odeHelper.getFunction().toString();
     }
 
     @Override
@@ -98,19 +67,18 @@ public class OdeVertex extends BaseGraphVertex {
 
     @Override
     public long numParams() {
-        return graph.numParams();
+        return odeHelper.getFunction().numParams();
     }
 
     @Override
     public INDArray params() {
-        return graph.params();
+        return odeHelper.getFunction().params();
     }
 
     @Override
     public void clear() {
         super.clear();
-        graph.clearLayersStates();
-        parameters.setLastOutput(null);
+        odeHelper.clear();
     }
 
     @Override
@@ -149,13 +117,8 @@ public class OdeVertex extends BaseGraphVertex {
 
         leverageInputs(workspaceMgr);
 
-        final LayerWorkspaceMgr innerWorkspaceMgr = createWorkspaceMgr(workspaceMgr);
+        final INDArray output = odeHelper.doForward(workspaceMgr, getInputs());
 
-        graph.getConfiguration().setIterationCount(0);
-        final INDArray output = odeHelperForward.solve(graph, innerWorkspaceMgr, getInputs());
-        log.info("Nrof func eval forward " + graph.getIterationCount());
-
-        parameters.setLastOutput(output.detach());
         return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, output);
     }
 
@@ -164,27 +127,14 @@ public class OdeVertex extends BaseGraphVertex {
         validateBackprop();
         log.trace("Start backward");
 
-        final OdeHelperBackward.InputArrays inputArrays = new OdeHelperBackward.InputArrays(
-                getInputs(),
-                parameters.lastOutput(),
+        final Pair<Gradient, INDArray[]> gradients = odeHelper.doBackward(
+                new OdeHelperBackward.MiscPar(tbptt, workspaceMgr, parName),
                 getEpsilon(),
-                parameters.realGradients()
-        );
-
-        final OdeHelperBackward.MiscPar miscPar = new OdeHelperBackward.MiscPar(
-                tbptt,
-                createWorkspaceMgr(workspaceMgr),
-                parName
-        );
-
-        graph.getConfiguration().setIterationCount(0);
-        final Pair<Gradient, INDArray[]> gradients = odeHelperBackward.solve(graph, inputArrays, miscPar);
-        log.info("Nrof func eval backward " + graph.getIterationCount());
-
+                getInputs());
 
         final INDArray[] inputGrads = gradients.getSecond();
         final INDArray[] leveragedGrads = new INDArray[inputGrads.length];
-        for(int i = 0; i < inputGrads.length; i++) {
+        for (int i = 0; i < inputGrads.length; i++) {
             leveragedGrads[i] = workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, inputGrads[i]);
         }
 
@@ -197,50 +147,9 @@ public class OdeVertex extends BaseGraphVertex {
         }
     }
 
-    private LayerWorkspaceMgr createWorkspaceMgr(final LayerWorkspaceMgr outerWsMgr) {
-
-        if(outerWsMgr == LayerWorkspaceMgr.noWorkspacesImmutable()) {
-            return outerWsMgr;
-        }
-
-        return new ComputationGraph(graph.getConfiguration()) {
-            LayerWorkspaceMgr spyWsConfigs() {
-                // A little bit too many methods to comfortably decorate. Try to copy config instead
-                final LayerWorkspaceMgr.Builder wsBuilder = LayerWorkspaceMgr.builder();
-                for (ArrayType type : ArrayType.values()) {
-                    if (outerWsMgr.hasConfiguration(type)) {
-                        wsBuilder.with(type, outerWsMgr.getWorkspaceName(type), outerWsMgr.getConfiguration(type));
-                    }
-                }
-
-                final LayerWorkspaceMgr wsMgr = wsBuilder
-                        .with(ArrayType.FF_WORKING_MEM, "WS_ODE_VERTEX_LAYER_WORKING_MEM", WS_LAYER_WORKING_MEM_CONFIG)
-                        .with(ArrayType.BP_WORKING_MEM, "WS_ODE_VERTEX_LAYER_WORKING_MEM", WS_LAYER_WORKING_MEM_CONFIG)
-                        .with(ArrayType.RNN_FF_LOOP_WORKING_MEM, "WS_ODE_VERTEX_RNN_LOOP_WORKING_MEM", WS_RNN_LOOP_WORKING_MEM_CONFIG)
-                        .with(ArrayType.RNN_BP_LOOP_WORKING_MEM, "WS_ODE_VERTEX_RNN_LOOP_WORKING_MEM", WS_RNN_LOOP_WORKING_MEM_CONFIG)
-                        .with(ArrayType.ACTIVATIONS, "WS_ODE_VERTEX_ALL_LAYERS_ACT", WS_ALL_LAYERS_ACT_CONFIG)
-                        .with(ArrayType.ACTIVATION_GRAD, "WS_ODE_VERTEX_ALL_LAYERS_GRAD", WS_ALL_LAYERS_ACT_CONFIG)
-                        .build();
-                wsMgr.setHelperWorkspacePointers(outerWsMgr.getHelperWorkspacePointers());
-                return wsMgr;
-            }
-        }.spyWsConfigs();
-
-    }
-
     @Override
     public void setBackpropGradientsViewArray(INDArray backpropGradientsViewArray) {
-        graph.setBackpropGradientsViewArray(backpropGradientsViewArray);
-
-        // What is this about? Some layers "abuse" the gradient to perform updates of parameters for which no gradient
-        // is calculated and this screws up the ODE solvers idea of what the solution is. The following layers are known
-        // to do this:
-        //
-        // * BatchNormalization: The global variance and mean are just the (sliding) average of the batch dittos.
-        //                       However, in order to support distributed training the updates are performed by adding
-        //                       the change to the state as a gradient even through it is not really.
-
-        parameters.realGradients = new GradientViewSelectionFromBlacklisted().create(graph);
+        odeHelper.setBackpropGradientsViewArray(backpropGradientsViewArray);
     }
 
     @Override
