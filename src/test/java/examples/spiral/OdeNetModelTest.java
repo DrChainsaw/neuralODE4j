@@ -41,10 +41,10 @@ public class OdeNetModelTest {
         final ComputationGraph model = factory.create(nrofTimeSteps, 0.3, nrofLatentDims);
         model.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 2, nrofTimeSteps}), Nd4j.linspace(0, 3, nrofTimeSteps)},
-                new INDArray[]{Nd4j.randn(new long[] {batchSize, 2, nrofTimeSteps}), Nd4j.randn(batchSize, nrofLatentDims)}));
+                new INDArray[]{Nd4j.randn(new long[] {batchSize, 2, nrofTimeSteps}), Nd4j.zeros(batchSize, nrofLatentDims)}));
         model.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 2, nrofTimeSteps}), Nd4j.linspace(0, 3, nrofTimeSteps)},
-                new INDArray[]{Nd4j.randn(new long[] {batchSize, 2, nrofTimeSteps}), Nd4j.randn(batchSize, nrofLatentDims)}));
+                new INDArray[]{Nd4j.randn(new long[] {batchSize, 2, nrofTimeSteps}), Nd4j.zeros(batchSize, nrofLatentDims)}));
     }
 
     /**

@@ -28,7 +28,7 @@ public class AddKLDLabel implements MultiDataSetPreProcessor {
     public void preProcess(MultiDataSet multiDataSet) {
         final INDArray label0 = multiDataSet.getLabels(0);
         final long batchSize = label0.size(0);
-        final INDArray kldLabel = Nd4j.ones(batchSize, 2*nrofLatentDims);
+        final INDArray kldLabel = Nd4j.zeros(batchSize, 2*nrofLatentDims);
         kldLabel.put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(0, nrofLatentDims)}, mean);
         kldLabel.put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(nrofLatentDims, 2*nrofLatentDims)}, var);
         multiDataSet.setLabels(new INDArray[]{label0, kldLabel});

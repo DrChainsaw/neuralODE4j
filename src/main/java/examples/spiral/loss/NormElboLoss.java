@@ -68,7 +68,8 @@ public class NormElboLoss implements ILossFunction{
         }
 
         final INDArray predGrad = reconstructionLoss.computeGradient(labels, predMeanVar.getFirst(), activationFn, mask);
-        final INDArray meanAndLogvarGrad = kldLoss.computeGradient(labels, Nd4j.hstack(predMeanVar.getSecond(), predMeanVar.getThird()), activationFn, mask);
+        final INDArray meanAndLogVar =  Nd4j.hstack(predMeanVar.getSecond(), predMeanVar.getThird());
+        final INDArray meanAndLogvarGrad = kldLoss.computeGradient(Nd4j.zeros(meanAndLogVar.shape()), meanAndLogVar, activationFn, mask);
         final INDArray meanGrad = meanAndLogvarGrad.get(NDArrayIndex.all(),
                 NDArrayIndex.interval(0, predMeanVar.getSecond().size(1)));
         final INDArray logvarGrad = meanAndLogvarGrad.get(NDArrayIndex.all(),
@@ -92,9 +93,10 @@ public class NormElboLoss implements ILossFunction{
             Preconditions.throwEx("Labels and preOutput must have equal shapes: got shapes %s vs %s", labels.shape(), predMeanVar.getFirst().shape());
         }
         final INDArray reconstructionScore = reconstructionLoss.computeScoreArray(labels, predMeanVar.getFirst(), activationFn, mask);
+        final INDArray meanAndLogVar =  Nd4j.hstack(predMeanVar.getSecond(), predMeanVar.getThird());
         final INDArray meanAndLogvarScore = kldLoss.computeScoreArray(
-                labels,
-                Nd4j.hstack(predMeanVar.getSecond(), predMeanVar.getThird()),
+                Nd4j.zeros(meanAndLogVar.shape()),
+                meanAndLogVar,
                 activationFn,
                 mask);
 

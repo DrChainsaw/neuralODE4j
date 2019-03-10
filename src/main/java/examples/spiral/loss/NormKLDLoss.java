@@ -54,6 +54,17 @@ public class NormKLDLoss implements ILossFunction {
 
     private INDArray scoreArray(INDArray labels, INDArray preOutput, IActivation activationFn, INDArray mask) {
 
+        if(labels.amaxNumber().doubleValue() > 0) {
+            // Note that variance is given in log scale
+            // Should be straight forward to implement, but not needed
+            throw new UnsupportedOperationException("Targets other than N(0,1) not supported! Got: " + labels);
+        }
+
+        if(mask != null) {
+            // Should be straight forward to implement, but not needed
+            throw new UnsupportedOperationException("Masking not supported");
+        }
+
         final INDArray output = activationFn.getActivation(preOutput.dup(), true);
 
         long size = output.size(1) / 2;

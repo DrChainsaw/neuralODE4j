@@ -61,6 +61,11 @@ public class NormLogLikelihoodLoss implements ILossFunction {
 
     private INDArray scoreArray(INDArray labels, INDArray preOutput, IActivation activationFn, INDArray mask) {
 
+        if(mask != null) {
+            // Should be straight forward to implement, but not needed
+            throw new UnsupportedOperationException("Masking not supported");
+        }
+
         final INDArray output = activationFn.getActivation(preOutput.dup(), true);
 
         final int[] sumDims = new int[output.rank()-1];

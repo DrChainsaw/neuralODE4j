@@ -28,15 +28,15 @@ public interface OdeHelperBackward {
     @Data @AllArgsConstructor
     class InputArrays {
 
-        public InputArrays(INDArray[] lastInputs, INDArray lastOutput, INDArray lossGradient, INDArray1DView realGradientView) {
-            this(lastInputs, lastOutput, lossGradient, lossGradient, realGradientView);
-        }
-
         private final INDArray[] lastInputs;
         private final INDArray lastOutput;
         private final INDArray lossGradient;
         private final INDArray lossGradientTime;
         private final INDArray1DView realGradientView;
+
+        public InputArrays(INDArray[] lastInputs, INDArray lastOutput, INDArray lossGradient, INDArray1DView realGradientView) {
+            this(lastInputs, lastOutput, lossGradient, lossGradient, realGradientView);
+        }
     }
 
     /**
