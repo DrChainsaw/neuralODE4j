@@ -41,6 +41,9 @@ class Main {
 
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
+    @Parameter(names = {"-help", "-h"}, description = "Prints help message")
+    private boolean help = false;
+
     @Parameter(names = "-trainBatchSize", description = "Batch size to use for training")
     private int trainBatchSize = 1000;
 
@@ -89,6 +92,11 @@ class Main {
 
         JCommander jCommander = parbuilder.build();
         jCommander.parse(args);
+
+        if(main.help) {
+            jCommander.usage();
+            System.exit(0);
+        }
 
         final ModelFactory factory = modelCommands.get(jCommander.getParsedCommand());
 

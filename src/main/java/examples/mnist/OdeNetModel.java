@@ -1,6 +1,7 @@
 package examples.mnist;
 
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.Parameters;
 import com.beust.jcommander.ParametersDelegate;
 import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.DormandPrince54Solver;
@@ -22,6 +23,7 @@ import static examples.mnist.LayerUtil.*;
  *
  * @author Christian Skarby
  */
+@Parameters(commandDescription = "Configuration for image classification using an ODE block")
 public class OdeNetModel implements ModelFactory {
 
     private static final Logger log = LoggerFactory.getLogger(OdeNetModel.class);
