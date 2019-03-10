@@ -2,6 +2,8 @@ package ode.vertex.impl;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import ode.vertex.impl.gradview.GradientViewSelectionFromBlacklisted;
+import ode.vertex.impl.gradview.INDArray1DView;
 import ode.vertex.impl.helper.backward.OdeHelperBackward;
 import ode.vertex.impl.helper.forward.OdeHelperForward;
 import org.deeplearning4j.nn.api.Layer;
@@ -10,7 +12,6 @@ import org.deeplearning4j.nn.api.TrainingConfig;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.BaseGraphVertex;
-import org.deeplearning4j.nn.params.BatchNormalizationParamInitializer;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -18,9 +19,7 @@ import org.nd4j.linalg.primitives.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -43,17 +42,17 @@ public class OdeVertex extends BaseGraphVertex {
     private static class Parameters {
 
         private INDArray lastOutput; // z(t1) from paper
-        private final NonContiguous1DView realGradients; // Parts of graph.getFlattenedGradients() which are actually gradients
+        private INDArray1DView realGradients; // Parts of graph.getFlattenedGradients() which are actually gradients
 
         private Parameters() {
-            this.realGradients = new NonContiguous1DView();
+
         }
 
         private INDArray lastOutput() {
             return lastOutput;
         }
 
-        private NonContiguous1DView realGradients() {
+        private INDArray1DView realGradients() {
             return realGradients;
         }
 
@@ -241,24 +240,7 @@ public class OdeVertex extends BaseGraphVertex {
         //                       However, in order to support distributed training the updates are performed by adding
         //                       the change to the state as a gradient even through it is not really.
 
-        // Maybe get these from config so user can specify others e.g. for custom layers
-        final List<String> nonGradientParamNames = Arrays.asList(
-                BatchNormalizationParamInitializer.GLOBAL_VAR,
-                BatchNormalizationParamInitializer.GLOBAL_MEAN);
-
-        parameters.realGradients().clear();
-        for (Layer layer : graph.getLayers()) {
-            Map<String, INDArray> gradParams = layer.conf().getLayer().initializer().getGradientsFromFlattened(layer.conf(), layer.getGradientsViewArray());
-            for (Map.Entry<String, INDArray> parNameAndGradView : gradParams.entrySet()) {
-
-                final String parName = parNameAndGradView.getKey();
-                final INDArray grad = parNameAndGradView.getValue();
-
-                if (!nonGradientParamNames.contains(parName)) {
-                    parameters.realGradients().addView(grad);
-                }
-            }
-        }
+        parameters.realGradients = new GradientViewSelectionFromBlacklisted().create(graph);
     }
 
     @Override

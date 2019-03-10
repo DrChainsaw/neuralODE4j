@@ -2,7 +2,7 @@ package ode.vertex.impl.helper.backward;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
-import ode.vertex.impl.NonContiguous1DView;
+import ode.vertex.impl.gradview.INDArray1DView;
 import ode.vertex.impl.helper.NDArrayIndexAccumulator;
 import ode.vertex.impl.helper.forward.ForwardPass;
 import org.deeplearning4j.nn.gradient.DefaultGradient;
@@ -53,7 +53,7 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         // Not sure why this is not same as the above. Pytorch treats them differently in original repo
         final INDArray dL_dzt1_time = input.getLossGradientTime();
         final INDArray zt1 = input.getLastOutput();
-        final NonContiguous1DView realParamGrads = input.getRealGradientView();
+        final INDArray1DView realParamGrads = input.getRealGradientView();
 
         final FirstOrderEquation forward = new ForwardPass(graph,
                 miscPars.getWsMgr(),

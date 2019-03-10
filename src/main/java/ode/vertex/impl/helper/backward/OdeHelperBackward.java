@@ -2,7 +2,7 @@ package ode.vertex.impl.helper.backward;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import ode.vertex.impl.NonContiguous1DView;
+import ode.vertex.impl.gradview.INDArray1DView;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
@@ -28,7 +28,7 @@ public interface OdeHelperBackward {
     @Data @AllArgsConstructor
     class InputArrays {
 
-        public InputArrays(INDArray[] lastInputs, INDArray lastOutput, INDArray lossGradient, NonContiguous1DView realGradientView) {
+        public InputArrays(INDArray[] lastInputs, INDArray lastOutput, INDArray lossGradient, INDArray1DView realGradientView) {
             this(lastInputs, lastOutput, lossGradient, lossGradient, realGradientView);
         }
 
@@ -36,7 +36,7 @@ public interface OdeHelperBackward {
         private final INDArray lastOutput;
         private final INDArray lossGradient;
         private final INDArray lossGradientTime;
-        private final NonContiguous1DView realGradientView;
+        private final INDArray1DView realGradientView;
     }
 
     /**

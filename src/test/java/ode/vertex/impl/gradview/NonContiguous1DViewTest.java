@@ -1,4 +1,4 @@
-package ode.vertex.impl;
+package ode.vertex.impl.gradview;
 
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -47,6 +47,23 @@ public class NonContiguous1DViewTest {
 
         final INDArray expected = Nd4j.create(new double[] {0,1,2,6,7,8});
         assertEquals("Viewed array was not changed!", expected, actual);
+    }
+
+    /**
+     * Test that length is correct
+     */
+    @Test
+    public void length() {
+        final long length0 = 13;
+        final long length1 = 7;
+
+        final INDArray toView = Nd4j.ones(length0+length1+10).reshape(length0+length1+10);
+
+        final NonContiguous1DView view = new NonContiguous1DView();
+        view.addView(toView.get(NDArrayIndex.interval(0, length0)));
+        view.addView(toView.get(NDArrayIndex.interval(length0, length0+length1)));
+
+        assertEquals("Incorrect length!", length0 + length1, view.length());
     }
 
     /**

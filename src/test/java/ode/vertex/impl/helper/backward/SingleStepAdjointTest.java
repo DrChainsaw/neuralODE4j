@@ -2,7 +2,7 @@ package ode.vertex.impl.helper.backward;
 
 import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
-import ode.vertex.impl.NonContiguous1DView;
+import ode.vertex.impl.gradview.NonContiguous1DView;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;

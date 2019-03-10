@@ -213,7 +213,7 @@ class Main {
 
 
     private void run() {
-        for (int i = 0; i < 2000; i++) {
+        for (int i = model.getIterationCount(); i < 2000; i++) {
             model.fit(iterator.next());
 
             if (i > 0 && i % 100 == 0) {

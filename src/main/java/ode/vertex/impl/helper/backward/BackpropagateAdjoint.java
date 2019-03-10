@@ -2,7 +2,7 @@ package ode.vertex.impl.helper.backward;
 
 import lombok.AllArgsConstructor;
 import ode.solve.api.FirstOrderEquation;
-import ode.vertex.impl.NonContiguous1DView;
+import ode.vertex.impl.gradview.INDArray1DView;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
@@ -41,7 +41,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
     @AllArgsConstructor
     public static class GraphInfo {
         private final ComputationGraph graph;
-        private final NonContiguous1DView realGradients;
+        private final INDArray1DView realGradients;
         private final LayerWorkspaceMgr workspaceMgr;
         private final boolean truncatedBPTT;
     }

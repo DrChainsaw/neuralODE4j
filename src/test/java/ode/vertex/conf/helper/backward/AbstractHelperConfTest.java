@@ -1,6 +1,6 @@
 package ode.vertex.conf.helper.backward;
 
-import ode.vertex.impl.NonContiguous1DView;
+import ode.vertex.impl.gradview.NonContiguous1DView;
 import ode.vertex.impl.helper.backward.OdeHelperBackward.InputArrays;
 import ode.vertex.impl.helper.backward.OdeHelperBackward.MiscPar;
 import org.deeplearning4j.nn.conf.ConvolutionMode;

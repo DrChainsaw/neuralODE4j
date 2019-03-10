@@ -4,7 +4,7 @@ import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
 import ode.vertex.conf.OdeVertex;
 import ode.vertex.conf.helper.InputStep;
-import ode.vertex.impl.NonContiguous1DView;
+import ode.vertex.impl.gradview.NonContiguous1DView;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
