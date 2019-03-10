@@ -96,7 +96,7 @@ public class OdeGraphHelper {
 
         getFunction().getConfiguration().setIterationCount(0);
         final INDArray output = odeHelperForward.solve(getFunction(), innerWorkspaceMgr, inputs);
-        log.info("Nrof func eval forward " + getFunction().getIterationCount());
+        log.debug("Nrof func eval forward " + getFunction().getIterationCount());
 
         odeFunction.setLastOutput(output.detach());
 
@@ -123,7 +123,7 @@ public class OdeGraphHelper {
 
         getFunction().getConfiguration().setIterationCount(0);
         final Pair<Gradient, INDArray[]> gradients = odeHelperBackward.solve(getFunction(), inputArrays, miscParNewWsMgr);
-        log.info("Nrof func eval backward " + getFunction().getIterationCount());
+        log.debug("Nrof func eval backward " + getFunction().getIterationCount());
 
         return gradients;
     }

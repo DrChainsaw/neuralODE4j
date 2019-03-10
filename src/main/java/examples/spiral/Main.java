@@ -9,7 +9,6 @@ import examples.spiral.listener.SpiralPlot;
 import org.apache.commons.io.filefilter.OrFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.deeplearning4j.nn.graph.ComputationGraph;
-import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.deeplearning4j.util.ModelSerializer;
@@ -47,6 +46,9 @@ class Main {
     @Parameter(names = "-nrofTimeStepsForTraining", description = "Number of time steps per spiral when training")
     private int nrofTimeStepsForTraining = 100;
 
+    @Parameter(names = "-nrofTrainIters", description = "Number of iterations for training")
+    private int nrofTrainIters = 2000;
+
     @Parameter(names = "-noiseSigma", description = "How much noise to add to generated spirals")
     private double noiseSigma = 0.3;
 
@@ -60,7 +62,6 @@ class Main {
     private ComputationGraph model;
     private String modelName;
     private SpiralIterator iterator;
-    private Plot<Double, Double> reconstructionPlot;
 
     public static void main(String[] args) throws IOException {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
@@ -143,12 +144,6 @@ class Main {
     private void init(ComputationGraph model, String modelName, MultiDataSetPreProcessor preProcessor) {
         this.model = model;
         this.modelName = modelName;
-        long cnt = 0;
-        for (GraphVertex vertex : model.getVertices()) {
-            log.trace("vertex: " + vertex.getVertexName() + " nrof params: " + vertex.numParams());
-            cnt += vertex.numParams();
-        }
-        log.info("Nrof parameters in model: " + cnt);
 
         final SpiralFactory spiralFactory = new SpiralFactory(0, 0.3, 0, 6 * Math.PI, 1000);
         this.iterator = new SpiralIterator(
@@ -165,7 +160,6 @@ class Main {
         setupOutputPlotting(savedir);
 
         final Plot<Integer, Double> meanAndLogVarPlot = new RealTimePlot<>("Mean and log(var) of z", savedir.getAbsolutePath());
-        this.reconstructionPlot = new RealTimePlot<>("Reconstruction", savedir.getAbsolutePath());
 
         model.addListeners(
                 new ZeroGrad(),
@@ -173,7 +167,7 @@ class Main {
                 new CheckpointListener.Builder(savedir.getAbsolutePath())
                         .keepLast(1)
                         .deleteExisting(true)
-                        .saveEveryNIterations(20)
+                        .saveEveryNIterations(20, true)
                         .build(),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
@@ -214,20 +208,22 @@ class Main {
 
 
     private void run() {
-        for (int i = model.getIterationCount(); i < 2000; i++) {
+        final Plot<Double, Double> samplePlot = new RealTimePlot<>("Reconstruction " + 1, saveDir(modelName).getAbsolutePath());
+        for (int i = model.getIterationCount(); i < nrofTrainIters; i++) {
             model.fit(iterator.next());
 
             if (i > 0 && i % 100 == 0) {
-                drawSample();
+                drawSample(0, samplePlot);
             }
         }
-        drawSample();
+
+        for(int i = 1; i < 5; i++) {
+            drawSample(i, new RealTimePlot<>("Reconstruction " + i, saveDir(modelName).getAbsolutePath()));
+        }
     }
 
-    private void drawSample() {
+    private void drawSample(final int toSample, Plot<Double, Double> reconstructionPlot) {
         log.info("Sampling model...");
-
-        final int toSample = 0;
 
         final SpiralIterator.SpiralSet spiralSet = iterator.getCurrent();
         final MultiDataSet mds = spiralSet.getMds();
@@ -235,7 +231,7 @@ class Main {
 
         final TimeVae timeVae = new TimeVae(model, "z0", "latentOde");
 
-        final INDArray z0 = timeVae.encode(sample).tensorAlongDimension(0, 1).reshape(1, nrofLatentDims);
+        final INDArray z0 = timeVae.encode(sample).tensorAlongDimension(toSample, 1).reshape(1, nrofLatentDims);
 
         final INDArray tsPos = Nd4j.linspace(0, 2 * Math.PI, 2000);
         final INDArray tsNeg = Nd4j.linspace(0, -Math.PI, 2000);
@@ -246,16 +242,17 @@ class Main {
         final INDArray xsPos = timeVae.decode(zsPos);
         final INDArray xsNeg = flip(timeVae.decode(zsNeg));
 
+        reconstructionPlot.createSeries("True trajectory");
+        reconstructionPlot.clearData("True trajectory");
         final SpiralPlot spiralPlot = new SpiralPlot(reconstructionPlot);
         spiralPlot.createSeries("Sampled data");
         spiralPlot.createSeries("Learned trajectory (t > 0)");
         spiralPlot.createSeries("Learned trajectory (t < 0)");
 
-        reconstructionPlot.clearData("True trajectory");
         spiralSet.getSpirals().get(toSample).plotBase(reconstructionPlot, "True trajectory");
         spiralPlot.plot("Sampled data", sample, toSample);
-        spiralPlot.plot("Learned trajectory (t > 0)", xsPos, toSample);
-        spiralPlot.plot("Learned trajectory (t < 0)", xsNeg, toSample);
+        spiralPlot.plot("Learned trajectory (t > 0)", xsPos, 0); // Always dim 0 as shape is [1, 2, 2000]
+        spiralPlot.plot("Learned trajectory (t < 0)", xsNeg, 0); // Always dim 0 as shape is [1, 2, 2000]
     }
 
     private INDArray flip(INDArray array) {
