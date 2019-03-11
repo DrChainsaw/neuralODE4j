@@ -62,16 +62,9 @@ public class NonContiguous1DView implements INDArray1DView {
         return length;
     }
 
-    /**
-     * Clears the view
-     */
-    public void clear() {
-        view.clear();
-        length = 0;
-    }
-
     @Override
     public String toString() {
         return view.toString();
     }
+
 }

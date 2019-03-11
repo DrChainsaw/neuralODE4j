@@ -21,7 +21,8 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * Implementation of an ODE block.
+ * Implementation of an ODE block. Contains a {@link ComputationGraph} which defines the learnable function
+ * {@code f = z(t)/dt} for which the {@code OdeVertex} will output an estimate of z(t) for given t(s).
  *
  * @author Christian Skarby
  */

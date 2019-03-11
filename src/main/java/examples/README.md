@@ -1,6 +1,6 @@
 # Examples
 
-# MNIST
+## MNIST
 
 Reimplementation of the MNIST experiment from the [original repo](https://github.com/rtqichen/torchdiffeq/tree/master/examples).
 
@@ -32,7 +32,7 @@ Performance (approx):
 
 Model "stem" is using the resnet option with zero resblocks after the downsampling layers. This indicates that neither the residual blocks nor the ode block seems to be contributing much to the performance in this simple experiment. Performance also varies about +-0.1% for each run of the same model.
 
-# Spiral demo
+## Spiral demo
 
 Reimplementation of the spiral generation experiment from the [original repo](https://github.com/rtqichen/torchdiffeq/tree/master/examples).
 

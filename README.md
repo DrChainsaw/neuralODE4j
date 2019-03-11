@@ -26,8 +26,15 @@ cd neuralODE4j
 mvn install
 ```
 
-The class OdeVertex is used to add an arbitrary graph of Layers or GraphVertices as an ODE block in a ComputationGraph. OdeVertex
-extends GraphVertex and can be added to a GraphBuilder just as any other vertex. It has a similar API as GraphBuilder for adding 
+I will try to create a maven artifact whenever I find the time for it. Please file an issue for this if you are interested.
+
+Implementations of the MNIST and spiral generation toy experiments from the paper can be found under examples [[link]](./src/main/java/examples)
+
+## Usage
+
+The class [OdeVertex](./src/main/java/ode/vertex/conf/OdeVertex.java) is used to add an arbitrary graph of Layers or GraphVertices as an ODE block in a ComputationGraph. 
+
+OdeVertex extends GraphVertex and can be added to a GraphBuilder just as any other vertex. It has a similar API as GraphBuilder for adding 
 layers and vertices. 
 
 Example:
@@ -62,6 +69,9 @@ Example:
                 .build());
 ```
 
+An inherent constraint to the method itself is that the output of the last layer in the OdeVertex must have the exact same 
+shape as the input to the first layer in the OdeVertex. 
+
 Method for solving the ODE can be configured:
 
 ```
@@ -82,7 +92,28 @@ new OdeVertex.Builder(...)
     .build(), "someLayer", "time");  
 ```
 
-Implementations of the MNIST and spiral generation toy experiments from the paper can be found under examples [[link]](./src/main/java/examples)
+Note that time must be a vector meaning it can not be minibatched; It has to be the same for all examples in a minibatch. This is because the implementation uses the minibatching approach from 
+section 6 in the paper where all examples in the batch are concatenated into one state. If one time sequence per example is desired this 
+can be achieved by using minibatch size of 1.  
+
+Gradients for loss with respect to time will be output from the vertex when using time as input. I have not seen these being used for 
+anything in the original implementation though.
+
+In either case, the minimum number of elements in the time vector is two. If more than two elements are given the output of the OdeVertex 
+will have one more dimension compared to the input (corresponding to each time element). 
+
+For example, if the graph in the OdeVertex is the function `f = dz/dt` and `time` is the sequence `t0, t1, ..., tN-1` 
+with `N > 2` then the output of the OdeVertex will be (an approximation of) the sequence `z(t0), z(t1), ... , z(tN-1)`. 
+Note that `z(t0)` is also the input to the OdeVertex.
+ 
+The exact mapping to dimensions depends on the shape of the input. Currently the following mappings are supported:
+
+| Input shape               | Output shape                  |
+|---------------------------|-------------------------------| 
+| `B x H (dense/FF)`        | `B x H x t  (RNN)`            |
+| `B x H x T(RNN)`          | `Not supported`               |
+| `B x D x H x W (conv 2D) `| `B x D x H x W x t  (conv 3D)`|
+
 
 ### Prerequisites
 
@@ -99,7 +130,7 @@ All contributions are welcome. Head over to the issues page and either add a new
 
 ## Versioning
 
-TBD. I will try to add a maven artifact whenever I find the time for it.
+TBD.
 
 ## Authors
 

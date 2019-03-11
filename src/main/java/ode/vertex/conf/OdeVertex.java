@@ -23,7 +23,18 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 /**
- * Configuration of an ODE block.
+ * Configuration of an ODE block. Contains a {@link ComputationGraphConfiguration} which defines the structure of the
+ * learnable function {@code f = z(t)/dt} for which the {@link ode.vertex.impl.OdeVertex} will output an estimate
+ * of z(t) for given t(s).
+ * <br><br>
+ * A {@link Builder} is used to add {@link Layer}s and {@link GraphVertex GraphVertices} to the internal
+ * {@link ComputationGraphConfiguration}.
+ * <br><br>
+ * Note that the internal {@code ComputationGraphConfiguration} is <i>not</i> the same as the "outer"
+ * {@code ComputationGraphConfiguration} which houses the OdeVertex itself. This understandably confusing composition
+ * comes from the fact that the {@code OdeVertex} needs to operate on an arbitrary graph and I didn't want to
+ * reimplement all the routing for doing this. If dl4j had something similar to pytorch's nn.Module I would rather have
+ * used that.
  *
  * @author Christian Skarby
  */
