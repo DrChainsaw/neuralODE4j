@@ -93,7 +93,7 @@ class Main {
         JCommander jCommander = parbuilder.build();
         jCommander.parse(args);
 
-        if(main.help) {
+        if (main.help) {
             jCommander.usage();
             System.exit(0);
         }
@@ -137,7 +137,7 @@ class Main {
     }
 
     private static File[] ageOrder(File[] files) {
-        if(files == null) {
+        if (files == null) {
             return null;
         }
 
@@ -208,7 +208,7 @@ class Main {
 
 
     private void run() {
-        final Plot<Double, Double> samplePlot = new RealTimePlot<>("Reconstruction " + 1, saveDir(modelName).getAbsolutePath());
+        final Plot<Double, Double> samplePlot = new RealTimePlot<>("Reconstruction", saveDir(modelName).getAbsolutePath());
         for (int i = model.getIterationCount(); i < nrofTrainIters; i++) {
             model.fit(iterator.next());
 
@@ -241,13 +241,14 @@ class Main {
 
         final INDArray xsPos = timeVae.decode(zsPos);
         final INDArray xsNeg = flip(timeVae.decode(zsNeg));
+        Nd4j.getExecutioner().commit();
 
-        reconstructionPlot.createSeries("True trajectory");
-        reconstructionPlot.clearData("True trajectory");
         final SpiralPlot spiralPlot = new SpiralPlot(reconstructionPlot);
-        spiralPlot.createSeries("Sampled data");
-        spiralPlot.createSeries("Learned trajectory (t > 0)");
-        spiralPlot.createSeries("Learned trajectory (t < 0)");
+
+        reconstructionPlot.clearData("True trajectory");
+        reconstructionPlot.clearData("Sampled data");
+        reconstructionPlot.clearData("Learned trajectory (t > 0)");
+        reconstructionPlot.clearData("Learned trajectory (t < 0)");
 
         spiralSet.getSpirals().get(toSample).plotBase(reconstructionPlot, "True trajectory");
         spiralPlot.plot("Sampled data", sample, toSample);

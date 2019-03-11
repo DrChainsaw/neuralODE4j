@@ -1,5 +1,6 @@
 package examples.spiral;
 
+import examples.spiral.listener.SpiralPlot;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -33,9 +34,7 @@ class SpiralFactory {
         }
 
         void plot(Plot<Double, Double> plot, String series) {
-            for(int i = 0; i < trajectory.size(1); i++) {
-                plot.plotData(series, trajectory.getDouble(0, i), trajectory.getDouble(1, i));
-            }
+            new SpiralPlot(plot).plot(series, trajectory);
         }
 
         void plotBase(Plot<Double, Double> plot, String series) {
