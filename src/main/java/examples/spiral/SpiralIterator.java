@@ -32,7 +32,7 @@ public class SpiralIterator implements MultiDataSetIterator {
     }
 
     /**
-     * Generates {@link MultiDataSet}s from a {@link SpiralFactory}.
+     * Generates {@link SpiralSet}s from a {@link SpiralFactory}.
      */
     public static class Generator {
         private final SpiralFactory factory;
@@ -49,18 +49,24 @@ public class SpiralIterator implements MultiDataSetIterator {
         }
 
         SpiralSet generate(int batchSize) {
+
+            final double sampoffset = nrofSamples / (double)factory.baseNrofSamples();
+            final double samprange = 1 - 2*sampoffset;
+
             final List<SpiralFactory.Spiral> spirals = factory.sample(
                     batchSize,
                     nrofSamples,
-                    () -> Math.min(0.9, Math.max(0.1,rng.nextDouble())),
+                    () -> sampoffset + rng.nextDouble()*samprange,
                     rng::nextBoolean);
 
             final INDArray trajFeature = Nd4j.createUninitialized(new long[] {batchSize, 2, nrofSamples});
             final INDArray tFeature = spirals.get(0).theta().dup();
             tFeature.subi(tFeature.minNumber());
+
             for(int i = 0; i < batchSize; i++) {
                 trajFeature.tensorAlongDimension(i, 1,2).assign(spirals.get(i).trajectory());
             }
+
             trajFeature.addi(Nd4j.randn(trajFeature.shape(), Nd4j.getRandomFactory().getNewRandomInstance(rng.nextLong())).muli(noiseSigma));
             return new SpiralSet(new org.nd4j.linalg.dataset.MultiDataSet(
                     new INDArray[] {trajFeature, tFeature},

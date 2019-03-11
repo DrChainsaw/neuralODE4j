@@ -86,8 +86,13 @@ class SpiralFactory {
         baseCc.plot(plot, label);
     }
 
+    long baseNrofSamples() {
+        return baseCw.theta.length();
+    }
+
     List<Spiral> sample(long nrofSpirals, long nrofSamples, DoubleSupplier startSupplier, BooleanSupplier cwOrCc) {
         final List<Spiral> output = new ArrayList<>();
+
         for(int i = 0; i < nrofSpirals; i++) {
             Spiral base = cwOrCc.getAsBoolean() ? baseCw : baseCc;
             long start = (long)Math.min(base.theta.length() - nrofSamples, startSupplier.getAsDouble() * base.theta.length());
@@ -98,13 +103,14 @@ class SpiralFactory {
                     base.theta.get(NDArrayIndex.all(), NDArrayIndex.interval(start, start + nrofSamples)))
             );
         }
+
         return output;
     }
 
 
     public static void main(String[] args) {
         final Plot<Double, Double> plot = new RealTimePlot<>("Spiral test", "");
-        final SpiralFactory factory = new SpiralFactory(0, 0.3, 0, 6 * Math.PI, 1000);
+        final SpiralFactory factory = new SpiralFactory(0, 0.3, 0, 6 * Math.PI, 500);
 
         final String cw = "ClockWise";
         final String cc = "CounterClock";

@@ -158,7 +158,7 @@ class Main {
         this.model = model;
         this.modelName = modelName;
 
-        final SpiralFactory spiralFactory = new SpiralFactory(0, 0.3, 0, 6 * Math.PI, 1000);
+        final SpiralFactory spiralFactory = new SpiralFactory(0, 0.3, 0, 6 * Math.PI, 500);
         this.iterator = new SpiralIterator(
                 new SpiralIterator.Generator(spiralFactory, noiseSigma, nrofTimeStepsForTraining, new Random(666)),
                 trainBatchSize);
