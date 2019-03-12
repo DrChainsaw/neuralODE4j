@@ -20,7 +20,7 @@ class ReconstructionLossBlock implements Block {
 
 
     @Override
-    public String add(String decoderOutput, ComputationGraphConfiguration.GraphBuilder builder) {
+    public String add(ComputationGraphConfiguration.GraphBuilder builder, String... decoderOutput) {
         builder.addLayer("reconstruction", new RnnLossLayer.Builder()
                 .activation(new ActivationIdentity())
                 .lossFunction(loss)

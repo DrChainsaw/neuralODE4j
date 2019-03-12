@@ -29,7 +29,7 @@ public class RnnEncoderBlock implements Block {
     }
 
     @Override
-    public String add(String prev, ComputationGraphConfiguration.GraphBuilder builder) {
+    public String add(ComputationGraphConfiguration.GraphBuilder builder, String... prev) {
         builder
                 .addVertex("reverse", new ReverseTimeSeriesVertex(), prev)
                 .addLayer("encRnn", new SimpleRnn.Builder()

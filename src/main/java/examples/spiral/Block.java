@@ -11,8 +11,9 @@ interface Block {
 
     /**
      * Add layers to given builder
-     * @param builder
+     * @param builder Builder to add layers to
+     * @param prev previous layers
      * @return name of last layer added
      */
-    String add(String prev, ComputationGraphConfiguration.GraphBuilder builder);
+    String add(ComputationGraphConfiguration.GraphBuilder builder, String... prev);
 }

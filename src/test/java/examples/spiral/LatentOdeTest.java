@@ -6,6 +6,7 @@ import examples.spiral.listener.SpiralPlot;
 import examples.spiral.loss.NormLogLikelihoodLoss;
 import ode.solve.conf.DormandPrince54Solver;
 import ode.solve.conf.SolverConfig;
+import ode.vertex.conf.helper.InputStep;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -55,15 +56,16 @@ public class LatentOdeTest {
 
 
         next = new LatentOdeBlock(
-                "time",
-                true,
+                20,
                 nrofLatentDims,
-                new DormandPrince54Solver(new SolverConfig(1e-12, 1e-6, 1e-20, 1e2)))
-                .add(next, builder);
+                new InputStep(
+                        new DormandPrince54Solver(new SolverConfig(1e-12, 1e-6, 1e-20, 1e2)),
+                1, true))
+                .add(builder, next, "time");
 
-        next = new DenseDecoderBlock(20, 2).add(next, builder);
+        next = new DenseDecoderBlock(20, 2).add(builder, next);
         final String decoded = next;
-        next = new ReconstructionLossBlock(new NormLogLikelihoodLoss(0.3)).add(next, builder);
+        next = new ReconstructionLossBlock(new NormLogLikelihoodLoss(0.3)).add(builder, next);
         builder.setOutputs(next);
 
         final ComputationGraph graph = new ComputationGraph(builder.build());

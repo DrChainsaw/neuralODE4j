@@ -1,6 +1,7 @@
 package examples.spiral.listener;
 
 import org.deeplearning4j.nn.api.Model;
+import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.optimize.api.BaseTrainingListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import util.plot.Plot;
@@ -17,8 +18,6 @@ public class PlotActivations extends BaseTrainingListener {
     private final Plot<Integer, Double> plot;
     private final String activationName;
 
-    private int iteration = 0;
-
     public PlotActivations(Plot<Integer, Double> plot, String activationName, long nrofElemsToPlot) {
         this.plot = plot;
         this.activationName = activationName;
@@ -30,12 +29,14 @@ public class PlotActivations extends BaseTrainingListener {
 
     @Override
     public void onForwardPass(Model model, Map<String, INDArray> activations) {
+        final int iteration = ((ComputationGraph)model).getIterationCount();
+
         final INDArray toPlot = activations.get(activationName).mean(0);
 
         for(int i = 0; i < toPlot.length(); i++) {
             plot.plotData(getPlotLabel(i), iteration, toPlot.getDouble(i));
         }
-        iteration++;
+
     }
 
     private String getPlotLabel(int i) {

@@ -23,7 +23,7 @@ public class DenseDecoderBlock implements Block {
     }
 
     @Override
-    public String add(String prev, ComputationGraphConfiguration.GraphBuilder builder) {
+    public String add(ComputationGraphConfiguration.GraphBuilder builder, String... prev) {
         builder
                 .addLayer("dec0", new DenseLayer.Builder()
                         .nOut(nrofHidden)

@@ -71,6 +71,8 @@ class Main {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         root.setLevel(Level.INFO);
 
+        Nd4j.factory().setOrder('f');
+
         final Main main = parseArgs(args);
 
         main.addListeners();
@@ -105,8 +107,10 @@ class Main {
 
     @NotNull
     private static Main createModel(Main main, ModelFactory factory) throws IOException {
+        final File saveDir = saveDir(factory.name());
+
         if (!main.newModel) {
-            final File saveDir = saveDir(factory.name());
+
             final File[] files = ageOrder(saveDir.listFiles((FilenameFilter)
                     new OrFileFilter(
                             new WildcardFileFilter("checkpoint_*_ComputationGraph.zip"),
@@ -126,6 +130,14 @@ class Main {
                         factory.name(),
                         factory.getPreProcessor(main.nrofLatentDims)); // TODO: Get this from model instead
                 return main;
+            }
+        }
+
+        // Else, delete all saved plots and initialize a new model
+        final File[] plotFiles = saveDir.listFiles((FilenameFilter) new WildcardFileFilter("*.plt"));
+        if(plotFiles != null) {
+            for (File plotFile : plotFiles) {
+                Files.delete(Paths.get(plotFile.getAbsolutePath()));
             }
         }
 
@@ -227,11 +239,11 @@ class Main {
 
         final SpiralIterator.SpiralSet spiralSet = iterator.getCurrent();
         final MultiDataSet mds = spiralSet.getMds();
-        final INDArray sample = mds.getFeatures(0);
+        final INDArray sample = mds.getFeatures(0).tensorAlongDimension(toSample, 1, 2).reshape(1, 2, nrofTimeStepsForTraining);
 
         final TimeVae timeVae = new TimeVae(model, "z0", "latentOde");
 
-        final INDArray z0 = timeVae.encode(sample).tensorAlongDimension(toSample, 1).reshape(1, nrofLatentDims);
+        final INDArray z0 = timeVae.encode(sample);
 
         final INDArray tsPos = Nd4j.linspace(0, 2 * Math.PI, 2000);
         final INDArray tsNeg = Nd4j.linspace(0, -Math.PI, 2000);
@@ -240,8 +252,7 @@ class Main {
         final INDArray zsNeg = timeVae.timeDependency(z0, tsNeg);
 
         final INDArray xsPos = timeVae.decode(zsPos);
-        final INDArray xsNeg = flip(timeVae.decode(zsNeg));
-        Nd4j.getExecutioner().commit();
+        final INDArray xsNeg = timeVae.decode(zsNeg);
 
         final SpiralPlot spiralPlot = new SpiralPlot(reconstructionPlot);
 
@@ -251,14 +262,9 @@ class Main {
         reconstructionPlot.clearData("Learned trajectory (t < 0)");
 
         spiralSet.getSpirals().get(toSample).plotBase(reconstructionPlot, "True trajectory");
-        spiralPlot.plot("Sampled data", sample, toSample);
+        spiralPlot.plot("Sampled data", sample, 0); // Always dim 0 as shape is [1, 2, nrofTimeSteps]
         spiralPlot.plot("Learned trajectory (t > 0)", xsPos, 0); // Always dim 0 as shape is [1, 2, 2000]
         spiralPlot.plot("Learned trajectory (t < 0)", xsNeg, 0); // Always dim 0 as shape is [1, 2, 2000]
-    }
 
-    private INDArray flip(INDArray array) {
-        final INDArray x = array.tensorAlongDimension(0, 2);
-        final INDArray y = array.tensorAlongDimension(1, 2);
-        return Nd4j.vstack(Nd4j.reverse(x.reshape(x.length())), Nd4j.reverse(y.reshape(y.length()))).reshape(array.shape());
     }
 }

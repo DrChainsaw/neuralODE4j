@@ -91,9 +91,15 @@ public class InterpolatingStepListenerTest {
      * @param args not used
      */
     public static void main(String[] args) {
-        final SpiralPlot plot = new SpiralPlot(new RealTimePlot<>("Multi step vs interpol", ""));
-        final Pair<INDArray, INDArray> multiAndInterp = solveCircleMultiInterpol(true);
 
+        final Pair<INDArray, INDArray> multiAndInterpBackwards = solveCircleMultiInterpol(true);
+        plotSolutions(new SpiralPlot(new RealTimePlot<>("Multi step vs interpol bwd", "")), multiAndInterpBackwards);
+
+        final Pair<INDArray, INDArray> multiAndInterpForwards = solveCircleMultiInterpol(false);
+        plotSolutions(new SpiralPlot(new RealTimePlot<>("Multi step vs interpol fwd" , "")), multiAndInterpForwards);
+    }
+
+    private static void plotSolutions(SpiralPlot plot, Pair<INDArray, INDArray> multiAndInterp) {
         final INDArray multi = multiAndInterp.getFirst();
         final INDArray interp = multiAndInterp.getSecond();
 

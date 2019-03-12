@@ -13,7 +13,7 @@ import org.nd4j.linalg.activations.impl.ActivationIdentity;
 class KldLossBlock implements Block {
 
     @Override
-    public String add(String  qz0_meanAndLogvar, ComputationGraphConfiguration.GraphBuilder builder) {
+    public String add(ComputationGraphConfiguration.GraphBuilder builder, String... qz0_meanAndLogvar) {
         builder.addLayer("kld", new LossLayer.Builder()
                 .activation(new ActivationIdentity())
                 .lossFunction(new NormKLDLoss())
