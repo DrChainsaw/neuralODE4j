@@ -1,6 +1,7 @@
 package examples.spiral;
 
 import lombok.Data;
+import org.deeplearning4j.util.TimeSeriesUtils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
@@ -69,7 +70,9 @@ public class SpiralIterator implements MultiDataSetIterator {
 
             trajFeature.addi(Nd4j.randn(trajFeature.shape(), Nd4j.getRandomFactory().getNewRandomInstance(rng.nextLong())).muli(noiseSigma));
             return new SpiralSet(new org.nd4j.linalg.dataset.MultiDataSet(
-                    new INDArray[] {trajFeature, tFeature},
+                    // Reverse trajectory so last time step of RNN represents first element of trajectory.
+                    // Unsure if really needed since RNN anyways mangles whole sequence into something (mean and var)
+                    new INDArray[] {TimeSeriesUtils.reverseTimeSeries(trajFeature), tFeature},
                     new INDArray[] {trajFeature}),
                     Collections.unmodifiableList(spirals));
         }
