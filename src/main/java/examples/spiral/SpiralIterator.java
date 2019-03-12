@@ -1,6 +1,7 @@
 package examples.spiral;
 
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.deeplearning4j.util.TimeSeriesUtils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
@@ -26,7 +27,7 @@ public class SpiralIterator implements MultiDataSetIterator {
     private SpiralSet current;
     private MultiDataSetPreProcessor preProcessor = new CompositeMultiDataSetPreProcessor(); // Noop
 
-    @Data
+    @Getter @AllArgsConstructor
     public static class SpiralSet {
         private final MultiDataSet mds;
         private final List<SpiralFactory.Spiral> spirals;

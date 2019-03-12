@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static junit.framework.TestCase.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
 
 /**
@@ -30,10 +31,6 @@ public class OdeNetModelTest {
     @Test
     public void fit() {
         final OdeNetModel factory = new OdeNetModel();
-        JCommander.newBuilder()
-                .addObject(factory)
-                .build()
-                .parse();
 
         final long nrofTimeSteps = 10;
         final long batchSize = 3;
@@ -83,5 +80,37 @@ public class OdeNetModelTest {
             new File(fileName).delete();
             Files.delete(baseDir);
         }
+    }
+
+    /**
+     * Smoke test to assert that an {@link OdeNetModel} can be represented as a {@link TimeVae} without there being
+     * any exceptions.
+     */
+    @Test
+    public void asTimeVae()  {
+        final long batchSize = 5;
+        final long nrofTimeSteps = 17;
+        final long nrofLatentDims = 6;
+
+        final TimeVae timeVae = new TimeVae(
+                new OdeNetModel().create(nrofTimeSteps, 0.3, nrofLatentDims),
+                "z0",
+                "latentOde");
+
+        final INDArray inputTraj = Nd4j.randn(new long[]{batchSize, 2, nrofTimeSteps});
+        final INDArray time =  Nd4j.linspace(0, 3, nrofTimeSteps);
+
+        final INDArray z0 = timeVae.encode(inputTraj);
+
+        assertArrayEquals("Incorrect shape of z0!", new long[] {batchSize, nrofLatentDims}, z0.shape());
+
+        final INDArray zt = timeVae.timeDependency(z0, time);
+
+        assertArrayEquals("Incorrect shape of zt!", new long[] {batchSize, nrofLatentDims, nrofTimeSteps}, zt.shape());
+
+        final INDArray decoded = timeVae.decode(zt);
+
+        assertArrayEquals("Incorrect shape of decoded output!", new long[] {batchSize, 2, nrofTimeSteps}, decoded.shape());
+
     }
 }

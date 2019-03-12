@@ -1,7 +1,7 @@
 package ode.vertex.impl.helper.backward;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import ode.vertex.impl.gradview.INDArray1DView;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -25,7 +25,7 @@ public interface OdeHelperBackward {
      * {@link ComputationGraph}s gradient view array. Notable exceptions (i.e. things labeled as gradients which are not
      * are running mean and variance of Batch Normalization layers.
      */
-    @Data @AllArgsConstructor
+    @Getter @AllArgsConstructor
     class InputArrays {
 
         private final INDArray[] lastInputs;
@@ -42,7 +42,7 @@ public interface OdeHelperBackward {
     /**
      * Misc parameters needed to jump through the hoops of doing back propagation
      */
-    @Data
+    @Getter @AllArgsConstructor
     class MiscPar {
         private final boolean useTruncatedBackPropTroughTime;
         private final LayerWorkspaceMgr wsMgr;

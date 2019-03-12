@@ -3,6 +3,7 @@ package examples.spiral;
 import examples.spiral.loss.NormElboLoss;
 import examples.spiral.loss.NormKLDLoss;
 import examples.spiral.loss.NormLogLikelihoodLoss;
+import examples.spiral.loss.PredMeanLogvar2D;
 import org.junit.Test;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -28,20 +29,7 @@ public class NormElboLossTest {
     @Test
     public void computeGradientAndScore() {
         final double sigma = 0.3;
-        final NormElboLoss loss = new NormElboLoss(new NormLogLikelihoodLoss(sigma), new NormKLDLoss(), new NormElboLoss.ExtractQzZero() {
-            @Override
-            public Triple<INDArray, INDArray, INDArray> extractPredMeanLogvar(INDArray result) {
-                return new Triple<>(
-                        result.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 5)),
-                        result.get(NDArrayIndex.all(), NDArrayIndex.point(5)),
-                        result.get(NDArrayIndex.all(), NDArrayIndex.point(6)));
-            }
-
-            @Override
-            public INDArray combinePredMeanLogvarEpsilon(INDArray predEps, INDArray meanEps, INDArray logvarEps) {
-                return Nd4j.hstack(predEps, meanEps, logvarEps);
-            }
-        });
+        final NormElboLoss loss = new NormElboLoss(new NormLogLikelihoodLoss(sigma), new NormKLDLoss(), new PredMeanLogvar2D(1));
 
         final INDArray labels = Nd4j.create(new double[][]{
                 {-1, 2, -3, 4, -5},
