@@ -8,7 +8,6 @@ import ode.solve.conf.DormandPrince54Solver;
 import ode.solve.conf.SolverConfig;
 import ode.vertex.conf.helper.InputStep;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
-import org.deeplearning4j.nn.conf.graph.SubsetVertex;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
 
@@ -54,14 +53,7 @@ class OdeNetModel implements ModelFactory {
         final String qz0_meanAndLogvar = next;
 
         // Add sampling of a gaussian with the encoded mean and log(var)
-        final String qz0_mean = "qz0_mean";
-        final String qz0_logvar = "qz0_logvar";
-        builder
-                //First split prev into mean and log(var) since this is how SampleGaussianVertex assumes input is structured
-                .addVertex(qz0_mean, new SubsetVertex(0, (int) nrofLatentDims - 1), next)
-                .addVertex(qz0_logvar, new SubsetVertex((int) nrofLatentDims, (int) nrofLatentDims * 2 - 1), next)
-                .addVertex("z0", new SampleGaussianVertex(667), qz0_mean, qz0_logvar);
-        //.addVertex("z0", new ElementWiseVertex(ElementWiseVertex.Op.Add), qz0_mean, qz0_logvar);
+        builder.addVertex("z0", new SampleGaussianVertex(667), next);
 
         next = ode.add(builder, "z0", "time"); // Position of "time" is dependent on argument in constructor to InputStep above
         next = dec.add(builder, next);

@@ -29,6 +29,7 @@ class LatentOdeBlock implements Block {
     public String add(ComputationGraphConfiguration.GraphBuilder builder, String... prev) {
         builder.addVertex("latentOde", new OdeVertex.Builder("fc1",
                 new DenseLayer.Builder()
+                        .nIn(nrofLatentDims) // Fail fast if previous layer is incorrect
                         .nOut(nrofHidden)
                         .activation(new ActivationELU()).build())
                 .addLayer("fc2", new DenseLayer.Builder()

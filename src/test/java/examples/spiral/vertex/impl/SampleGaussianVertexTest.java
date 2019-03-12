@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.nd4j.linalg.primitives.Pair;
 
@@ -57,15 +58,18 @@ public class SampleGaussianVertexTest {
         final GraphVertex vertex = graph.getVertex("z");
 
         // Need to do a forward pass to set inputs and calculate epsilon
-        vertex.setInput(0, Nd4j.arange(nrofLatentDims), LayerWorkspaceMgr.noWorkspaces());
-        vertex.setInput(1,  Nd4j.arange(nrofLatentDims, 2*nrofLatentDims), LayerWorkspaceMgr.noWorkspaces());
+        vertex.setInput(0, Nd4j.arange(2*nrofLatentDims), LayerWorkspaceMgr.noWorkspaces());
         vertex.doForward(true, LayerWorkspaceMgr.noWorkspaces());
 
         vertex.setEpsilon(Nd4j.create(new double[] {1.3, 2.4}));
         final Pair<Gradient, INDArray[]> result = graph.getVertex("z").doBackward(false, LayerWorkspaceMgr.noWorkspaces());
 
-        assertEquals("Incorrect gradient for mean!", vertex.getEpsilon(), result.getSecond()[0]);
-        assertEquals("Incorrect gradient for log var!", Nd4j.create(new double[] {2.6503,   23.1255}), result.getSecond()[1]);
+        assertEquals("Incorrect gradient for mean!",
+                vertex.getEpsilon(),
+                result.getSecond()[0].get(NDArrayIndex.all(), NDArrayIndex.interval(0, nrofLatentDims)));
+        assertEquals("Incorrect gradient for log var!",
+                Nd4j.create(new double[] {2.6503,   23.1255}),
+                result.getSecond()[0].get(NDArrayIndex.all(), NDArrayIndex.interval(nrofLatentDims, 2*nrofLatentDims)));
     }
 
     @NotNull
@@ -74,7 +78,7 @@ public class SampleGaussianVertexTest {
                 .graphBuilder()
                 .addInputs("mean", "logVar")
                 .setInputTypes(InputType.feedForward(nrofLatentDims), InputType.feedForward(nrofLatentDims))
-                .addVertex("z", vertex, "mean", "logVar")
+                .addVertex("z", vertex, "mean", "logVar") // Note: MergeVertex will be added
                 .setOutputs("output")
                 .addLayer("output", new LossLayer.Builder().build(), "z")
                 .build());

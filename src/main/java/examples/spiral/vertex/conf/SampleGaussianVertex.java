@@ -12,8 +12,6 @@ import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
 
-import java.util.Arrays;
-
 
 /**
  * Takes samples from a Gaussian process where mean and std are inputs, typically from a set of layers acting as a
@@ -56,12 +54,12 @@ public class SampleGaussianVertex extends GraphVertex {
 
     @Override
     public int minVertexInputs() {
-        return 2;
+        return 1;
     }
 
     @Override
     public int maxVertexInputs() {
-        return 2;
+        return 1;
     }
 
     @Override
@@ -72,23 +70,21 @@ public class SampleGaussianVertex extends GraphVertex {
 
     @Override
     public InputType getOutputType(int layerIndex, InputType... vertexInputs) throws InvalidInputTypeException {
-        if(vertexInputs.length != 2) {
-            throw new IllegalArgumentException(this.getClass().getSimpleName() +" must have two inputs!");
+        if(vertexInputs.length != 1) {
+            throw new IllegalArgumentException(this.getClass().getSimpleName() +" must have one inputs!");
         }
 
         for(InputType inputType: vertexInputs) {
             if(inputType.getType() != InputType.Type.FF) {
                 throw new IllegalArgumentException(this.getClass().getSimpleName() + " only supports feedforward input! Got: " + inputType);
             }
+
+            if(inputType.arrayElementsPerExample() % 2 != 0) {
+                throw new IllegalArgumentException(this.getClass().getSimpleName() + " input size must be even! Got: " + inputType);
+            }
         }
 
-        if(vertexInputs[0].getShape(false)[0] != vertexInputs[1].getShape(false)[0]) {
-            throw new IllegalArgumentException(this.getClass().getSimpleName() + " must have same size on both inputs! Was: " +
-                    Arrays.toString(vertexInputs[0].getShape(false)) + " and " +
-                    Arrays.toString(vertexInputs[1].getShape(false)));
-        }
-
-        return vertexInputs[0];
+        return InputType.feedForward(vertexInputs[0].arrayElementsPerExample() / 2);
     }
 
     @Override

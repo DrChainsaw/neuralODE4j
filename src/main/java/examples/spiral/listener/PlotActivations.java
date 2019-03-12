@@ -17,14 +17,12 @@ public class PlotActivations extends BaseTrainingListener {
 
     private final Plot<Integer, Double> plot;
     private final String activationName;
+    private final String[] labels;
 
-    public PlotActivations(Plot<Integer, Double> plot, String activationName, long nrofElemsToPlot) {
+    public PlotActivations(Plot<Integer, Double> plot, String activationName, String[] labels) {
         this.plot = plot;
         this.activationName = activationName;
-
-        for (int i = 0; i < nrofElemsToPlot; i++) {
-            plot.createSeries(getPlotLabel(i));
-        }
+        this.labels = labels;
     }
 
     @Override
@@ -33,13 +31,9 @@ public class PlotActivations extends BaseTrainingListener {
 
         final INDArray toPlot = activations.get(activationName).mean(0);
 
+        int labelSwitch = (int)toPlot.length() / labels.length;
         for(int i = 0; i < toPlot.length(); i++) {
-            plot.plotData(getPlotLabel(i), iteration, toPlot.getDouble(i));
+            plot.plotData( labels[i / labelSwitch] + "_" + (i % labelSwitch), iteration, toPlot.getDouble(i));
         }
-
-    }
-
-    private String getPlotLabel(int i) {
-        return activationName + "_" + i;
     }
 }

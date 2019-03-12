@@ -199,8 +199,7 @@ class Main {
                     throw new IllegalStateException("NaN score!");
                 }),
                 // Get names from model factory instead?
-                new PlotActivations(meanAndLogVarPlot, "qz0_mean", nrofLatentDims),
-                new PlotActivations(meanAndLogVarPlot, "qz0_logvar", nrofLatentDims),
+                new PlotActivations(meanAndLogVarPlot, "encOut", new String[] {"qz0Mean" , "qz0Log(Var)"}),
                 new IterationHook(saveEveryNIterations, () -> {
                     try {
                         meanAndLogVarPlot.storePlotData();

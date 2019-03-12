@@ -8,6 +8,8 @@ import org.deeplearning4j.nn.graph.vertex.BaseGraphVertex;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.nd4j.linalg.primitives.Pair;
 
@@ -36,8 +38,12 @@ public class SampleGaussianVertex extends BaseGraphVertex {
         if (!canDoForward())
             throw new IllegalStateException("Cannot do forward pass: inputs not set");
 
-        final INDArray mean = getInputs()[0];
-        final INDArray logVar = getInputs()[1];
+        final INDArray input = getInputs()[0];
+        final long size = input.size(1) / 2;
+
+        // Dup due to dl4j issue #7263
+        INDArray mean = input.get(NDArrayIndex.all(), NDArrayIndex.interval(0, size)).dup();
+        INDArray logVar = input.get(NDArrayIndex.all(), NDArrayIndex.interval(size, 2 * size)).dup();
 
         if(training) {
             lastEps = workspaceMgr.leverageTo(ArrayType.INPUT, rng.get(mean.shape()));
@@ -53,15 +59,18 @@ public class SampleGaussianVertex extends BaseGraphVertex {
         if (!canDoBackward())
             throw new IllegalStateException("Cannot do backward pass: errors not set");
 
-        final INDArray epsMean = workspaceMgr.dup(ArrayType.ACTIVATION_GRAD, getEpsilon());
+        final INDArray epsMean = getEpsilon();
+
+        final INDArray input = getInputs()[0];
+        final long size = input.size(1) / 2;
 
         // dL/dz * dz/dlogVar = epsilon * d/dlogVar(lastEps * e^0.5logVar + mean) = epsilon*0.5*lastEps*e^0.5logVar
-        final INDArray logVar = getInputs()[1];
+        final INDArray logVar = input.get(NDArrayIndex.all(), NDArrayIndex.interval(size, 2 * size)).dup();
         final INDArray epsLogVar = getEpsilon().mul(lastEps).mul(0.5).muli(Transforms.exp(logVar.mul(0.5)));
 
+        final INDArray combinedEps =  Nd4j.hstack(epsMean, epsLogVar);
         return new Pair<>(null, new INDArray[]{
-                epsMean,
-                workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, epsLogVar)
+                workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, combinedEps)
         });
     }
 
