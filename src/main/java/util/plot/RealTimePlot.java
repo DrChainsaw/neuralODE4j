@@ -12,13 +12,11 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import lombok.Data;
 import org.jetbrains.annotations.NotNull;
-import org.knowm.xchart.SwingWrapper;
-import org.knowm.xchart.XYChart;
-import org.knowm.xchart.XYChartBuilder;
-import org.knowm.xchart.XYSeries;
+import org.knowm.xchart.*;
 import org.knowm.xchart.style.Styler;
 import org.knowm.xchart.style.Styler.ChartTheme;
 
+import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
@@ -207,6 +205,24 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
         DataXY<X, Y> data = plotSeries.get(label);
         if (data != null) {
             new ObjectMapper().writeValue(new File(createFileName(label)), data);
+        }
+    }
+
+    @Override
+    public void savePicture(String suffix) throws IOException {
+        // Bleh! How to do this for real?
+        final IOException[] eMaybe = new IOException[1];
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                BitmapEncoder.saveBitmap(xyChart, plotDir + File.separator + title + suffix, BitmapEncoder.BitmapFormat.PNG);
+            } catch (IOException e) {
+                eMaybe[0] = e;
+            }
+        });
+
+        if(eMaybe[0] != null) {
+            throw eMaybe[0];
         }
     }
 

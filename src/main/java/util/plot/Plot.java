@@ -70,6 +70,11 @@ public interface Plot<X extends Number, Y extends Number> {
     void storePlotData(String label) throws IOException;
 
     /**
+     * Save plot as a picture
+     */
+    void savePicture(String suffix) throws IOException;
+
+    /**
      * Convenience method for debugging purposes. Plots the given data vs list indexes
      * @param data
      * @param <Y>

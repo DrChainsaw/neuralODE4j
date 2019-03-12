@@ -218,18 +218,21 @@ class Main {
     }
 
 
-    private void run() {
+    private void run() throws IOException {
         final Plot<Double, Double> samplePlot = new RealTimePlot<>("Reconstruction", saveDir(modelName).getAbsolutePath());
         for (int i = model.getIterationCount(); i < nrofTrainIters; i++) {
             model.fit(iterator.next());
 
             if (i > 0 && i % 100 == 0) {
                 drawSample(0, samplePlot);
+                samplePlot.savePicture("_iter" + model.getIterationCount());
             }
         }
 
         for (int i = 1; i < 5; i++) {
-            drawSample(i, new RealTimePlot<>("Reconstruction " + i, saveDir(modelName).getAbsolutePath()));
+            final Plot<Double, Double> plot = new RealTimePlot<>("Reconstruction " + i, saveDir(modelName).getAbsolutePath());
+            drawSample(i, plot);
+            plot.savePicture("");
         }
     }
 
@@ -264,6 +267,5 @@ class Main {
         spiralPlot.plot("Sampled data", sample, 0); // Always dim 0 as shape is [1, 2, nrofTimeSteps]
         spiralPlot.plot("Learned trajectory (t > 0)", xsPos, 0); // Always dim 0 as shape is [1, 2, 2000]
         spiralPlot.plot("Learned trajectory (t < 0)", xsNeg, 0); // Always dim 0 as shape is [1, 2, 2000]
-
     }
 }
