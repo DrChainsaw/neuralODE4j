@@ -72,7 +72,7 @@ class OdeNetModel implements ModelFactory {
 
     @Override
     public String name() {
-        return "odenet";
+        return "odenet_enc" + encoderNrofHidden + "_lat" + latentNrofHidden + "_dec" + decoderNrofHidden;
     }
 
 

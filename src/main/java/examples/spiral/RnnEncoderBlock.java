@@ -1,5 +1,6 @@
 package examples.spiral;
 
+import examples.spiral.vertex.conf.ConcatRnn;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.graph.rnn.LastTimeStepVertex;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
@@ -34,7 +35,7 @@ public class RnnEncoderBlock implements Block {
     public String add(ComputationGraphConfiguration.GraphBuilder builder, String... prev) {
         builder
                 // Note that reverse time series input is assumed. ReverseTimeSeriesVertex adds significant processing time
-                .addLayer("encRnn", new SimpleRnn.Builder()
+                .addLayer("encRnn", new ConcatRnn.Builder()
                         .nOut(nrofHidden)
                         .activation(new ActivationTanH())
                         .build(),prev)
