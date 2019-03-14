@@ -41,7 +41,7 @@ public class LatentOdeTest {
     @Test
     public void fitLine() {
         final long nrofTimeSteps = 10;
-        final long nrofLatentDims = 20;
+        final long nrofLatentDims = 2;
 
         final ComputationGraphConfiguration.GraphBuilder builder = new NeuralNetConfiguration.Builder()
                 .seed(666)

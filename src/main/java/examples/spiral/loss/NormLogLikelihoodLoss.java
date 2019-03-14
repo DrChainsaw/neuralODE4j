@@ -98,6 +98,7 @@ public class NormLogLikelihoodLoss implements ILossFunction {
 
     private INDArray logNormalPdfGradient(INDArray labels, INDArray output) {
         // 2 from derivative of exponent and -0.5 constant cancel out
-        return output.sub(labels).divi(Math.exp(logNoiseVar));
+        // Original implementation uses mean of loss along batch dimension
+        return output.sub(labels).muli(Math.exp(-logNoiseVar)).divi(output.size(0));
     }
 }
