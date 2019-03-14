@@ -7,6 +7,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.nd4j.linalg.ops.transforms.Transforms;
 import org.nd4j.linalg.primitives.Pair;
 
 import java.util.Arrays;
@@ -30,10 +31,17 @@ public class MultiStepAdjoint implements OdeHelperBackward {
         if(time.length() <= 2 || !time.isVector()) {
             throw new IllegalArgumentException("time must be a vector of size > 2! Was of shape: " + Arrays.toString(time.shape())+ "!");
         }
+        assertSorted(time);
+    }
+
+    private void assertSorted(INDArray time) {
+        int signDiffSum = 0;
         for(int i = 0; i < time.length()-1; i++) {
-            if(time.getDouble(i) > time.getDouble(i+1)) {
-                throw new IllegalArgumentException("Time must be in ascending order! Got: " + time);
-            }
+            signDiffSum += Transforms.sign(time.getScalar(i).sub(time.getScalar(i+1))).getDouble(0);
+        }
+
+        if(Math.abs(signDiffSum)+1 != time.length()) {
+           throw new IllegalArgumentException("Time must be in ascending or descending order! Got: " + time);
         }
     }
 

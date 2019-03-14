@@ -61,8 +61,8 @@ public class SpiralIterator implements MultiDataSetIterator {
                     () -> sampoffset + rng.nextDouble()*samprange,
                     rng::nextBoolean);
 
-            final INDArray trajFeature = Nd4j.createUninitialized(new long[] {batchSize, 2, nrofSamples});
-            final INDArray tFeature = spirals.get(0).theta().dup();
+            final INDArray trajFeature = Nd4j.createUninitialized( new long[] {batchSize, 2, nrofSamples}, 'f');
+            final INDArray tFeature = spirals.get(0).theta().dup('f');
             tFeature.subi(tFeature.minNumber());
 
             for(int i = 0; i < batchSize; i++) {

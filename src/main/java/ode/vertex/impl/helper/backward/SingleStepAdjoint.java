@@ -33,10 +33,6 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         if (time.length() != 2 && time.rank() != 1) {
             throw new IllegalArgumentException("time must be a vector with two elements! Was of shape: " + Arrays.toString(time.shape()) + "!");
         }
-
-        if(time.getDouble(0) > time.getDouble(1)) {
-            throw new IllegalArgumentException("Time must be in increasing order! Got: " + time);
-        }
     }
 
     @Override
