@@ -24,6 +24,7 @@ import util.listen.training.NanScoreWatcher;
 import util.listen.training.ZeroGrad;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
+import util.random.SeededRandomFactory;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -72,16 +73,20 @@ class Main {
         root.setLevel(Level.INFO);
 
         Nd4j.factory().setOrder('f');
-
-        final Main main = parseArgs(args);
-
-        main.addListeners();
-        main.run();
-    }
-
-    private static Main parseArgs(String[] args) throws IOException {
+        SeededRandomFactory.setNd4jSeed(0);
 
         final Main main = new Main();
+        final ModelFactory factory = parseArgs(main, args);
+
+        if(!main.help) {
+            createModel(main, factory);
+            main.addListeners();
+            main.run();
+        }
+    }
+
+    private static ModelFactory parseArgs(Main main, String[] args) throws IOException {
+
         final Map<String, ModelFactory> modelCommands = new HashMap<>();
         modelCommands.put("odenet", new OdeNetModel());
 
@@ -95,14 +100,7 @@ class Main {
         JCommander jCommander = parbuilder.build();
         jCommander.parse(args);
 
-        if (main.help) {
-            jCommander.usage();
-            System.exit(0);
-        }
-
-        final ModelFactory factory = modelCommands.get(jCommander.getParsedCommand());
-
-        return createModel(main, factory);
+        return modelCommands.get(jCommander.getParsedCommand());
     }
 
     @NotNull

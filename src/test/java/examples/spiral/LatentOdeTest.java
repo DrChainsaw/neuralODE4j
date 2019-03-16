@@ -41,7 +41,9 @@ public class LatentOdeTest {
     @Test
     public void fitLine() {
         final long nrofTimeSteps = 10;
-        final long nrofLatentDims = 2;
+        final long nrofLatentDims = 4;
+
+        //SeededRandomFactory.setNd4jSeed(0);
 
         final ComputationGraphConfiguration.GraphBuilder builder = new NeuralNetConfiguration.Builder()
                 .seed(666)

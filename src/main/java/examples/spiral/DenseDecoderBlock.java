@@ -4,6 +4,7 @@ import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.preprocessor.FeedForwardToRnnPreProcessor;
+import org.deeplearning4j.nn.conf.preprocessor.RnnToFeedForwardPreProcessor;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
 
@@ -25,15 +26,22 @@ public class DenseDecoderBlock implements Block {
     @Override
     public String add(ComputationGraphConfiguration.GraphBuilder builder, String... prev) {
         builder
+                .addVertex("preProc",
+                        new PreprocessorVertex(
+                                new ScaleUpLossGradPreProcessor(
+                                        new RnnToFeedForwardPreProcessor())), prev)
                 .addLayer("dec0", new DenseLayer.Builder()
                         .nOut(nrofHidden)
                         .activation(new ActivationReLU())
-                        .build(), prev)
+                        .build(), "preProc")
                 .addLayer("dec1", new DenseLayer.Builder()
                         .nOut(nrofOutputs)
                         .activation(new ActivationIdentity())
                         .build(), "dec0")
-                .addVertex("decodedOutput", new PreprocessorVertex(new FeedForwardToRnnPreProcessor()), "dec1");
+                .addVertex("decodedOutput",
+                        new PreprocessorVertex(
+                                new ScaleDownLossGradPreProcessor(2, new FeedForwardToRnnPreProcessor())),
+                        "dec1");
 
         return "decodedOutput";
     }

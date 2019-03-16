@@ -52,6 +52,8 @@ public class NormLogLikelihoodLossTest {
         final Pair<Double, INDArray> out = new NormLogLikelihoodLoss(0.3)
                 .computeGradientAndScore(traj, traj.add(eps), new ActivationIdentity(), null, true);
 
+
+        out.getSecond().divi(3); // Dl4j scales gradients with mini batch size centrally in BaseMultiLayerUpdater
         assertEquals("Incorrect loss!", 1229.4709, out.getFirst(), 1e-4);
 
         for (int i = 0; i < expectedGrad.length; i++) {

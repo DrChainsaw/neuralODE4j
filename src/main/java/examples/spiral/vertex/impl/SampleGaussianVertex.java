@@ -38,7 +38,7 @@ public class SampleGaussianVertex extends BaseGraphVertex {
         if (!canDoForward())
             throw new IllegalStateException("Cannot do forward pass: inputs not set");
 
-        final INDArray input = getInputs()[0];
+        final INDArray input = getInputs()[0].dup();
         final long size = input.size(1) / 2;
 
         // Dup due to dl4j issue #7263
@@ -61,12 +61,12 @@ public class SampleGaussianVertex extends BaseGraphVertex {
 
         final INDArray epsMean = getEpsilon();
 
-        final INDArray input = getInputs()[0];
+        final INDArray input = getInputs()[0].dup();
         final long size = input.size(1) / 2;
 
         // dL/dz * dz/dlogVar = epsilon * d/dlogVar(lastEps * e^0.5logVar + mean) = epsilon*0.5*lastEps*e^0.5logVar
         final INDArray logVar = input.get(NDArrayIndex.all(), NDArrayIndex.interval(size, 2 * size)).dup();
-        final INDArray epsLogVar = getEpsilon().mul(lastEps).mul(0.5).muli(Transforms.exp(logVar.mul(0.5)));
+        final INDArray epsLogVar = getEpsilon().dup().mul(lastEps).mul(0.5).muli(Transforms.exp(logVar.mul(0.5)));
 
         final INDArray combinedEps =  Nd4j.hstack(epsMean, epsLogVar);
         return new Pair<>(null, new INDArray[]{

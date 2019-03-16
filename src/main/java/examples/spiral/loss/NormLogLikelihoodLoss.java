@@ -98,7 +98,8 @@ public class NormLogLikelihoodLoss implements ILossFunction {
 
     private INDArray logNormalPdfGradient(INDArray labels, INDArray output) {
         // 2 from derivative of exponent and -0.5 constant cancel out
-        // Original implementation uses mean of loss along batch dimension
-        return output.sub(labels).muli(Math.exp(-logNoiseVar)).divi(output.size(0));
+        // Original implementation uses mean of loss along batch dimension. Dl4j does however divide gradients by minibatch
+        // in BaseMultiLayerUpdater
+        return output.sub(labels).muli(Math.exp(-logNoiseVar));
     }
 }
