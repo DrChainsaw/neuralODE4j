@@ -45,13 +45,12 @@ public class SampleGaussianVertex extends BaseGraphVertex {
         INDArray mean = input.get(NDArrayIndex.all(), NDArrayIndex.interval(0, size)).dup();
         INDArray logVar = input.get(NDArrayIndex.all(), NDArrayIndex.interval(size, 2 * size)).dup();
 
-        if(training) {
-            lastEps = workspaceMgr.leverageTo(ArrayType.INPUT, rng.get(mean.shape()));
-        } else {
-            lastEps = rng.get(mean.shape());
+        lastEps = rng.get(mean.shape()).mul(Transforms.exp(logVar.mul(0.5)));
+        if (training) {
+            lastEps = workspaceMgr.leverageTo(ArrayType.INPUT, lastEps);
         }
 
-        return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, lastEps.mul(Transforms.exp(logVar.mul(0.5))).addi(mean));
+        return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, lastEps.add(mean));
     }
 
     @Override
@@ -65,10 +64,9 @@ public class SampleGaussianVertex extends BaseGraphVertex {
         final long size = input.size(1) / 2;
 
         // dL/dz * dz/dlogVar = epsilon * d/dlogVar(lastEps * e^0.5logVar + mean) = epsilon*0.5*lastEps*e^0.5logVar
-        final INDArray logVar = input.get(NDArrayIndex.all(), NDArrayIndex.interval(size, 2 * size)).dup();
-        final INDArray epsLogVar = getEpsilon().dup().mul(lastEps).mul(0.5).muli(Transforms.exp(logVar.mul(0.5)));
+        final INDArray epsLogVar = getEpsilon().dup().mul(lastEps).mul(0.5);
 
-        final INDArray combinedEps =  Nd4j.hstack(epsMean, epsLogVar);
+        final INDArray combinedEps = Nd4j.hstack(epsMean, epsLogVar);
         return new Pair<>(null, new INDArray[]{
                 workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, combinedEps)
         });

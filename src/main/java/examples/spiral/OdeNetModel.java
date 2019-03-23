@@ -10,6 +10,8 @@ import ode.vertex.conf.helper.InputStep;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
+import org.nd4j.linalg.factory.Nd4j;
+import util.BiasInit;
 
 /**
  * Model used for spiral generation using neural ODE. Equivalent to model used in
@@ -46,14 +48,14 @@ class OdeNetModel implements ModelFactory {
         final Block outReconstruction = new ReconstructionLossBlock(new NormLogLikelihoodLoss(noiseSigma));
         final Block outKld = new KldLossBlock();
 
-        final GraphBuilder builder = LayerUtil.initGraphBuilder(666, nrofSamples);
+        final GraphBuilder builder = LayerUtil.initGraphBuilder(Nd4j.getRandom().nextLong(), nrofSamples);
         builder.addInputs("spiral", "time");
 
         String next = enc.add(builder, "spiral");
         final String qz0_meanAndLogvar = next;
 
         // Add sampling of a gaussian with the encoded mean and log(var)
-        builder.addVertex("z0", new SampleGaussianVertex(667), next);
+        builder.addVertex("z0", new SampleGaussianVertex(Nd4j.getRandom().nextLong()), next);
 
         next = ode.add(builder, "z0", "time"); // Position of "time" is dependent on argument in constructor to InputStep above
         next = dec.add(builder, next);
@@ -67,6 +69,7 @@ class OdeNetModel implements ModelFactory {
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
 
+        BiasInit.initBiases(graph);
         return graph;
     }
 

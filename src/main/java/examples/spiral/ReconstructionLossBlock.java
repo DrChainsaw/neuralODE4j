@@ -2,6 +2,7 @@ package examples.spiral;
 
 import examples.spiral.vertex.conf.LossLayerTransparent;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
+import org.deeplearning4j.nn.conf.layers.RnnLossLayer;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.lossfunctions.ILossFunction;
 
@@ -21,7 +22,7 @@ class ReconstructionLossBlock implements Block {
 
     @Override
     public String add(ComputationGraphConfiguration.GraphBuilder builder, String... decoderOutput) {
-        builder.addLayer("reconstruction", new LossLayerTransparent.Builder()
+        builder.addLayer("reconstruction", new RnnLossLayer.Builder()
                 .activation(new ActivationIdentity())
                 .lossFunction(loss)
                 .build(), decoderOutput);

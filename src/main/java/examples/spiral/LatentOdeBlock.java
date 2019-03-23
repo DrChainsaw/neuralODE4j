@@ -4,6 +4,7 @@ import ode.vertex.conf.OdeVertex;
 import ode.vertex.conf.helper.OdeHelper;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
+import org.deeplearning4j.nn.weights.WeightInit;
 import org.nd4j.linalg.activations.impl.ActivationELU;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 
@@ -27,7 +28,9 @@ class LatentOdeBlock implements Block {
 
     @Override
     public String add(ComputationGraphConfiguration.GraphBuilder builder, String... prev) {
-        builder.addVertex("latentOde", new OdeVertex.Builder("fc1",
+        builder.addVertex("latentOde", new OdeVertex.Builder(
+                builder.getGlobalConfiguration(),
+                "fc1",
                 new DenseLayer.Builder()
                         .nIn(nrofLatentDims) // Fail fast if previous layer is incorrect
                         .nOut(nrofHidden)

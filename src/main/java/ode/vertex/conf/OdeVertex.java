@@ -21,6 +21,7 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
+import util.BiasInit;
 
 /**
  * Configuration of an ODE block. Contains a {@link ComputationGraphConfiguration} which defines the structure of the
@@ -126,6 +127,7 @@ public class OdeVertex extends GraphVertex {
 
         if (initializeParams) {
             innerGraph.init(); // This will init parameters using weight initialization
+           // BiasInit.initBiases(innerGraph);
             paramsView.assign(innerGraph.params());
         }
 
@@ -168,14 +170,24 @@ public class OdeVertex extends GraphVertex {
 
     public static class Builder {
 
-        private final ComputationGraphConfiguration.GraphBuilder graphBuilder = new NeuralNetConfiguration.Builder()
-                .graphBuilder();
+        private final ComputationGraphConfiguration.GraphBuilder graphBuilder;
         private final String first;
         private OdeHelperForward odeForwardConf = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2), true);
         private OdeHelperBackward odeBackwardConf = new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.arange(2));
         private GradientViewFactory gradientViewFactory = new GradientViewSelectionFromBlacklisted();
 
+
         public Builder(String name, Layer layer) {
+            graphBuilder = new NeuralNetConfiguration.Builder().graphBuilder();
+            final String inputName = this.toString() + "_input";
+            graphBuilder
+                    .addInputs(inputName)
+                    .addLayer(name, layer, inputName);
+            first = name;
+        }
+
+        public Builder(NeuralNetConfiguration.Builder globalConf, String name, Layer layer) {
+            graphBuilder = globalConf.clone().graphBuilder();
             final String inputName = this.toString() + "_input";
             graphBuilder
                     .addInputs(inputName)

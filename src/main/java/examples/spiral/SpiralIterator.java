@@ -9,6 +9,7 @@ import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
 import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.CompositeMultiDataSetPreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import java.util.Collections;
 import java.util.List;
@@ -62,8 +63,7 @@ public class SpiralIterator implements MultiDataSetIterator {
                     rng::nextBoolean);
 
             final INDArray trajFeature = Nd4j.createUninitialized( new long[] {batchSize, 2, nrofSamples}, 'f');
-            final INDArray tFeature = spirals.get(0).theta().dup('f');
-            tFeature.subi(tFeature.minNumber());
+            final INDArray tFeature = factory.baseTs().get(NDArrayIndex.all(), NDArrayIndex.interval(0, nrofSamples)).dup('f');
 
             for(int i = 0; i < batchSize; i++) {
                 trajFeature.tensorAlongDimension(i, 1,2).assign(spirals.get(i).trajectory());

@@ -72,8 +72,8 @@ class Main {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         root.setLevel(Level.INFO);
 
-        Nd4j.factory().setOrder('f');
-        SeededRandomFactory.setNd4jSeed(0);
+        //Nd4j.factory().setOrder('f');
+        SeededRandomFactory.setNd4jSeed(1);
 
         final Main main = new Main();
         final ModelFactory factory = parseArgs(main, args);
@@ -170,7 +170,7 @@ class Main {
 
         final SpiralFactory spiralFactory = new SpiralFactory(0, 0.3, 0, 6 * Math.PI, 500);
         this.iterator = new SpiralIterator(
-                new SpiralIterator.Generator(spiralFactory, noiseSigma, nrofTimeStepsForTraining, new Random(666)),
+                new SpiralIterator.Generator(spiralFactory, noiseSigma, nrofTimeStepsForTraining, new Random(Nd4j.getRandom().nextLong())),
                 trainBatchSize);
         iterator.setPreProcessor(preProcessor);
     }
@@ -227,7 +227,7 @@ class Main {
             }
         }
 
-        for (int i = 1; i < 5; i++) {
+        for (int i = 0; i < Math.min(trainBatchSize, 8); i++) {
             final Plot<Double, Double> plot = new RealTimePlot<>("Reconstruction " + i, saveDir(modelName).getAbsolutePath());
             drawSample(i, plot);
             plot.savePicture("");

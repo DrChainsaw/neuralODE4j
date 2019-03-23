@@ -23,6 +23,7 @@ class SpiralFactory {
 
     private final Spiral baseCw;
     private final Spiral baseCc;
+    private final INDArray baseTs;
 
     static class Spiral {
         private final INDArray trajectory;
@@ -76,6 +77,7 @@ class SpiralFactory {
         final INDArray rCc = thetaCc.rdiv(50).mul(b).addi(a);
         final INDArray trajectoryCc = Nd4j.vstack(rCc.mul(Transforms.cos(thetaCc)).sub(5), rCc.mul(Transforms.sin(thetaCc)));
         this.baseCc = new Spiral(trajectoryCc, thetaCc);
+        baseTs = thetaCw;
     }
 
     void plotClockWise(Plot<Double, Double> plot, String label) {
@@ -87,7 +89,11 @@ class SpiralFactory {
     }
 
     long baseNrofSamples() {
-        return baseCw.theta.length();
+        return baseTs.length();
+    }
+
+    INDArray baseTs() {
+        return baseTs;
     }
 
     List<Spiral> sample(long nrofSpirals, long nrofSamples, DoubleSupplier startSupplier, BooleanSupplier cwOrCc) {

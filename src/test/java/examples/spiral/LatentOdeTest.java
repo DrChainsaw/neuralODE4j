@@ -11,8 +11,12 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.conf.preprocessor.FeedForwardToRnnPreProcessor;
+import org.deeplearning4j.nn.conf.preprocessor.RnnToFeedForwardPreProcessor;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
+import org.deeplearning4j.nn.weights.WeightInitUtil;
+import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -23,9 +27,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.listen.training.ZeroGrad;
 import util.plot.RealTimePlot;
+import util.random.SeededRandomFactory;
 
 import java.awt.*;
 
+import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
 
 /**
@@ -47,7 +53,7 @@ public class LatentOdeTest {
 
         final ComputationGraphConfiguration.GraphBuilder builder = new NeuralNetConfiguration.Builder()
                 .seed(666)
-                .weightInit(WeightInit.RELU_UNIFORM)
+                .weightInit(WeightInit.UNIFORM)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(new Adam(0.01))
                 .graphBuilder()
@@ -62,7 +68,7 @@ public class LatentOdeTest {
                 nrofLatentDims,
                 new InputStep(
                         new DormandPrince54Solver(new SolverConfig(1e-12, 1e-6, 1e-20, 1e2)),
-                1, true))
+                        1, true))
                 .add(builder, next, "time");
 
         next = new DenseDecoderBlock(20, 2).add(builder, next);
@@ -86,7 +92,7 @@ public class LatentOdeTest {
             root.setLevel(Level.INFO);
 
             final SpiralPlot linePlot = new SpiralPlot(new RealTimePlot<>("Decoded output", ""));
-            linePlot.plot("Ground truth", label.tensorAlongDimension(0, 1,2));
+            linePlot.plot("Ground truth", label.tensorAlongDimension(0, 1, 2));
             graph.addListeners(new PlotDecodedOutput(linePlot, decoded, 0));
         }
 
