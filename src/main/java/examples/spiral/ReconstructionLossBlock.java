@@ -1,13 +1,12 @@
 package examples.spiral;
 
-import examples.spiral.vertex.conf.LossLayerTransparent;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.layers.RnnLossLayer;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.lossfunctions.ILossFunction;
 
 /**
- * Adds a {@link LossLayerTransparent} for the decoder output
+ * Adds a {@link RnnLossLayer} for the decoder output
  *
  * @author Christian Skarby
  */
