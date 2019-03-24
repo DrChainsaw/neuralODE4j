@@ -8,14 +8,18 @@ import org.deeplearning4j.nn.conf.layers.Convolution2D;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.primitives.Pair;
 import org.nd4j.shade.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 
 /**
@@ -31,10 +35,20 @@ public class GradientViewSelectionFromBlacklistedTest {
     @Test
     public void createWithBlacklisted() {
         final ComputationGraph graph = createGraph();
+        final GradientViewFactory factory = new GradientViewSelectionFromBlacklisted();
+        final ParameterGradientView gradView = factory.create(graph);
 
         assertEquals("Incorrect number of parameter gradients in view!",
                 graph.getGradientsViewArray().length() - graph.getLayer("1").getGradientsViewArray().length() / 2,
-                new GradientViewSelectionFromBlacklisted().create(graph).length());
+               gradView.realGradientView().length());
+
+        for(Map.Entry<String, INDArray> nameGradEntry: gradView.allGradientsPerParam().gradientForVariable().entrySet()){
+            final Pair<String, String> vertexAndParName = factory.paramNameMapping().reverseMap(nameGradEntry.getKey());
+            final long[] expectedShape = graph.getLayer(vertexAndParName.getFirst()).getParam(vertexAndParName.getSecond()).shape();
+            assertArrayEquals("Incorrect grad size for " + nameGradEntry.getKey() + "!",
+                    expectedShape,
+                    nameGradEntry.getValue().shape());
+        }
     }
 
     /**
@@ -43,10 +57,20 @@ public class GradientViewSelectionFromBlacklistedTest {
     @Test
     public void createNoBlackList() {
         final ComputationGraph graph = createGraph();
+        final GradientViewFactory factory =new GradientViewSelectionFromBlacklisted(new ArrayList<>());
+        final ParameterGradientView gradView = factory.create(graph);
 
         assertEquals("Incorrect number of parameter gradients in view!",
                 graph.getGradientsViewArray().length(),
-                new GradientViewSelectionFromBlacklisted(new ArrayList<>()).create(graph).length());
+                gradView.realGradientView().length());
+
+        for(Map.Entry<String, INDArray> nameGradEntry: gradView.allGradientsPerParam().gradientForVariable().entrySet()){
+            final Pair<String, String> vertexAndParName = factory.paramNameMapping().reverseMap(nameGradEntry.getKey());
+            final long[] expectedShape = graph.getLayer(vertexAndParName.getFirst()).getParam(vertexAndParName.getSecond()).shape();
+            assertArrayEquals("Incorrect grad size for " + nameGradEntry.getKey() + "!",
+                    expectedShape,
+                    nameGradEntry.getValue().shape());
+        }
     }
 
     /**

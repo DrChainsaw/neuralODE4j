@@ -4,7 +4,6 @@ import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.preprocessor.FeedForwardToRnnPreProcessor;
-import org.deeplearning4j.nn.conf.preprocessor.RnnToFeedForwardPreProcessor;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
 

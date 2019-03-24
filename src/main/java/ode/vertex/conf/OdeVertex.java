@@ -21,7 +21,6 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
-import util.BiasInit;
 
 /**
  * Configuration of an ODE block. Contains a {@link ComputationGraphConfiguration} which defines the structure of the
@@ -127,23 +126,16 @@ public class OdeVertex extends GraphVertex {
 
         if (initializeParams) {
             innerGraph.init(); // This will init parameters using weight initialization
-           // BiasInit.initBiases(innerGraph);
+            //BiasInit.initBiases(innerGraph);
             paramsView.assign(innerGraph.params());
         }
 
         innerGraph.init(paramsView, false); // This does not update any parameters, just sets them
 
-        // Edge case: "outer" graph has no layers, if so, use the config from one of the layers of the OdeVertex
-        boolean atLeastOneLayer = false;
-        for (GraphVertex vertex : graph.getConfiguration().getVertices().values()) {
-            if (vertex != this) {
-                atLeastOneLayer |= vertex.numParams(false) > 0;
-            }
-        }
-
         final DefaultTrainingConfig trainingConfig = new DefaultTrainingConfig(
-                atLeastOneLayer ? graph : innerGraph,
-                name);
+                innerGraph,
+                name,
+                gradientViewFactory.paramNameMapping());
 
         return new ode.vertex.impl.OdeVertex(
                 new ode.vertex.impl.OdeVertex.BaseGraphVertexInputs(graph, name, idx),

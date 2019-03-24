@@ -1,5 +1,6 @@
 package ode.vertex.impl.gradview;
 
+import ode.vertex.impl.gradview.parname.ParamNameMapping;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.shade.jackson.annotation.JsonTypeInfo;
 
@@ -17,14 +18,23 @@ import java.io.Serializable;
 public interface GradientViewFactory extends Serializable {
 
     /**
-     * Create a {@link INDArray1DView} of the gradients of the given graph.
+     * Create a {@link ParameterGradientView} of the gradients of the given graph.
+     *
      * @param graph Graph to extract gradients from
-     * @return INDArray1DView of the gradients
+     * @return Views of the gradients
      */
-    INDArray1DView create(ComputationGraph graph);
+    ParameterGradientView create(ComputationGraph graph);
+
+    /**
+     * Return the mapping used to create non-colliding names
+     *
+     * @return the mapping used to create non-colliding names
+     */
+    ParamNameMapping paramNameMapping();
 
     /**
      * Clone the factory
+     *
      * @return a clone
      */
     GradientViewFactory clone();

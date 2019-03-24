@@ -17,7 +17,6 @@ import org.nd4j.linalg.primitives.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -84,7 +83,7 @@ public class OdeVertex extends BaseGraphVertex {
 
     @Override
     public Map<String, INDArray> paramTable(boolean backpropOnly) {
-        return Collections.synchronizedMap(Collections.singletonMap(parName, params()));
+        return odeHelper.paramTable(backpropOnly);
     }
 
     @Override

@@ -2,16 +2,21 @@ package ode.vertex.impl.helper;
 
 import ode.vertex.impl.gradview.GradientViewFactory;
 import ode.vertex.impl.gradview.INDArray1DView;
+import ode.vertex.impl.gradview.ParameterGradientView;
 import ode.vertex.impl.helper.backward.OdeHelperBackward;
 import ode.vertex.impl.helper.forward.OdeHelperForward;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.primitives.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Helper which jumps through the hoops so that a {@link ComputationGraph} can be seen as the function which provides
@@ -36,7 +41,7 @@ public class OdeGraphHelper {
     public static class CompGraphAsOdeFunction {
 
         private INDArray lastOutput; // z(t1) from paper
-        private INDArray1DView realGradients; // Parts of graph.getFlattenedGradients() which are actually gradients
+        private ParameterGradientView parameterGradientView;
         private final ComputationGraph function;
         private final GradientViewFactory gradientViewFactory;
 
@@ -50,16 +55,31 @@ public class OdeGraphHelper {
         }
 
         private INDArray1DView realGradients() {
-            return realGradients;
+            return parameterGradientView.realGradientView();
         }
 
         private void setLastOutput(INDArray lastOutput) {
             this.lastOutput = lastOutput;
         }
 
-        public void setBackpropGradientsViewArray(INDArray backpropGradientsViewArray) {
+        void setBackpropGradientsViewArray(INDArray backpropGradientsViewArray) {
             function.setBackpropGradientsViewArray(backpropGradientsViewArray);
-            realGradients = gradientViewFactory.create(function);
+            parameterGradientView = gradientViewFactory.create(function);
+        }
+
+        Map<String, INDArray> paramTable(boolean backpropOnly) {
+            final Map<String, INDArray> output = new HashMap<>();
+            for(GraphVertex vertex: function.getVertices()) {
+                final Map<String, INDArray> partable = vertex.paramTable(backpropOnly);
+                if(partable != null) {
+                    for(Map.Entry<String, INDArray> parEntry: partable.entrySet()) {
+                        output.put(
+                                gradientViewFactory.paramNameMapping().map(vertex.getVertexName(), parEntry.getKey()),
+                                parEntry.getValue());
+                    }
+                }
+            }
+            return output;
         }
     }
 
@@ -69,6 +89,10 @@ public class OdeGraphHelper {
     public void clear() {
         getFunction().clearLayersStates();
         odeFunction.setLastOutput(null);
+    }
+
+    public Map<String, INDArray> paramTable(boolean backpropOnly) {
+        return odeFunction.paramTable(backpropOnly);
     }
 
     public ComputationGraph getFunction() {
@@ -125,7 +149,7 @@ public class OdeGraphHelper {
         final Pair<Gradient, INDArray[]> gradients = odeHelperBackward.solve(getFunction(), inputArrays, miscParNewWsMgr);
         log.debug("Nrof func eval backward " + getFunction().getIterationCount());
 
-        return gradients;
+        return new Pair<>(odeFunction.parameterGradientView.allGradientsPerParam(), gradients.getSecond());
     }
 
         /**
