@@ -29,8 +29,6 @@ public class OdeVertex extends BaseGraphVertex {
 
     private static final Logger log = LoggerFactory.getLogger(OdeVertex.class);
 
-    private final static String parName = "params";
-
     private final OdeGraphHelper odeHelper;
     private final TrainingConfig trainingConfig;
 
@@ -128,7 +126,7 @@ public class OdeVertex extends BaseGraphVertex {
         log.trace("Start backward");
 
         final Pair<Gradient, INDArray[]> gradients = odeHelper.doBackward(
-                new OdeHelperBackward.MiscPar(tbptt, workspaceMgr, parName),
+                new OdeHelperBackward.MiscPar(tbptt, workspaceMgr),
                 getEpsilon(),
                 getInputs());
 

@@ -25,17 +25,13 @@ public class SeededRandomFactory extends RandomFactory {
         try {
             if (threadRandom.get() == null) {
                 Random t = super.getNewRandomInstance(base.nextLong());
-                if (t.getStatePointer() != null) {
-                    // TODO: attach this thing to deallocator
-                    // if it's stateless random - we just don't care then
-                }
                 threadRandom.set(t);
                 return t;
             }
 
             return threadRandom.get();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         }
     }
 

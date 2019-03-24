@@ -4,7 +4,6 @@ import ode.vertex.conf.OdeVertex;
 import ode.vertex.conf.helper.OdeHelper;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
-import org.deeplearning4j.nn.weights.WeightInit;
 import org.nd4j.linalg.activations.impl.ActivationELU;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 

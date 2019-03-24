@@ -60,9 +60,6 @@ public class SampleGaussianVertex extends BaseGraphVertex {
 
         final INDArray epsMean = getEpsilon();
 
-        final INDArray input = getInputs()[0].dup();
-        final long size = input.size(1) / 2;
-
         // dL/dz * dz/dlogVar = epsilon * d/dlogVar(lastEps * e^0.5logVar + mean) = epsilon*0.5*lastEps*e^0.5logVar
         final INDArray epsLogVar = getEpsilon().dup().mul(lastEps).mul(0.5);
 

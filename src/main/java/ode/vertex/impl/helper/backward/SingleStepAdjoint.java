@@ -5,12 +5,9 @@ import ode.solve.api.FirstOrderSolver;
 import ode.vertex.impl.gradview.INDArray1DView;
 import ode.vertex.impl.helper.NDArrayIndexAccumulator;
 import ode.vertex.impl.helper.forward.ForwardPass;
-import org.deeplearning4j.nn.gradient.DefaultGradient;
-import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.primitives.Pair;
 
 import java.util.Arrays;
 
@@ -36,7 +33,7 @@ public class SingleStepAdjoint implements OdeHelperBackward {
     }
 
     @Override
-    public Pair<Gradient, INDArray[]> solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
+    public INDArray[] solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
 
         // Create augmented dynamics for adjoint method
         // Initialization: S0:
@@ -89,10 +86,8 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         augmentedDynamics.updateFrom(augAns);
 
         realParamGrads.assignFrom(augmentedDynamics.paramAdjoint());
-        final Gradient gradient = new DefaultGradient(graph.getFlattenedGradients());
-        gradient.setGradientFor(miscPars.getGradientParName(), graph.getFlattenedGradients());
 
-        return new Pair<>(gradient, epsilons(augmentedDynamics, dL_dt1, input.getLastInputs()));
+        return epsilons(augmentedDynamics, dL_dt1, input.getLastInputs());
     }
 
     private INDArray[] epsilons(

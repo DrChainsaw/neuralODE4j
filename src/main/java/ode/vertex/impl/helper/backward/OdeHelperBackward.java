@@ -3,11 +3,9 @@ package ode.vertex.impl.helper.backward;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import ode.vertex.impl.gradview.INDArray1DView;
-import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.primitives.Pair;
 
 /**
  * Helps with input/output handling when solving ODEs inside a neural network
@@ -46,18 +44,18 @@ public interface OdeHelperBackward {
     class MiscPar {
         private final boolean useTruncatedBackPropTroughTime;
         private final LayerWorkspaceMgr wsMgr;
-        private final String gradientParName;
     }
 
     /**
      * Return the solution to the ODE when assuming that a backwards pass through the layers of the given graph is
-     * the derivative of the sought function.
+     * the derivative of the sought function. Note that parameter gradient is set in given graph so it is not returned.
      *
      * @param graph Graph of layers to do backwards pass through
      * @param input Input arrays
      * @param miscPars Misc parameters needed to jump through the hoops of doing back propagation
      *
-     * @return Pair consisting of parameter {@link Gradient} for parameter adjustment and gradient w.r.t last input from previous layers.
+     * @return Loss gradients (a.k.a epsilon in dl4j) w.r.t last input from previous layers. Note that parameter gradients
+     * are set in graph and can be accessed through graph.getGradientsViewArray()
      */
-    Pair<Gradient, INDArray[]> solve(ComputationGraph graph, InputArrays input, MiscPar miscPars);
+    INDArray[] solve(ComputationGraph graph, InputArrays input, MiscPar miscPars);
 }

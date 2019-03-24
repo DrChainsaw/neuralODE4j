@@ -65,8 +65,10 @@ public class ConcatRnn extends BaseRecurrentLayer<examples.spiral.vertex.conf.Co
     }
 
     @Override
-    public Pair<Gradient, INDArray> tbpttBackpropGradient(INDArray epsilon, int tbpttBackLength, LayerWorkspaceMgr workspaceMgr) {
+    public Pair<Gradient, INDArray> tbpttBackpropGradient(INDArray epsilonIn, int tbpttBackLength, LayerWorkspaceMgr workspaceMgr) {
         assertInputSet(true);
+
+        INDArray epsilon = epsilonIn;
         if(epsilon.ordering() != 'f' || !Shape.hasDefaultStridesForShape(epsilon))
             epsilon = epsilon.dup('f');
 
@@ -172,10 +174,11 @@ public class ConcatRnn extends BaseRecurrentLayer<examples.spiral.vertex.conf.Co
 
         IActivation a = layerConf().getActivationFn();
 
+        INDArray prevStep = prevStepOut;
         for( int i=0; i<tsLength; i++ ){
             //out = activationFn(concat(in, last)*w + bias)
             INDArray currOut = out.get(all(), all(), point(i)); //F order
-            INDArray currIn = Nd4j.concat( 1, input.get(all(), all(), point(i)), prevStepOut);
+            INDArray currIn = Nd4j.concat( 1, input.get(all(), all(), point(i)), prevStep);
             Nd4j.gemm(currIn, w, currOut, false, false, 1.0, 1.0);  //beta = 1.0 to keep previous contents (bias)
 
             if(forBackprop){
@@ -184,7 +187,7 @@ public class ConcatRnn extends BaseRecurrentLayer<examples.spiral.vertex.conf.Co
 
             a.getActivation(currOut, training);
 
-            prevStepOut = currOut;
+            prevStep = currOut;
         }
 
         //Apply mask, if present:

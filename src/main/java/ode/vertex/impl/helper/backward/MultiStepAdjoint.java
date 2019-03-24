@@ -1,14 +1,12 @@
 package ode.vertex.impl.helper.backward;
 
 import ode.solve.api.FirstOrderSolver;
-import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
-import org.nd4j.linalg.primitives.Pair;
 
 import java.util.Arrays;
 
@@ -46,7 +44,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
     }
 
     @Override
-    public Pair<Gradient, INDArray[]> solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
+    public INDArray[] solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
         final INDArray zt = alignInShapeToTimeFirst(input.getLastOutput());
         final INDArray dL_dzt = alignInShapeToTimeFirst(input.getLossGradient());
         final INDArray dL_dzt_time = alignInShapeToTimeFirst(input.getLossGradientTime().dup());
@@ -59,7 +57,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
         final INDArrayIndex[] ztIndexer = createIndexer(input.getLastOutput());
         final INDArrayIndex[] dL_dztIndexer= createIndexer(input.getLossGradient());
 
-        Pair<Gradient, INDArray[]> gradients = null;
+        INDArray[] gradients = null;
         final INDArray timeGradient = Nd4j.zeros(time.shape());
         double lastTime = 0;
 
@@ -70,7 +68,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
 
             final INDArray dL_dztStep = getStep(dL_dztIndexer, dL_dzt, step);
             if(gradients != null) {
-                dL_dztStep.addi(gradients.getSecond()[0]);
+                dL_dztStep.addi(gradients[0]);
             }
 
             final InputArrays stepInput = new InputArrays(
@@ -85,7 +83,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
             gradients = stepSolve.solve(graph, stepInput, miscPars);
 
             if(timeIndex != -1) {
-                timeGradient.put(timeIndexer, gradients.getSecond()[timeIndex]);
+                timeGradient.put(timeIndexer, gradients[timeIndex]);
                 lastTime -= timeGradient.get(timeIndexer).getDouble(1);
             }
         }
@@ -93,10 +91,10 @@ public class MultiStepAdjoint implements OdeHelperBackward {
         if(timeIndex != -1 && gradients != null) {
             timeIndexer[1] = NDArrayIndex.point(0);
             timeGradient.put(timeIndexer, lastTime);
-            gradients.getSecond()[timeIndex] = timeGradient;
+            gradients[timeIndex] = timeGradient;
         }
 
-        gradients.getSecond()[0].addi(getStep(dL_dztIndexer, dL_dzt, 0));
+        gradients[0].addi(getStep(dL_dztIndexer, dL_dzt, 0));
 
         return gradients;
     }

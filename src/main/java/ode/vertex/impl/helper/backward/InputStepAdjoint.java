@@ -1,10 +1,8 @@
 package ode.vertex.impl.helper.backward;
 
 import ode.solve.api.FirstOrderSolver;
-import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.primitives.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +23,7 @@ public class InputStepAdjoint implements OdeHelperBackward {
     }
 
     @Override
-    public Pair<Gradient, INDArray[]> solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
+    public INDArray[] solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
         final INDArray time = input.getLastInputs()[timeIndex];
         final List<INDArray> notTimeInputs = new ArrayList<>();
         for(int i = 0; i < input.getLastInputs().length; i++) {

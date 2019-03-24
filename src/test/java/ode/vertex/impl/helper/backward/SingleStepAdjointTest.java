@@ -7,7 +7,6 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.distribution.ConstantDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
-import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.NotNull;
@@ -15,7 +14,6 @@ import org.junit.Test;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.primitives.Pair;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
@@ -42,18 +40,16 @@ public class SingleStepAdjointTest {
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
                 time, -1);
 
-        Pair<Gradient, INDArray[]> gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
+        INDArray[] gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,
-                LayerWorkspaceMgr.noWorkspaces(),
-                "dummy"));
+                LayerWorkspaceMgr.noWorkspaces()));
 
-        final INDArray parGrad = gradients.getFirst().getGradientFor("dummy");
-        assertEquals("Incorect gradients view!", graph.getGradientsViewArray(), parGrad);
-        assertEquals("Incorrect number of input gradients!", 1, gradients.getSecond().length);
+        assertEquals("Incorrect number of input gradients!", 1, gradients.length);
 
-        final INDArray inputGrad = gradients.getSecond()[0];
+        final INDArray inputGrad = gradients[0];
         assertArrayEquals("Incorrect input gradient shape!", inputArrays.getLastInputs()[0].shape(), inputGrad.shape());
 
+        final INDArray parGrad = graph.getGradientsViewArray();
         assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.sumNumber().doubleValue(),1e-10);
         assertNotEquals("Expected non-zero input gradient!", 0.0, inputGrad.sumNumber().doubleValue(), 1e-10);
     }
@@ -72,20 +68,18 @@ public class SingleStepAdjointTest {
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
                 time, 1);
 
-        Pair<Gradient, INDArray[]> gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
+        INDArray[] gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,
-                LayerWorkspaceMgr.noWorkspaces(),
-                "dummy"));
+                LayerWorkspaceMgr.noWorkspaces()));
 
-        final INDArray parGrad = gradients.getFirst().getGradientFor("dummy");
-        assertEquals("Incorect gradients view!", graph.getGradientsViewArray(), parGrad);
-        assertEquals("Incorrect number of input gradients!", 2, gradients.getSecond().length);
+        assertEquals("Incorrect number of input gradients!", 2, gradients.length);
 
-        final INDArray inputGrad = gradients.getSecond()[0];
-        final INDArray timeGrad = gradients.getSecond()[1];
+        final INDArray inputGrad = gradients[0];
+        final INDArray timeGrad = gradients[1];
         assertArrayEquals("Incorrect input gradient shape!", inputArrays.getLastInputs()[0].shape(), inputGrad.shape());
         assertArrayEquals("Incorrect time gradient shape!", time.shape(), timeGrad.shape());
 
+        final INDArray parGrad = graph.getGradientsViewArray();
         assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.sumNumber().doubleValue(),1e-10);
         assertNotEquals("Expected non-zero input gradient!", 0.0, inputGrad.sumNumber().doubleValue(), 1e-10);
         assertNotEquals("Expected non-zero time gradient!", 0.0, timeGrad.sumNumber().doubleValue(), 1e-10);

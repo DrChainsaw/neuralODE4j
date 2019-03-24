@@ -49,18 +49,16 @@ public class MultiStepAdjointTest {
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
                 time, -1);
 
-        Pair<Gradient, INDArray[]> gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
+        INDArray[] gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,
-                LayerWorkspaceMgr.noWorkspacesImmutable(),
-                "dummy"));
+                LayerWorkspaceMgr.noWorkspacesImmutable()));
 
-        final INDArray parGrad = gradients.getFirst().getGradientFor("dummy");
-        assertEquals("Incorrect gradients view!", graph.getGradientsViewArray(), parGrad);
-        assertEquals("Incorrect number of input gradients!", 1, gradients.getSecond().length);
+        assertEquals("Incorrect number of input gradients!", 1, gradients.length);
 
-        final INDArray inputGrad = gradients.getSecond()[0];
+        final INDArray inputGrad = gradients[0];
         assertArrayEquals("Incorrect input gradient shape!", inputArrays.getLastInputs()[0].shape(), inputGrad.shape());
 
+        final INDArray parGrad = graph.getGradientsViewArray();
         assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.maxNumber().doubleValue(), 1e-10);
         assertNotEquals("Expected non-zero input gradient!", 0.0, inputGrad.maxNumber().doubleValue(), 1e-10);
     }
@@ -80,23 +78,19 @@ public class MultiStepAdjointTest {
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
                 time, 1);
 
-        Pair<Gradient, INDArray[]> gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
+        INDArray[] gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,
-                LayerWorkspaceMgr.noWorkspacesImmutable(),
-                "dummy"));
+                LayerWorkspaceMgr.noWorkspacesImmutable()));
 
-        Nd4j.getExecutioner().commit();
-        Thread.sleep(100); // Sometimes one must wait for the executioner to finish??
 
-        final INDArray parGrad = gradients.getFirst().getGradientFor("dummy");
-        assertEquals("Incorect gradients view!", graph.getGradientsViewArray(), parGrad);
-        assertEquals("Incorrect number of input gradients!", 2, gradients.getSecond().length);
+        assertEquals("Incorrect number of input gradients!", 2, gradients.length);
 
-        final INDArray inputGrad = gradients.getSecond()[0];
-        final INDArray timeGrad = gradients.getSecond()[1];
+        final INDArray inputGrad = gradients[0];
+        final INDArray timeGrad = gradients[1];
         assertArrayEquals("Incorrect input gradient shape!", inputArrays.getLastInputs()[0].shape(), inputGrad.shape());
         assertArrayEquals("Incorrect time gradient shape!", time.shape(), timeGrad.shape());
 
+        final INDArray parGrad = graph.getGradientsViewArray();
         assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.maxNumber().doubleValue(), 1e-10);
         assertNotEquals("Expected non-zero input gradient!", 0.0, inputGrad.maxNumber().doubleValue(), 1e-10);
         assertNotEquals("Expected non-zero time gradient!", 0.0, timeGrad.maxNumber().doubleValue(), 1e-10);

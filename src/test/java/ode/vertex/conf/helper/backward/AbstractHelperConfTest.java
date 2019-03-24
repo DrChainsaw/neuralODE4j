@@ -9,14 +9,12 @@ import org.deeplearning4j.nn.conf.WorkspaceMode;
 import org.deeplearning4j.nn.conf.distribution.ConstantDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.Convolution2D;
-import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.primitives.Pair;
 
 import java.io.IOException;
 
@@ -75,12 +73,13 @@ abstract class AbstractHelperConfTest {
         final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps).instantiate();
         final ComputationGraph graph = createGraph();
         final InputArrays input = getTestInputArrays(nrofTimeSteps, graph);
-        final Pair<Gradient, INDArray[]> output = helper.solve(graph, input, new MiscPar(
+        final INDArray[] output = helper.solve(graph, input, new MiscPar(
                 false,
-                LayerWorkspaceMgr.noWorkspaces(),
-                "grad"));
-        assertNotEquals("Expected non-zero param gradient!", 0, output.getFirst().gradient().sumNumber().doubleValue() ,1e-10);
-        for(INDArray inputGrad: output.getSecond()) {
+                LayerWorkspaceMgr.noWorkspaces()));
+
+
+        assertNotEquals("Expected non-zero param gradient!", 0, graph.getGradientsViewArray().sumNumber().doubleValue() ,1e-10);
+        for(INDArray inputGrad: output) {
             assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.sumNumber().doubleValue() ,1e-10);
         }
     }
@@ -94,13 +93,12 @@ abstract class AbstractHelperConfTest {
         final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps).instantiate();
         final ComputationGraph graph = createGraph();
         final InputArrays input = getTestInputArrays(nrofTimeSteps, graph);
-        final Pair<Gradient, INDArray[]> output = helper.solve(graph, input, new MiscPar(
+        final INDArray[] output = helper.solve(graph, input, new MiscPar(
                 false,
-                LayerWorkspaceMgr.noWorkspaces(),
-                "grad"));
+                LayerWorkspaceMgr.noWorkspaces()));
 
-        assertNotEquals("Expected non-zero param gradient!", 0, output.getFirst().gradient().amaxNumber().doubleValue() ,1e-10);
-        for(INDArray inputGrad: output.getSecond()) {
+        assertNotEquals("Expected non-zero param gradient!", 0, graph.getGradientsViewArray().amaxNumber().doubleValue() ,1e-10);
+        for(INDArray inputGrad: output) {
             assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.amaxNumber().doubleValue() ,1e-10);
         }
     }

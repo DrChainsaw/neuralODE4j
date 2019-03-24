@@ -141,15 +141,14 @@ public class OdeGraphHelper {
 
         final OdeHelperBackward.MiscPar miscParNewWsMgr = new OdeHelperBackward.MiscPar(
                 miscPars.isUseTruncatedBackPropTroughTime(),
-                createWorkspaceMgr(miscPars.getWsMgr(), getFunction()),
-                miscPars.getGradientParName()
+                createWorkspaceMgr(miscPars.getWsMgr(), getFunction())
         );
 
         getFunction().getConfiguration().setIterationCount(0);
-        final Pair<Gradient, INDArray[]> gradients = odeHelperBackward.solve(getFunction(), inputArrays, miscParNewWsMgr);
+        final INDArray[] gradients = odeHelperBackward.solve(getFunction(), inputArrays, miscParNewWsMgr);
         log.debug("Nrof func eval backward " + getFunction().getIterationCount());
 
-        return new Pair<>(odeFunction.parameterGradientView.allGradientsPerParam(), gradients.getSecond());
+        return new Pair<>(odeFunction.parameterGradientView.allGradientsPerParam(), gradients);
     }
 
         /**
