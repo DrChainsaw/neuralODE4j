@@ -39,38 +39,44 @@ layers and vertices.
 
 Example:
 ```
-        final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
-                .graphBuilder()
-                .addInputs("input")
-                .setInputTypes(InputType.convolutional(9, 9, 3))
-                .addLayer("normalLayer0",
-                        new Convolution2D.Builder(3, 3)
-                                .nOut(32)
-                                .convolutionMode(ConvolutionMode.Same).build(), "input")
+final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
+        .graphBuilder()
+        .addInputs("input")
+        .setInputTypes(InputType.convolutional(9, 9, 3))
+        .addLayer("normalLayer0",
+                new Convolution2D.Builder(3, 3)
+                        .nOut(32)
+                        .convolutionMode(ConvolutionMode.Same).build(), "input")
 
-                // Add an ODE block called "odeBlock" to the graph.
-                .addVertex("odeBlock", 
-                        new OdeVertex.Builder("odeLayer0", new BatchNormalization.Builder().build())
-                        
-                        // OdeVertex has a similar API as GraphBuilder for adding new layers/vertices to the OdeBlock
-                        .addLayer("odeLayer1", new Convolution2D.Builder(3, 3)
-                                .nOut(32)
-                                .convolutionMode(ConvolutionMode.Same).build(), "odeLayer0")
-                        
-                        // Add more layers and vertices as desired
-                        
-                        // Build the OdeVertex. All layers added to it will be treated as an ODE
-                        .build(), "normalLayer0")
+        // Add an ODE block called "odeBlock" to the graph.
+        .addVertex("odeBlock", 
+                new OdeVertex.Builder(new NeuralNetConfiguration.Builder(), "odeLayer0", new BatchNormalization.Builder().build())
+                
+                // OdeVertex has a similar API as GraphBuilder for adding new layers/vertices to the OdeBlock
+                .addLayer("odeLayer1", new Convolution2D.Builder(3, 3)
+                        .nOut(32)
+                        .convolutionMode(ConvolutionMode.Same).build(), "odeLayer0")
+                
+                // Add more layers and vertices as desired
+                
+                // Build the OdeVertex. The resulting "inner graph" will be treated as an ODE
+                .build(), "normalLayer0")
 
-                // Layers can be added to the graph after the ODE block
-                .addLayer("normalLayer1", new BatchNormalization.Builder().build(), "odeBlock")
-                .setOutputs("output")
-                .addLayer("output", new CnnLossLayer(), "normalLayer1")
-                .build());
+        // Layers/vertices can be added to the graph after the ODE block
+        .addLayer("normalLayer1", new BatchNormalization.Builder().build(), "odeBlock")
+        .setOutputs("output")
+        .addLayer("output", new CnnLossLayer(), "normalLayer1")
+        .build());
 ```
 
 An inherent constraint to the method itself is that the output of the last layer in the OdeVertex must have the exact same 
 shape as the input to the first layer in the OdeVertex. 
+
+Note that OdeVertex.Builder requires a NeuralNetConfiguration.Builder as constructor input. This is because DL4J does not set graph wise 
+default values for things like updaters and weight initialization for vertices so the only way to apply them to the
+Layers of the OdeVertex is to pass in the global configuration. Putting it as a required constructor argument will 
+hopefully make this harder to forget. It is of course possible to have a separate set of default values for the layers
+of the OdeVertex by just giving it another NeuralNetConfiguration.Builder. 
 
 Method for solving the ODE can be configured:
 
@@ -85,7 +91,7 @@ Currently, the only ODE solver implementation which is integrated with Nd4j is [
 It is however possible to use FirstOrderIntegrators from apache.commons:commons-math3 through [FirstOrderSolverAdapter](./src/main/java/ode/solve/commons/FirstOrderSolverAdapter.java)
 at the cost of slower training and inference speed.
 
-Time can also be input from another vertex:
+Time can also be input from another vertex in the graph:
 ```
 new OdeVertex.Builder(...)
     .odeConf(new InputStep(solverConf, 1)) // Number "1" refers to input "time" on the line below
