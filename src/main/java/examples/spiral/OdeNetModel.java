@@ -9,9 +9,9 @@ import ode.solve.conf.SolverConfig;
 import ode.vertex.conf.helper.InputStep;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.deeplearning4j.nn.weights.WeightInit;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
-import util.BiasInit;
 
 /**
  * Model used for spiral generation using neural ODE. Equivalent to model used in
@@ -69,7 +69,7 @@ class OdeNetModel implements ModelFactory {
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
 
-        BiasInit.initBiases(graph);
+        LayerUtil.initBiases(graph, WeightInit.UNIFORM);
         return graph;
     }
 

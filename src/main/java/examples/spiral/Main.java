@@ -73,7 +73,7 @@ class Main {
         root.setLevel(Level.INFO);
 
         //Nd4j.factory().setOrder('f');
-        SeededRandomFactory.setNd4jSeed(1);
+        SeededRandomFactory.setNd4jSeed(0);
 
         final Main main = new Main();
         final ModelFactory factory = parseArgs(main, args);

@@ -126,7 +126,6 @@ public class OdeVertex extends GraphVertex {
 
         if (initializeParams) {
             innerGraph.init(); // This will init parameters using weight initialization
-            //BiasInit.initBiases(innerGraph);
             paramsView.assign(innerGraph.params());
         }
 
