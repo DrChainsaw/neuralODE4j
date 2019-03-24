@@ -17,11 +17,13 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
  */
 public class TimeVae {
 
+    private final ComputationGraph trainingModel;
     private final ComputationGraph encoder;
     private final GraphVertex latentTime;
     private final ComputationGraph decoder;
 
     public TimeVae(ComputationGraph model, String z0, String zt) {
+        trainingModel = model;
         encoder = createEncoder(model, z0);
         latentTime = createLatentTime(model, zt, encoder.numParams());
         decoder = createDecoder(model, zt, encoder.numParams() + latentTime.numParams());
@@ -104,4 +106,18 @@ public class TimeVae {
     INDArray decode(INDArray... inputs) {
         return decoder.outputSingle(inputs);
     }
+
+    ComputationGraph trainingModel() {
+        return trainingModel;
+    }
+
+    String outputName() {
+        return decoder.getConfiguration().getNetworkOutputs().get(0);
+    }
+
+    String qzMeanAndLogVarName() {
+        final String z0 = encoder.getConfiguration().getNetworkOutputs().get(0);
+        return encoder.getConfiguration().getVertexInputs().get(z0).iterator().next();
+    }
+
 }

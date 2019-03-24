@@ -36,7 +36,7 @@ class OdeNetModel implements ModelFactory {
     private long decoderNrofHidden = 20;
 
     @Override
-    public ComputationGraph create(long nrofSamples, double noiseSigma, long nrofLatentDims) {
+    public TimeVae createNew(long nrofSamples, double noiseSigma, long nrofLatentDims) {
 
         final Block enc = new RnnEncoderBlock(nrofLatentDims, encoderNrofHidden, "spiral");
         final Block dec = new DenseDecoderBlock(decoderNrofHidden, 2);
@@ -55,9 +55,11 @@ class OdeNetModel implements ModelFactory {
         final String qz0_meanAndLogvar = next;
 
         // Add sampling of a gaussian with the encoded mean and log(var)
-        builder.addVertex("z0", new SampleGaussianVertex(Nd4j.getRandom().nextLong()), next);
+        final String z0 = "z0";
+        builder.addVertex(z0, new SampleGaussianVertex(Nd4j.getRandom().nextLong()), next);
 
-        next = ode.add(builder, "z0", "time"); // Position of "time" is dependent on argument in constructor to InputStep above
+        next = ode.add(builder, z0, "time"); // Position of "time" is dependent on argument in constructor to InputStep above
+        final String zt = next;
         next = dec.add(builder, next);
 
         // Steps after this is just for ELBO calculation
@@ -70,7 +72,12 @@ class OdeNetModel implements ModelFactory {
         graph.init();
 
         LayerUtil.initBiases(graph, WeightInit.UNIFORM);
-        return graph;
+        return new TimeVae(graph, z0, zt);
+    }
+
+    @Override
+    public TimeVae createFrom(ComputationGraph graph) {
+        return new TimeVae(graph, "z0", LatentOdeBlock.name);
     }
 
     @Override

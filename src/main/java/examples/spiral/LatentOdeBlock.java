@@ -14,10 +14,11 @@ import org.nd4j.linalg.activations.impl.ActivationIdentity;
  */
 class LatentOdeBlock implements Block {
 
+    public static final String name = "zt";
+
     private final long nrofHidden;
     private final long nrofLatentDims;
     private final OdeHelper solverConf;
-
 
     LatentOdeBlock(long nrofHidden, long nrofLatentDims, OdeHelper solverConf) {
         this.nrofHidden = nrofHidden;
@@ -27,7 +28,7 @@ class LatentOdeBlock implements Block {
 
     @Override
     public String add(ComputationGraphConfiguration.GraphBuilder builder, String... prev) {
-        builder.addVertex("latentOde", new OdeVertex.Builder(
+        builder.addVertex(name, new OdeVertex.Builder(
                 builder.getGlobalConfiguration(),
                 "fc1",
                 new DenseLayer.Builder()
@@ -42,6 +43,6 @@ class LatentOdeBlock implements Block {
                         .activation(new ActivationIdentity()).build(), "fc2")
                 .odeConf(solverConf)
                 .build(), prev);
-        return "latentOde";
+        return name;
     }
 }

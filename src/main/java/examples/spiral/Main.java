@@ -37,6 +37,8 @@ import java.util.*;
 
 /**
  * Main class for spiral example. Reimplementation of https://github.com/rtqichen/torchdiffeq/blob/master/examples/latent_ode.py
+ *
+ * @author Christian Skarby
  */
 class Main {
 
@@ -64,7 +66,7 @@ class Main {
             "no checkpoint exists, a new model will be created")
     private boolean newModel = false;
 
-    private ComputationGraph model;
+    private TimeVae model;
     private String modelName;
     private SpiralIterator iterator;
 
@@ -72,7 +74,6 @@ class Main {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         root.setLevel(Level.INFO);
 
-        //Nd4j.factory().setOrder('f');
         SeededRandomFactory.setNd4jSeed(0);
 
         final Main main = new Main();
@@ -124,9 +125,9 @@ class Main {
                 }
 
                 final ComputationGraph graph = ModelSerializer.restoreComputationGraph(modelFile.toFile(), true);
-                main.init(graph,
+                main.init(factory.createFrom(graph),
                         factory.name(),
-                        factory.getPreProcessor(main.nrofLatentDims)); // TODO: Get this from model instead
+                        factory.getPreProcessor(main.nrofLatentDims));
                 return main;
             }
         }
@@ -140,7 +141,7 @@ class Main {
         }
 
         main.init(
-                factory.create(main.nrofTimeStepsForTraining, main.noiseSigma, main.nrofLatentDims),
+                factory.createNew(main.nrofTimeStepsForTraining, main.noiseSigma, main.nrofLatentDims),
                 factory.name(),
                 factory.getPreProcessor(main.nrofLatentDims));
         return main;
@@ -164,7 +165,7 @@ class Main {
         return new File("savedmodels" + File.separator + "spiral" + File.separator + modelName);
     }
 
-    private void init(ComputationGraph model, String modelName, MultiDataSetPreProcessor preProcessor) {
+    private void init(TimeVae model, String modelName, MultiDataSetPreProcessor preProcessor) {
         this.model = model;
         this.modelName = modelName;
 
@@ -182,10 +183,10 @@ class Main {
 
         setupOutputPlotting(savedir);
 
-        final Plot<Integer, Double> meanAndLogVarPlot = new RealTimePlot<>("Mean and log(var) of z", savedir.getAbsolutePath());
+        final Plot<Integer, Double> meanAndLogVarPlot = new RealTimePlot<>("Mean and log(var) of z0", savedir.getAbsolutePath());
 
         final int saveEveryNIterations = 20;
-        model.addListeners(
+        model.trainingModel().addListeners(
                 new ZeroGrad(),
                 new PerformanceListener(1, true),
                 new CheckpointListener.Builder(savedir.getAbsolutePath())
@@ -196,8 +197,7 @@ class Main {
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
                 }),
-                // Get names from model factory instead?
-                new PlotActivations(meanAndLogVarPlot, "encOut", new String[] {"qz0Mean" , "qz0Log(Var)"}),
+                new PlotActivations(meanAndLogVarPlot, model.qzMeanAndLogVarName(), new String[] {"qz0Mean" , "qz0Log(Var)"}),
                 new IterationHook(saveEveryNIterations, () -> {
                     try {
                         meanAndLogVarPlot.storePlotData();
@@ -211,19 +211,19 @@ class Main {
         final SpiralPlot outputPlot = new SpiralPlot(new RealTimePlot<>("Training Output", savedir.getAbsolutePath()));
         for (int batchNrToPlot = 0; batchNrToPlot < Math.min(trainBatchSize, 4); batchNrToPlot++) {
             outputPlot.plot("True output " + batchNrToPlot, iterator.next().getLabels(0), batchNrToPlot);
-            model.addListeners(new PlotDecodedOutput(outputPlot, "decodedOutput", batchNrToPlot));
+            model.trainingModel().addListeners(new PlotDecodedOutput(outputPlot, model.outputName(), batchNrToPlot));
         }
     }
 
-
     private void run() throws IOException {
+        final ComputationGraph trainingModel = model.trainingModel();
         final Plot<Double, Double> samplePlot = new RealTimePlot<>("Reconstruction", saveDir(modelName).getAbsolutePath());
-        for (int i = model.getIterationCount(); i < nrofTrainIters; i++) {
-            model.fit(iterator.next());
+        for (int i = trainingModel.getIterationCount(); i < nrofTrainIters; i++) {
+            trainingModel.fit(iterator.next());
 
             if (i > 0 && i % 100 == 0) {
                 drawSample(0, samplePlot);
-                samplePlot.savePicture("_iter" + model.getIterationCount());
+                samplePlot.savePicture("_iter" + trainingModel.getIterationCount());
             }
         }
 
@@ -241,18 +241,16 @@ class Main {
         final MultiDataSet mds = spiralSet.getMds();
         final INDArray sample = mds.getFeatures(0).tensorAlongDimension(toSample, 1, 2).reshape(1, 2, nrofTimeStepsForTraining);
 
-        final TimeVae timeVae = new TimeVae(model, "z0", "latentOde");
-
-        final INDArray z0 = timeVae.encode(sample);
+        final INDArray z0 = model.encode(sample);
 
         final INDArray tsPos = Nd4j.linspace(0, 2 * Math.PI, 2000);
         final INDArray tsNeg = Nd4j.linspace(0, -Math.PI, 2000);
 
-        final INDArray zsPos = timeVae.timeDependency(z0, tsPos);
-        final INDArray zsNeg = timeVae.timeDependency(z0, tsNeg);
+        final INDArray zsPos = model.timeDependency(z0, tsPos);
+        final INDArray zsNeg = model.timeDependency(z0, tsNeg);
 
-        final INDArray xsPos = timeVae.decode(zsPos);
-        final INDArray xsNeg = timeVae.decode(zsNeg);
+        final INDArray xsPos = model.decode(zsPos);
+        final INDArray xsNeg = model.decode(zsNeg);
 
         final SpiralPlot spiralPlot = new SpiralPlot(reconstructionPlot);
 

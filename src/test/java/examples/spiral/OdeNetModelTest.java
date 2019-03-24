@@ -35,7 +35,7 @@ public class OdeNetModelTest {
         final long nrofTimeSteps = 10;
         final long batchSize = 3;
         final long nrofLatentDims = 5;
-        final ComputationGraph model = factory.create(nrofTimeSteps, 0.3, nrofLatentDims);
+        final ComputationGraph model = factory.createNew(nrofTimeSteps, 0.3, nrofLatentDims).trainingModel();
         model.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 2, nrofTimeSteps}), Nd4j.linspace(0, 3, nrofTimeSteps)},
                 new INDArray[]{Nd4j.randn(new long[] {batchSize, 2, nrofTimeSteps}), Nd4j.zeros(batchSize, nrofLatentDims)}));
@@ -55,7 +55,7 @@ public class OdeNetModelTest {
                 .addObject(factory)
                 .build()
                 .parse();
-        final ComputationGraph graph = factory.create(nrofTimeSteps, 0.1, 4);
+        final ComputationGraph graph = factory.createNew(nrofTimeSteps, 0.1, 4).trainingModel();
 
         final Path baseDir = Paths.get("src", "test", "resources", "OdeNetModelTest");
         final String fileName = Paths.get(baseDir.toString(), "testSerializeDeserialize.zip").toString();
@@ -92,10 +92,7 @@ public class OdeNetModelTest {
         final long nrofTimeSteps = 17;
         final long nrofLatentDims = 6;
 
-        final TimeVae timeVae = new TimeVae(
-                new OdeNetModel().create(nrofTimeSteps, 0.3, nrofLatentDims),
-                "z0",
-                "latentOde");
+        final TimeVae timeVae = new OdeNetModel().createNew(nrofTimeSteps, 0.3, nrofLatentDims);
 
         final INDArray inputTraj = Nd4j.randn(new long[]{batchSize, 2, nrofTimeSteps});
         final INDArray time =  Nd4j.linspace(0, 3, nrofTimeSteps);
