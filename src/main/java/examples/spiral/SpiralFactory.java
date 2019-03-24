@@ -68,16 +68,16 @@ class SpiralFactory {
 
 
     SpiralFactory(double a, double b, double startTheta, double stopTheta, long nrofSamples) {
-        final INDArray thetaCw = Nd4j.linspace(startTheta, stopTheta, nrofSamples);
-        final INDArray rCw = thetaCw.mul(b).addi(a);
-        final INDArray trajectoryCw = Nd4j.vstack(rCw.mul(Transforms.cos(thetaCw)).add(5), rCw.mul(Transforms.sin(thetaCw)));
-        this.baseCw = new Spiral(trajectoryCw, thetaCw);
-
-        final INDArray thetaCc = thetaCw.rsub(1 + stopTheta);
-        final INDArray rCc = thetaCc.rdiv(50).mul(b).addi(a);
-        final INDArray trajectoryCc = Nd4j.vstack(rCc.mul(Transforms.cos(thetaCc)).sub(5), rCc.mul(Transforms.sin(thetaCc)));
+        final INDArray thetaCc = Nd4j.linspace(startTheta, stopTheta, nrofSamples);
+        final INDArray rCc = thetaCc.mul(b).addi(a);
+        final INDArray trajectoryCc = Nd4j.vstack(rCc.mul(Transforms.cos(thetaCc)).add(5), rCc.mul(Transforms.sin(thetaCc)));
         this.baseCc = new Spiral(trajectoryCc, thetaCc);
-        baseTs = thetaCw;
+
+        final INDArray thetaCw = thetaCc.rsub(1 + stopTheta);
+        final INDArray rCw = thetaCw.rdiv(50).mul(b).addi(a);
+        final INDArray trajectoryCw = Nd4j.vstack(rCw.mul(Transforms.cos(thetaCw)).sub(5), rCw.mul(Transforms.sin(thetaCw)));
+        this.baseCw = new Spiral(trajectoryCw, thetaCw);
+        baseTs = thetaCc;
     }
 
     void plotClockWise(Plot<Double, Double> plot, String label) {
