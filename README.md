@@ -102,8 +102,16 @@ Note that time must be a vector meaning it can not be minibatched; It has to be 
 section 6 in the paper where all examples in the batch are concatenated into one state. If one time sequence per example is desired this 
 can be achieved by using minibatch size of 1.  
 
-Gradients for loss with respect to time will be output from the vertex when using time as input. I have not seen these being used for 
-anything in the original implementation though.
+Gradients for loss with respect to time will be output from the vertex when using time as input but will be set to 0 by default to save computation. To have them computed, set needTimeGradient to true:
+
+```
+final boolean needTimeGradient = true;
+new OdeVertex.Builder(...)
+    .odeConf(new InputStep(solverConf, 1, true, needTimeGradient))
+    .build(), "someLayer", "time");  
+```
+
+I have not seen these being used for anything in the original implementation and if used, some extra measure is most likely required to ensure that time is always strictly increasing or decreasing.
 
 In either case, the minimum number of elements in the time vector is two. If more than two elements are given the output of the OdeVertex 
 will have one more dimension compared to the input (corresponding to each time element). 
