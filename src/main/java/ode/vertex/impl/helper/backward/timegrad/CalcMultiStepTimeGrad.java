@@ -15,7 +15,7 @@ public class CalcMultiStepTimeGrad implements MultiStepTimeGrad {
     private final INDArray timeGradient;
     private final int timeIndex;
 
-    private double lastTime = 0;
+    private final INDArray lastTime = Nd4j.scalar(0);
 
     /**
      * Factory for this class.
@@ -51,7 +51,7 @@ public class CalcMultiStepTimeGrad implements MultiStepTimeGrad {
     @Override
     public void updateStep(INDArrayIndex[] timeIndexer, INDArray[] gradients) {
         timeGradient.put(timeIndexer, gradients[timeIndex]);
-        lastTime -= timeGradient.get(timeIndexer).getDouble(1);
+        lastTime.subi(timeGradient.get(timeIndexer).getScalar(0));
     }
 
     @Override
