@@ -14,17 +14,24 @@ public class InputStepAdjoint implements OdeHelperBackward {
 
     private final FirstOrderSolverConf solverConf;
     private final int timeInputIndex;
+    private final boolean needTimeGradient;
+
+    public InputStepAdjoint(FirstOrderSolverConf solverConf, int timeInputIndex) {
+        this(solverConf, timeInputIndex, false);
+    }
 
     public InputStepAdjoint(
             @JsonProperty("solverConf") FirstOrderSolverConf solverConf,
-            @JsonProperty("timeInputIndex") int timeInputIndex) {
+            @JsonProperty("timeInputIndex") int timeInputIndex,
+            @JsonProperty("needTimeGradient") boolean needTimeGradient) {
         this.solverConf = solverConf;
         this.timeInputIndex = timeInputIndex;
+        this.needTimeGradient = needTimeGradient;
     }
 
     @Override
     public ode.vertex.impl.helper.backward.OdeHelperBackward instantiate() {
-        return new ode.vertex.impl.helper.backward.InputStepAdjoint(solverConf.instantiate(), timeInputIndex);
+        return new ode.vertex.impl.helper.backward.InputStepAdjoint(solverConf.instantiate(), timeInputIndex, needTimeGradient);
     }
 
     @Override

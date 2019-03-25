@@ -3,19 +3,17 @@ package ode.vertex.impl.helper.backward.timegrad;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 
 /**
- * Calculates a time gradient for multiple time steps.
+ * {@link MultiStepTimeGrad} which does not compute and time gradients, but returns a dummy gradient so that array sizes
+ * are correct
  *
  * @author Christian Skarby
  */
-public class CalcMultiStepTimeGrad implements MultiStepTimeGrad {
+public class ZeroMultiStepTimeGrad implements MultiStepTimeGrad {
 
-    private final INDArray timeGradient;
     private final int timeIndex;
-
-    private double lastTime = 0;
+    private final INDArray time;
 
     /**
      * Factory for this class.
@@ -32,12 +30,12 @@ public class CalcMultiStepTimeGrad implements MultiStepTimeGrad {
 
         @Override
         public MultiStepTimeGrad create() {
-            return new CalcMultiStepTimeGrad(time, timeIndex);
+            return new ZeroMultiStepTimeGrad(time, timeIndex);
         }
     }
 
-    public CalcMultiStepTimeGrad(INDArray time, int timeIndex) {
-        timeGradient = Nd4j.zeros(time.shape());
+    public ZeroMultiStepTimeGrad(INDArray time, int timeIndex) {
+        this.time = time;
         this.timeIndex = timeIndex;
     }
 
@@ -50,21 +48,23 @@ public class CalcMultiStepTimeGrad implements MultiStepTimeGrad {
 
     @Override
     public void updateStep(INDArrayIndex[] timeIndexer, INDArray[] gradients) {
-        timeGradient.put(timeIndexer, gradients[timeIndex]);
-        lastTime -= timeGradient.get(timeIndexer).getDouble(1);
+        // Do nothing
     }
 
     @Override
-    public INDArray[] updateLastStep(INDArrayIndex[] timeIndexer, INDArray[] gradients, INDArray dL_dzt0) {
-        timeIndexer[1] = NDArrayIndex.point(0);
-        timeGradient.put(timeIndexer, lastTime);
-        gradients[timeIndex] = timeGradient;
-        gradients[(timeIndex + 1) % gradients.length].addi(dL_dzt0);
-        return gradients;
+    public INDArray[] updateLastStep(INDArrayIndex[] timeIndexer, INDArray[] gradients, INDArray dL_dzt) {
+
+        final INDArray[] toRet = new INDArray[2];
+        toRet[timeIndex] = Nd4j.zerosLike(time);
+        final int notTimeIndex = (timeIndex + 1) % toRet.length;
+        toRet[notTimeIndex] = gradients[notTimeIndex % gradients.length];
+        gradients[notTimeIndex % gradients.length].addi(dL_dzt);
+
+        return toRet;
     }
 
     @Override
     public TimeGrad.Factory createSingleStepFactory(INDArray dL_dzt1_time) {
-        return new CalcTimeGrad.Factory(dL_dzt1_time, timeIndex);
+        return NoTimeGrad.factory;
     }
 }

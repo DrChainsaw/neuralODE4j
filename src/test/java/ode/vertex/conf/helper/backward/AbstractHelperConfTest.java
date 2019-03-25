@@ -31,7 +31,7 @@ abstract class AbstractHelperConfTest {
      * @param nrofTimeSteps Number of time steps to create helper for
      * @return a new {@link OdeHelperBackward}
      */
-    abstract OdeHelperBackward create(int nrofTimeSteps);
+    abstract OdeHelperBackward create(int nrofTimeSteps, boolean needTimeGradient);
 
     /**
      * Create inputs from a given input array
@@ -47,7 +47,7 @@ abstract class AbstractHelperConfTest {
      */
     @Test
     public void serializeDeserializeSingleStep() throws IOException {
-        final OdeHelperBackward conf = create(2);
+        final OdeHelperBackward conf = create(2, true);
         final String json = NeuralNetConfiguration.mapper().writeValueAsString(conf);
         final OdeHelperBackward newConf = NeuralNetConfiguration.mapper().readValue(json, OdeHelperBackward.class);
         assertEquals("Did not deserialize into the same thing!", conf, newConf);
@@ -58,7 +58,7 @@ abstract class AbstractHelperConfTest {
      */
     @Test
     public void serializeDeserializeMultiStep() throws IOException {
-        final OdeHelperBackward conf = create(5);
+        final OdeHelperBackward conf = create(5, true);
         final String json = NeuralNetConfiguration.mapper().writeValueAsString(conf);
         final OdeHelperBackward newConf = NeuralNetConfiguration.mapper().readValue(json, OdeHelperBackward.class);
         assertEquals("Did not deserialize into the same thing!", conf, newConf);
@@ -70,7 +70,7 @@ abstract class AbstractHelperConfTest {
     @Test
     public void instantiateAndSolveConvSingleStep() {
         final int nrofTimeSteps = 2;
-        final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps).instantiate();
+        final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps, true).instantiate();
         final ComputationGraph graph = createGraph();
         final InputArrays input = getTestInputArrays(nrofTimeSteps, graph);
         final INDArray[] output = helper.solve(graph, input, new MiscPar(
@@ -88,9 +88,30 @@ abstract class AbstractHelperConfTest {
      * Test that helper can be instantiated and that it does something
      */
     @Test
+    public void instantiateAndSolveConvSingleStepNoTimeGrad() {
+        final int nrofTimeSteps = 2;
+        final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps, false).instantiate();
+        final ComputationGraph graph = createGraph();
+        final InputArrays input = getTestInputArrays(nrofTimeSteps, graph);
+        final INDArray[] output = helper.solve(graph, input, new MiscPar(
+                false,
+                LayerWorkspaceMgr.noWorkspaces()));
+
+
+        assertNotEquals("Expected non-zero param gradient!", 0, graph.getGradientsViewArray().sumNumber().doubleValue() ,1e-10);
+        assertNotEquals("Expected non-zero param gradient!", 0, output[0].amaxNumber().doubleValue() ,1e-10);
+        if(output.length > 1) {
+            assertEquals("Expected zero time gradient!", 0, output[1].amaxNumber().doubleValue(), 1e-10);
+        }
+    }
+
+    /**
+     * Test that helper can be instantiated and that it does something
+     */
+    @Test
     public void instantiateAndSolveConvMultiStep() {
         final int nrofTimeSteps = 7;
-        final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps).instantiate();
+        final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps, true).instantiate();
         final ComputationGraph graph = createGraph();
         final InputArrays input = getTestInputArrays(nrofTimeSteps, graph);
         final INDArray[] output = helper.solve(graph, input, new MiscPar(
@@ -100,6 +121,26 @@ abstract class AbstractHelperConfTest {
         assertNotEquals("Expected non-zero param gradient!", 0, graph.getGradientsViewArray().amaxNumber().doubleValue() ,1e-10);
         for(INDArray inputGrad: output) {
             assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.amaxNumber().doubleValue() ,1e-10);
+        }
+    }
+
+    /**
+     * Test that helper can be instantiated and that it does something
+     */
+    @Test
+    public void instantiateAndSolveConvMultiStepNoTimeGrad() {
+        final int nrofTimeSteps = 7;
+        final ode.vertex.impl.helper.backward.OdeHelperBackward helper = create(nrofTimeSteps, false).instantiate();
+        final ComputationGraph graph = createGraph();
+        final InputArrays input = getTestInputArrays(nrofTimeSteps, graph);
+        final INDArray[] output = helper.solve(graph, input, new MiscPar(
+                false,
+                LayerWorkspaceMgr.noWorkspaces()));
+
+        assertNotEquals("Expected non-zero param gradient!", 0, graph.getGradientsViewArray().amaxNumber().doubleValue() ,1e-10);
+        assertNotEquals("Expected non-zero param gradient!", 0, output[0].amaxNumber().doubleValue() ,1e-10);
+        if(output.length > 1) {
+            assertEquals("Expected zero time gradient!", 0, output[1].amaxNumber().doubleValue(), 1e-10);
         }
     }
 

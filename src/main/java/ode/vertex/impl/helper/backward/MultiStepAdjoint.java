@@ -61,7 +61,6 @@ public class MultiStepAdjoint implements OdeHelperBackward {
 
         INDArray[] gradients = null;
         final MultiStepTimeGrad timeGrad = timeGradFactory.create();
-        double lastTime = 0;
 
         // Go backwards in time
         for (int step = (int)time.length()-1; step > 0; step--) {
@@ -70,9 +69,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
             final INDArray dL_dztStep = getStep(dL_dztIndexer, dL_dzt, step);
             final TimeGrad.Factory stepTimeGradFactory = timeGrad.createSingleStepFactory(dL_dztStep.dup());
 
-            if(gradients != null) {
-                dL_dztStep.addi(gradients[0]);
-            }
+            timeGrad.prepareStep(gradients, dL_dztStep);
 
             final InputArrays stepInput = new InputArrays(
                     input.getLastInputs(),
@@ -88,9 +85,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
             timeGrad.updateStep(timeIndexer, gradients);
         }
 
-        timeGrad.updateLastStep(timeIndexer, gradients);
-
-        gradients[0].addi(getStep(dL_dztIndexer, dL_dzt, 0));
+        gradients = timeGrad.updateLastStep(timeIndexer, gradients, getStep(dL_dztIndexer, dL_dzt, 0));
 
         return gradients;
     }

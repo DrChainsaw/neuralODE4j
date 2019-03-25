@@ -25,13 +25,21 @@ public class NoMultiStepTimeGrad implements MultiStepTimeGrad {
     };
 
     @Override
+    public void prepareStep(INDArray[] lastGradients, INDArray dL_dzt) {
+        if(lastGradients == null) return;
+
+        dL_dzt.addi(lastGradients[0]);
+    }
+
+    @Override
     public void updateStep(INDArrayIndex[] timeIndexer, INDArray[] gradients) {
         // Do nothing
     }
 
     @Override
-    public void updateLastStep(INDArrayIndex[] timeIndexer, INDArray[] gradients) {
-        // Do nothing
+    public INDArray[] updateLastStep(INDArrayIndex[] timeIndexer, INDArray[] gradients, INDArray dL_dzt) {
+        gradients[0].addi(dL_dzt);
+        return gradients;
     }
 
     @Override

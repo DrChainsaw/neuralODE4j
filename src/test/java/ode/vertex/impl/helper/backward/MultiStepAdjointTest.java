@@ -313,7 +313,7 @@ public class MultiStepAdjointTest {
                 .odeConf(new InputStep(
                         new ode.solve.conf.DormandPrince54Solver(
                                 new SolverConfig(1e-12, 1e-6, 1e-20, 1e2)),
-                        1, true))
+                        1, true, true))
                 .build(), next, "time");
 
         builder.allowNoOutput(true);

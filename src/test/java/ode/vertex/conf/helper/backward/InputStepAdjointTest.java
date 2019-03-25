@@ -12,8 +12,8 @@ import org.nd4j.linalg.factory.Nd4j;
 public class InputStepAdjointTest extends AbstractHelperConfTest {
 
     @Override
-    OdeHelperBackward create(int nrofTimeSteps) {
-        return new InputStepAdjoint(new DormandPrince54Solver(), 1);
+    OdeHelperBackward create(int nrofTimeSteps, boolean needTimeGrad) {
+        return new InputStepAdjoint(new DormandPrince54Solver(), 1, needTimeGrad);
     }
 
     @Override

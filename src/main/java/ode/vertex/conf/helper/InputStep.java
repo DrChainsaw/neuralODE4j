@@ -24,15 +24,21 @@ public class InputStep implements OdeHelper {
     private final FirstOrderSolverConf solverConf;
     private final int timeInputIndex;
     private final boolean interpolateForwardIfMultiStep;
+    private final boolean needTimeGradient;
 
     public InputStep(FirstOrderSolverConf solverConf, int timeInputIndex) {
         this(solverConf, timeInputIndex, false);
     }
 
     public InputStep(FirstOrderSolverConf solverConf, int timeInputIndex, boolean interpolateForwardIfMultiStep) {
+        this(solverConf, timeInputIndex, interpolateForwardIfMultiStep, false);
+    }
+
+    public InputStep(FirstOrderSolverConf solverConf, int timeInputIndex, boolean interpolateForwardIfMultiStep, boolean needTimeGradient) {
         this.solverConf = solverConf;
         this.timeInputIndex = timeInputIndex;
         this.interpolateForwardIfMultiStep = interpolateForwardIfMultiStep;
+        this.needTimeGradient = needTimeGradient;
     }
 
     @Override
@@ -42,6 +48,6 @@ public class InputStep implements OdeHelper {
 
     @Override
     public OdeHelperBackward backward() {
-        return new InputStepAdjoint(solverConf, timeInputIndex);
+        return new InputStepAdjoint(solverConf, timeInputIndex, needTimeGradient);
     }
 }

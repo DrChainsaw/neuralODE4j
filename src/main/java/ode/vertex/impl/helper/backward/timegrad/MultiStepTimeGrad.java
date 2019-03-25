@@ -23,6 +23,13 @@ public interface MultiStepTimeGrad {
     }
 
     /**
+     * Update dL_dzt based on last steps gradients
+     * @param lastGradients gradients from last time step
+     * @param dL_dzt Loss gradient for z(t) for current time step
+     */
+    void prepareStep(INDArray[] lastGradients, INDArray dL_dzt);
+
+    /**
      * Update after a single step backwards
      * @param timeIndexer Points to the current time step
      * @param gradients Current gradients
@@ -33,8 +40,10 @@ public interface MultiStepTimeGrad {
      * Update after the last step backwards has been performed. Note that this will update the input gradient
      * @param timeIndexer Points to the current time step
      * @param gradients Current gradients. Might be updated as a result
+     * @param dL_dzt0 Loss gradient for z(t0).
+     * @return Updated gradients
      */
-    void updateLastStep(INDArrayIndex[] timeIndexer, INDArray[] gradients);
+    INDArray[] updateLastStep(INDArrayIndex[] timeIndexer, INDArray[] gradients, INDArray dL_dzt0);
 
     /**
      * Create an appropriate {@link TimeGrad.Factory}

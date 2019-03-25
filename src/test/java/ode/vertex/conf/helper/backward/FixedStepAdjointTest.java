@@ -12,7 +12,7 @@ import org.nd4j.linalg.factory.Nd4j;
 public class FixedStepAdjointTest extends AbstractHelperConfTest {
 
     @Override
-    OdeHelperBackward create(int nrofTimeSteps) {
+    OdeHelperBackward create(int nrofTimeSteps, boolean needTimeGradient) {
         return new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.linspace(0,3,nrofTimeSteps));
     }
 
