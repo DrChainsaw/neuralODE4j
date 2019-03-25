@@ -1,6 +1,8 @@
 package ode.vertex.impl.helper.backward;
 
 import ode.solve.api.FirstOrderSolver;
+import ode.vertex.impl.helper.backward.timegrad.CalcMultiStepTimeGrad;
+import ode.vertex.impl.helper.backward.timegrad.CalcTimeGrad;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
@@ -40,9 +42,9 @@ public class InputStepAdjoint implements OdeHelperBackward {
         );
 
         if(time.length() > 2) {
-            return new MultiStepAdjoint(solver, time, timeIndex).solve(graph, newInput, miscPars);
+            return new MultiStepAdjoint(solver, time, new CalcMultiStepTimeGrad.Factory(time, timeIndex)).solve(graph, newInput, miscPars);
         }
 
-        return new SingleStepAdjoint(solver, time, timeIndex).solve(graph, newInput, miscPars);
+        return new SingleStepAdjoint(solver, time, new CalcTimeGrad.Factory(input.getLossGradient(), timeIndex)).solve(graph, newInput, miscPars);
     }
 }

@@ -3,6 +3,8 @@ package ode.vertex.impl.helper.backward;
 import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
 import ode.vertex.impl.gradview.NonContiguous1DView;
+import ode.vertex.impl.helper.backward.timegrad.CalcTimeGrad;
+import ode.vertex.impl.helper.backward.timegrad.NoTimeGrad;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.distribution.ConstantDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
@@ -38,7 +40,7 @@ public class SingleStepAdjointTest {
         final INDArray time = Nd4j.arange(2);
         final OdeHelperBackward helper = new SingleStepAdjoint(
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
-                time, -1);
+                time, NoTimeGrad.factory);
 
         INDArray[] gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,
@@ -66,7 +68,7 @@ public class SingleStepAdjointTest {
         final INDArray time = Nd4j.arange(2);
         final OdeHelperBackward helper = new SingleStepAdjoint(
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
-                time, 1);
+                time, new CalcTimeGrad.Factory(inputArrays.getLossGradient(), 1));
 
         INDArray[] gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,

@@ -5,6 +5,8 @@ import ode.solve.impl.DormandPrince54Solver;
 import ode.vertex.conf.OdeVertex;
 import ode.vertex.conf.helper.InputStep;
 import ode.vertex.impl.gradview.NonContiguous1DView;
+import ode.vertex.impl.helper.backward.timegrad.CalcMultiStepTimeGrad;
+import ode.vertex.impl.helper.backward.timegrad.NoMultiStepTimeGrad;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -47,7 +49,7 @@ public class MultiStepAdjointTest {
         final INDArray time = Nd4j.arange(nrofTimeSteps);
         final OdeHelperBackward helper = new MultiStepAdjoint(
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
-                time, -1);
+                time, NoMultiStepTimeGrad.factory);
 
         INDArray[] gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,
@@ -76,7 +78,7 @@ public class MultiStepAdjointTest {
         final INDArray time = Nd4j.arange(nrofTimeSteps);
         final OdeHelperBackward helper = new MultiStepAdjoint(
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
-                time, 1);
+                time, new CalcMultiStepTimeGrad.Factory(time, 1));
 
         INDArray[] gradients = helper.solve(graph, inputArrays, new OdeHelperBackward.MiscPar(
                 false,
@@ -118,9 +120,10 @@ public class MultiStepAdjointTest {
      */
     @Test(expected = IllegalArgumentException.class)
     public void timeNotSorted() {
+        final INDArray time = Nd4j.create(new double[]{0, 1, 2, 1.5, 3, 4});
         new MultiStepAdjoint(new DormandPrince54Solver(
-                new SolverConfig(1,1,1e-1,1)),
-                Nd4j.create(new double[] {0, 1, 2, 1.5, 3, 4}),1);
+                new SolverConfig(1, 1, 1e-1, 1)),
+                time, new CalcMultiStepTimeGrad.Factory(time, 1));
     }
 
     /**

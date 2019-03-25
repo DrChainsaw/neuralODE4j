@@ -1,9 +1,10 @@
 package ode.vertex.impl.helper.backward;
 
 import ode.solve.api.FirstOrderSolver;
+import ode.vertex.impl.helper.backward.timegrad.MultiStepTimeGrad;
+import ode.vertex.impl.helper.backward.timegrad.TimeGrad;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
@@ -20,12 +21,13 @@ public class MultiStepAdjoint implements OdeHelperBackward {
 
     private final FirstOrderSolver solver;
     private final INDArray time;
-    private final int timeIndex;
+    private final MultiStepTimeGrad.Factory timeGradFactory;
 
-    public MultiStepAdjoint(FirstOrderSolver solver, INDArray time, int timeIndex) {
+    public MultiStepAdjoint(FirstOrderSolver solver, INDArray time, MultiStepTimeGrad.Factory timeGradFactory) {
         this.solver = solver;
         this.time = time;
-        this.timeIndex = timeIndex;
+        this.timeGradFactory = timeGradFactory;
+
         if(time.length() <= 2 || !time.isVector()) {
             throw new IllegalArgumentException("time must be a vector of size > 2! Was of shape: " + Arrays.toString(time.shape())+ "!");
         }
@@ -47,7 +49,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
     public INDArray[] solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
         final INDArray zt = alignInShapeToTimeFirst(input.getLastOutput());
         final INDArray dL_dzt = alignInShapeToTimeFirst(input.getLossGradient());
-        final INDArray dL_dzt_time = alignInShapeToTimeFirst(input.getLossGradientTime().dup());
+        final INDArray dL_dzt_time = alignInShapeToTimeFirst(input.getLossGradient().dup());
 
         assertSizeVsTime(zt);
         assertSizeVsTime(dL_dzt);
@@ -58,15 +60,16 @@ public class MultiStepAdjoint implements OdeHelperBackward {
         final INDArrayIndex[] dL_dztIndexer= createIndexer(input.getLossGradient());
 
         INDArray[] gradients = null;
-        final INDArray timeGradient = Nd4j.zeros(time.shape());
+        final MultiStepTimeGrad timeGrad = timeGradFactory.create();
         double lastTime = 0;
 
         // Go backwards in time
         for (int step = (int)time.length()-1; step > 0; step--) {
             final INDArray ztStep = getStep(ztIndexer,zt, step);
-            final INDArray dL_dzt_timeStep = getStep(dL_dztIndexer, dL_dzt_time, step);
 
             final INDArray dL_dztStep = getStep(dL_dztIndexer, dL_dzt, step);
+            final TimeGrad.Factory stepTimeGradFactory = timeGrad.createSingleStepFactory(dL_dztStep.dup());
+
             if(gradients != null) {
                 dL_dztStep.addi(gradients[0]);
             }
@@ -75,24 +78,17 @@ public class MultiStepAdjoint implements OdeHelperBackward {
                     input.getLastInputs(),
                     ztStep,
                     dL_dztStep,
-                    dL_dzt_timeStep,
                     input.getRealGradientView()
             );
             timeIndexer[1] = NDArrayIndex.interval(step - 1, step+1);
-            final OdeHelperBackward stepSolve = new SingleStepAdjoint(solver, time.get(timeIndexer), timeIndex);
+
+            final OdeHelperBackward stepSolve = new SingleStepAdjoint(solver, time.get(timeIndexer), stepTimeGradFactory);
             gradients = stepSolve.solve(graph, stepInput, miscPars);
 
-            if(timeIndex != -1) {
-                timeGradient.put(timeIndexer, gradients[timeIndex]);
-                lastTime -= timeGradient.get(timeIndexer).getDouble(1);
-            }
+            timeGrad.updateStep(timeIndexer, gradients);
         }
 
-        if(timeIndex != -1 && gradients != null) {
-            timeIndexer[1] = NDArrayIndex.point(0);
-            timeGradient.put(timeIndexer, lastTime);
-            gradients[timeIndex] = timeGradient;
-        }
+        timeGrad.updateLastStep(timeIndexer, gradients);
 
         gradients[0].addi(getStep(dL_dztIndexer, dL_dzt, 0));
 
