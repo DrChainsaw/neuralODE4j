@@ -49,7 +49,6 @@ public class MultiStepAdjoint implements OdeHelperBackward {
     public INDArray[] solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
         final INDArray zt = alignInShapeToTimeFirst(input.getLastOutput());
         final INDArray dL_dzt = alignInShapeToTimeFirst(input.getLossGradient());
-        final INDArray dL_dzt_time = alignInShapeToTimeFirst(input.getLossGradient().dup());
 
         assertSizeVsTime(zt);
         assertSizeVsTime(dL_dzt);
