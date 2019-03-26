@@ -17,7 +17,6 @@ public interface OdeHelperBackward {
     /**
      * Input arrays needed to do backward pass. Has the following definitions:<br>
      * {@code lossGradient}: Gradient w.r.t loss from subsequent layers (typically called epsilon in dl4j)<br>
-     * {@code lossGradientTime}: Gradient w.r.t loss from subsequent layers w.r.t time<br>
      * {@code lastOutput}: Last computed output from a forward pass used to calculate the loss gradient<br>
      * {@code realGradientView}: View of all array elements which are actually gradients in the given
      * {@link ComputationGraph}s gradient view array. Notable exceptions (i.e. things labeled as gradients which are not
@@ -29,12 +28,7 @@ public interface OdeHelperBackward {
         private final INDArray[] lastInputs;
         private final INDArray lastOutput;
         private final INDArray lossGradient;
-        private final INDArray lossGradientTime;
         private final INDArray1DView realGradientView;
-
-        public InputArrays(INDArray[] lastInputs, INDArray lastOutput, INDArray lossGradient, INDArray1DView realGradientView) {
-            this(lastInputs, lastOutput, lossGradient, lossGradient, realGradientView);
-        }
     }
 
     /**

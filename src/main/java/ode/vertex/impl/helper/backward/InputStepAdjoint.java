@@ -39,7 +39,6 @@ public class InputStepAdjoint implements OdeHelperBackward {
                 notTimeInputs.toArray(new INDArray[0]),
                 input.getLastOutput(),
                 input.getLossGradient(),
-                input.getLossGradientTime(),
                 input.getRealGradientView()
         );
 
