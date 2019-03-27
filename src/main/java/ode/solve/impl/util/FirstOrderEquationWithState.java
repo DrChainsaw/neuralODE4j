@@ -11,11 +11,12 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
  *
  * @author Christian Skarby
  */
-public class FirstOrderEquationWithState {
+public class FirstOrderEquationWithState implements SolverState {
 
     private final FirstOrderEquation equation;
     private final INDArray time;
     private final State state;
+    private final double[] midPointCoeffs;
 
     private final static class State {
         private final INDArray y; // Last value of y. May be of any shape
@@ -48,13 +49,14 @@ public class FirstOrderEquationWithState {
             FirstOrderEquation equation,
             INDArray time,
             INDArray state,
-            long nrofStages) {
+            double[] midPointCoeffs) {
         if (!time.isScalar()) {
             throw new IllegalArgumentException("Expected time to be a scalar! Was: " + time);
         }
         this.equation = equation;
         this.time = time;
-        this.state = new State(state, nrofStages);
+        this.state = new State(state, midPointCoeffs.length);
+        this.midPointCoeffs = midPointCoeffs;
 
     }
 
@@ -64,10 +66,12 @@ public class FirstOrderEquationWithState {
      * @param stage which stage to update
      */
     public void calculateDerivative(long stage) {
+        //System.out.println("\tUpdate stage " + stage + " from " + state.getStateDot(stage));
         equation.calculateDerivative(
                 state.yWorking,
                 time.add(state.timeOffset),
                 state.getStateDot(stage)); // Note, stateDot of the given stage will be updated by this operation
+        //System.out.println("\tto: " + state.getStateDot(stage));
     }
 
     /**
@@ -75,6 +79,7 @@ public class FirstOrderEquationWithState {
      * @param stage wanted stage of derivative
      * @return The derivative of the given stage
      */
+    @Override
     public INDArray getStateDot(long stage) {
         return state.getStateDot(stage);
     }
@@ -83,8 +88,23 @@ public class FirstOrderEquationWithState {
      * Return the current state
      * @return the current state
      */
+    @Override
     public INDArray getCurrentState() {
         return state.y;
+    }
+
+    /**
+     * Return the current time state
+     * @return the current time state
+     */
+    @Override
+    public INDArray time() {
+        return time;
+    }
+
+    @Override
+    public double[] getInterpolationMidpoints() {
+        return midPointCoeffs;
     }
 
     /**
@@ -94,14 +114,6 @@ public class FirstOrderEquationWithState {
      */
     public INDArray estimateError(AdaptiveRungeKuttaSolver.MseComputation mseComputation) {
         return mseComputation.estimateMse(state.yDotK, state.y, state.yWorking, state.timeOffset);
-    }
-
-    /**
-     * Return the current time state
-     * @return
-     */
-    public INDArray time() {
-        return time;
     }
 
     /**
@@ -115,12 +127,18 @@ public class FirstOrderEquationWithState {
     }
 
     /**
-     * Update the current state to the working state. This also includes shifting the derivative so that previous
-     * stage 1 becomes new stage 0.
+     * Update the current state to the working state.
      */
     public void update() {
         time.addi(state.timeOffset);
         state.y.assign(state.yWorking);
+
+    }
+
+    /**
+     * Shift the derivative so that previous stage 1 becomes new stage 0 in preparation for next step.
+     */
+    public void shiftDerivative() {
         state.yDotK.putRow(0, state.yDotK.getRow(state.yDotK.rows()-1));
     }
 }

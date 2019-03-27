@@ -119,6 +119,7 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
 
         // step size is computed such that
         // step^order * max (||y'/tol||, ||y''/tol||) = 0.01
+        // TODO: Should be abs(yDDotOnScale) for when negative step?
         final INDArray maxInv2 = max(sqrt(yDotOnScale2), yDDotOnScale);
         final INDArray step1 = maxInv2.getDouble(0) < 1e-15 ?
                 max(MIN_H, abs(step).muli(0.001)) :

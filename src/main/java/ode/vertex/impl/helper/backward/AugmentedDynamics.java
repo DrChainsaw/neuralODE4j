@@ -1,4 +1,4 @@
-package ode.vertex.impl;
+package ode.vertex.impl.helper.backward;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.INDArrayIndex;
@@ -11,7 +11,7 @@ import java.util.List;
  *
  * @author Christian Skarby
  */
-class AugmentedDynamics {
+public class AugmentedDynamics {
 
     private final INDArray augStateFlat;
     private final INDArray z;
@@ -20,7 +20,7 @@ class AugmentedDynamics {
     private final INDArray tAdjoint;
 
 
-    AugmentedDynamics(INDArray zAug, long[] zShape, long[] paramShape, long[] tShape) {
+    public AugmentedDynamics(INDArray zAug, long[] zShape, long[] paramShape, long[] tShape) {
         this(
                 zAug,
                 zAug.get(NDArrayIndex.interval(0, length(zShape))).reshape(zShape),
@@ -45,7 +45,7 @@ class AugmentedDynamics {
         return length;
     }
 
-    void updateFrom(INDArray zAug) {
+    public void updateFrom(INDArray zAug) {
         augStateFlat.assign(zAug);
     }
 

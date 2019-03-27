@@ -1,6 +1,7 @@
 package util.listen.step;
 
 import ode.solve.api.StepListener;
+import ode.solve.impl.util.SolverState;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 /**
@@ -61,9 +62,9 @@ public class Mask implements StepListener {
     }
 
     @Override
-    public void step(INDArray currTime, INDArray step, INDArray error, INDArray y) {
+    public void step(SolverState solverState, INDArray step, INDArray error) {
         if(mask) {
-            listener.step(currTime, step, error, y);
+            listener.step(solverState, step, error);
         }
     }
 

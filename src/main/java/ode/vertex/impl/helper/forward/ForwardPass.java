@@ -1,6 +1,7 @@
-package ode.vertex.impl;
+package ode.vertex.impl.helper.forward;
 
 import ode.solve.api.FirstOrderEquation;
+import ode.vertex.impl.helper.NDArrayIndexAccumulator;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.graph.vertex.VertexIndices;
@@ -34,12 +35,12 @@ public class ForwardPass implements FirstOrderEquation {
         this.graph = graph;
         this.workspaceMgr = workspaceMgr;
         this.training = training;
-        this.inputs = startInputs;
+        this.inputs = startInputs.clone();
     }
-
 
     @Override
     public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
+        graph.getConfiguration().setIterationCount(graph.getIterationCount() + 1);
         try (WorkspacesCloseable ws = enterIfNotOpen(ArrayType.ACTIVATIONS)) {
             setInputsFromFlat(y);
             evaluate(inputs, fy);
@@ -64,7 +65,7 @@ public class ForwardPass implements FirstOrderEquation {
             INDArray input = inputs[i];
             final INDArray z = flatArray.get(NDArrayIndex.interval(lastInd, lastInd + input.length()));
             lastInd += input.length();
-            inputs[i].assign(z.reshape(input.shape()));
+            inputs[i] = z.reshape(input.shape());
         }
     }
 
@@ -81,19 +82,17 @@ public class ForwardPass implements FirstOrderEquation {
 
             VertexIndices[] inputsTo = current.getOutputVertices();
 
-            INDArray out = null;
+            final INDArray out;
             if (current.isInputVertex()) {
                 out = inputs[vIdx];
-            } else if (current.isOutputVertex()) {
-                for (INDArray outArr : current.getInputs()) {
-                    outputAccum.increment(outArr);
-                }
             } else {
                 //Standard feed-forward case
                 out = current.doForward(training, workspaceMgr);
             }
 
-            if (inputsTo != null) {  //Output vertices may not input to any other vertices
+            if (inputsTo == null) {  //Output vertices may not input to any other vertices
+                outputAccum.increment(out);
+            } else {
                 for (VertexIndices v : inputsTo) {
                     //Note that we don't have to do anything special here: the activations are always detached in
                     // this method

@@ -1,23 +1,40 @@
 package ode.vertex.conf;
 
 import lombok.Data;
-import ode.solve.api.FirstOrderSolver;
-import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.DormandPrince54Solver;
+import ode.vertex.conf.helper.OdeHelper;
+import ode.vertex.conf.helper.backward.FixedStepAdjoint;
+import ode.vertex.conf.helper.backward.OdeHelperBackward;
+import ode.vertex.conf.helper.forward.FixedStep;
+import ode.vertex.conf.helper.forward.OdeHelperForward;
+import ode.vertex.impl.gradview.GradientViewFactory;
+import ode.vertex.impl.gradview.GradientViewSelectionFromBlacklisted;
+import ode.vertex.impl.helper.OdeGraphHelper;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
-import org.deeplearning4j.nn.conf.layers.CnnLossLayer;
 import org.deeplearning4j.nn.conf.layers.Layer;
 import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 /**
- * Configuration of an ODE block.
+ * Configuration of an ODE block. Contains a {@link ComputationGraphConfiguration} which defines the structure of the
+ * learnable function {@code f = z(t)/dt} for which the {@link ode.vertex.impl.OdeVertex} will output an estimate
+ * of z(t) for given t(s).
+ * <br><br>
+ * A {@link Builder} is used to add {@link Layer}s and {@link GraphVertex GraphVertices} to the internal
+ * {@link ComputationGraphConfiguration}.
+ * <br><br>
+ * Note that the internal {@code ComputationGraphConfiguration} is <i>not</i> the same as the "outer"
+ * {@code ComputationGraphConfiguration} which houses the OdeVertex itself. This understandably confusing composition
+ * comes from the fact that the {@code OdeVertex} needs to operate on an arbitrary graph and I didn't want to
+ * reimplement all the routing for doing this. If dl4j had something similar to pytorch's nn.Module I would rather have
+ * used that.
  *
  * @author Christian Skarby
  */
@@ -26,23 +43,26 @@ public class OdeVertex extends GraphVertex {
 
     protected ComputationGraphConfiguration conf;
     protected String firstVertex;
-    protected String lastVertex;
-    protected FirstOrderSolverConf odeSolver;
+    protected OdeHelperForward odeForwardConf;
+    protected OdeHelperBackward odeBackwardConf;
+    protected GradientViewFactory gradientViewFactory;
 
     public OdeVertex(
             @JsonProperty("conf") ComputationGraphConfiguration conf,
             @JsonProperty("firstVertex") String firstVertex,
-            @JsonProperty("lastVertex") String lastVertex,
-            @JsonProperty("odeSolver") FirstOrderSolverConf odeSolver) {
+            @JsonProperty("odeForwardConf") OdeHelperForward odeForwardConf,
+            @JsonProperty("odeBackwardConf") OdeHelperBackward odeBackwardConf,
+            @JsonProperty("gradientViewFactory") GradientViewFactory gradientViewFactory) {
         this.conf = conf;
         this.firstVertex = firstVertex;
-        this.lastVertex = lastVertex;
-        this.odeSolver = odeSolver;
+        this.odeForwardConf = odeForwardConf;
+        this.odeBackwardConf = odeBackwardConf;
+        this.gradientViewFactory = gradientViewFactory;
     }
 
     @Override
     public GraphVertex clone() {
-        return new OdeVertex(conf.clone(), firstVertex, lastVertex, odeSolver.clone());
+        return new OdeVertex(conf.clone(), firstVertex, odeForwardConf.clone(), odeBackwardConf.clone(), gradientViewFactory.clone());
     }
 
     @Override
@@ -50,11 +70,12 @@ public class OdeVertex extends GraphVertex {
         if (!(o instanceof OdeVertex)) {
             return false;
         }
-        final OdeVertex other = (OdeVertex)o;
+        final OdeVertex other = (OdeVertex) o;
         return conf.equals(other.conf)
                 && firstVertex.equals(other.firstVertex)
-                && lastVertex.equals(other.lastVertex)
-                && odeSolver.equals(other.odeSolver);
+                && odeForwardConf.equals(other.odeForwardConf)
+                && odeBackwardConf.equals(other.odeBackwardConf)
+                && gradientViewFactory.equals(other.gradientViewFactory);
     }
 
     @Override
@@ -71,12 +92,12 @@ public class OdeVertex extends GraphVertex {
 
     @Override
     public int minVertexInputs() {
-        return conf.getVertices().get(firstVertex).minVertexInputs();
+        return conf.getVertices().get(firstVertex).minVertexInputs() + odeForwardConf.nrofTimeInputs();
     }
 
     @Override
     public int maxVertexInputs() {
-        return conf.getVertices().get(firstVertex).maxVertexInputs();
+        return conf.getVertices().get(firstVertex).maxVertexInputs() + odeForwardConf.nrofTimeInputs();
     }
 
     @Override
@@ -110,18 +131,27 @@ public class OdeVertex extends GraphVertex {
 
         innerGraph.init(paramsView, false); // This does not update any parameters, just sets them
 
-        return new ode.vertex.impl.OdeVertex(
-                graph,
-                name,
-                idx,
+        final DefaultTrainingConfig trainingConfig = new DefaultTrainingConfig(
                 innerGraph,
-                odeSolver.instantiate(),
-                new DefaultTrainingConfig(name, graph.getVertices()[1].getConfig().getUpdaterByParam("W").clone()));
+                name,
+                gradientViewFactory.paramNameMapping());
+
+        return new ode.vertex.impl.OdeVertex(
+                new ode.vertex.impl.OdeVertex.BaseGraphVertexInputs(graph, name, idx),
+                new OdeGraphHelper(
+                        odeForwardConf.instantiate(),
+                        odeBackwardConf.instantiate(),
+                        new OdeGraphHelper.CompGraphAsOdeFunction(
+                                innerGraph,
+                                // Hacky handling for legacy models. To be removed...
+                                gradientViewFactory == null ? new GradientViewSelectionFromBlacklisted() : gradientViewFactory)
+                ),
+                trainingConfig);
     }
 
     @Override
     public InputType getOutputType(int layerIndex, InputType... vertexInputs) throws InvalidInputTypeException {
-        return conf.getLayerActivationTypes(vertexInputs).get(lastVertex);
+        return odeForwardConf.getOutputType(conf, vertexInputs);
     }
 
     @Override
@@ -131,17 +161,25 @@ public class OdeVertex extends GraphVertex {
 
     public static class Builder {
 
-        private final String inputName = this.toString() + "_input";
-        private final String outputName = this.toString() + "_output";
-        private final ComputationGraphConfiguration.GraphBuilder graphBuilder = new NeuralNetConfiguration.Builder()
-                .graphBuilder();
+        private final ComputationGraphConfiguration.GraphBuilder graphBuilder;
+        private final String first;
+        private OdeHelperForward odeForwardConf = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2), true);
+        private OdeHelperBackward odeBackwardConf = new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.arange(2));
+        private GradientViewFactory gradientViewFactory = new GradientViewSelectionFromBlacklisted();
 
-        private String first = null;
-        private String last;
-
-        private FirstOrderSolverConf odeSolver = new DormandPrince54Solver();
 
         public Builder(String name, Layer layer) {
+            graphBuilder = new NeuralNetConfiguration.Builder().graphBuilder();
+            final String inputName = this.toString() + "_input";
+            graphBuilder
+                    .addInputs(inputName)
+                    .addLayer(name, layer, inputName);
+            first = name;
+        }
+
+        public Builder(NeuralNetConfiguration.Builder globalConf, String name, Layer layer) {
+            graphBuilder = globalConf.clone().graphBuilder();
+            final String inputName = this.toString() + "_input";
             graphBuilder
                     .addInputs(inputName)
                     .addLayer(name, layer, inputName);
@@ -153,8 +191,6 @@ public class OdeVertex extends GraphVertex {
          */
         public Builder addLayer(String name, Layer layer, String... inputs) {
             graphBuilder.addLayer(name, layer, inputs);
-            checkFirst(name);
-            last = name;
             return this;
         }
 
@@ -163,25 +199,51 @@ public class OdeVertex extends GraphVertex {
          */
         public Builder addVertex(String name, GraphVertex vertex, String... inputs) {
             graphBuilder.addVertex(name, vertex, inputs);
-            checkFirst(name);
-            last = name;
             return this;
         }
 
         /**
-         * Sets the {@link FirstOrderSolver} to use
-         * @param odeSolver solver instance
+         * Set the {@link OdeHelper} to use
+         *
+         * @param odeConf ODE configuration
          * @return the Builder for fluent API
          */
-        public Builder odeSolver(FirstOrderSolverConf odeSolver) {
-            this.odeSolver = odeSolver;
+        public Builder odeConf(OdeHelper odeConf) {
+            odeForward(odeConf.forward());
+            return odeBackward(odeConf.backward());
+        }
+
+        /**
+         * Sets the {@link OdeHelperForward} to use
+         *
+         * @param odeForwardConf Configuration of forward helper
+         * @return the Builder for fluent API
+         */
+        public Builder odeForward(OdeHelperForward odeForwardConf) {
+            this.odeForwardConf = odeForwardConf;
             return this;
         }
 
-        private void checkFirst(String name) {
-            if (first == null) {
-                first = name;
-            }
+        /**
+         * Sets the {@link OdeHelperBackward} to use
+         *
+         * @param odeBackwardConf Configuration of backward helper
+         * @return the Builder for fluent API
+         */
+        public Builder odeBackward(OdeHelperBackward odeBackwardConf) {
+            this.odeBackwardConf = odeBackwardConf;
+            return this;
+        }
+
+        /**
+         * Sets the {@link GradientViewFactory} to use
+         *
+         * @param gradientViewFactory Factory for gradient views
+         * @return the Builder for fluent API
+         */
+        public Builder gradientViewFactory(GradientViewFactory gradientViewFactory) {
+            this.gradientViewFactory = gradientViewFactory;
+            return this;
         }
 
         /**
@@ -191,9 +253,12 @@ public class OdeVertex extends GraphVertex {
          */
         public OdeVertex build() {
             return new OdeVertex(graphBuilder
-                    .setOutputs(outputName)
-                    .addLayer(outputName, new CnnLossLayer(), last)
-                    .build(), first, last, odeSolver);
+                    .allowNoOutput(true)
+                    .build(),
+                    first,
+                    odeForwardConf,
+                    odeBackwardConf,
+                    gradientViewFactory);
         }
 
     }

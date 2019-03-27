@@ -1,7 +1,8 @@
-package ode.vertex.impl;
+package ode.vertex.impl.helper.backward;
 
 import lombok.AllArgsConstructor;
 import ode.solve.api.FirstOrderEquation;
+import ode.vertex.impl.gradview.INDArray1DView;
 import org.deeplearning4j.nn.gradient.Gradient;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
@@ -25,7 +26,7 @@ import java.util.List;
  * <pre>
  * f(z(t), theta) = output from forward pass through the layers of the ODE vertex (i.e. the layers of graph)
  * -a(t)*df/dz(t) = dL / dz(t) = epsilon from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt previous output.
- * -a(t) * df / dt = not used, set to 0
+ * -a(t) * df / dt = not used (as of now), set to 0
  * -a(t) df/dtheta = -dL / dtheta = Gradient from a backward pass through the layers of the ODE vertex (i.e. the layers of graph) wrt -epsilon.
  * </pre>
  *
@@ -40,7 +41,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
     @AllArgsConstructor
     public static class GraphInfo {
         private final ComputationGraph graph;
-        private final NonContiguous1DView realGradients;
+        private final INDArray1DView realGradients;
         private final LayerWorkspaceMgr workspaceMgr;
         private final boolean truncatedBPTT;
     }
@@ -59,7 +60,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
         augmentedDynamics.updateFrom(zAug);
 
         // Note: Will also update z
-        forwardPass.calculateDerivative(augmentedDynamics.z(), t, augmentedDynamics.z());
+        forwardPass.calculateDerivative(augmentedDynamics.z().dup(), t, augmentedDynamics.z());
 
         try (WorkspacesCloseable ws = graphInfo.workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.ACTIVATION_GRAD)) {
 
@@ -86,19 +87,13 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
         final int[] topologicalOrder = graphInfo.graph.topologicalSortOrder();
         final GraphVertex[] vertices = graphInfo.graph.getVertices();
 
+        vertices[topologicalOrder[topologicalOrder.length-1]].setEpsilon(epsilon);
+
         List<INDArray> outputEpsilons = new ArrayList<>();
 
         boolean[] setVertexEpsilon = new boolean[topologicalOrder.length]; //If true: already set epsilon for this vertex; later epsilons should be *added* to the existing one, not set
         for (int i = topologicalOrder.length - 1; i >= 0; i--) {
             GraphVertex current = vertices[topologicalOrder[i]];
-
-            if (current.isOutputVertex()) {
-                for (VertexIndices vertexIndices : current.getInputVertices()) {
-                    final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();
-                    graphInfo.graph.getVertex(inputName).setEpsilon(epsilon);
-                }
-                continue;
-            }
 
             if (current.isInputVertex()) {
                 continue;

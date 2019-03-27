@@ -1,11 +1,10 @@
-package ode.vertex.impl;
+package ode.vertex.impl.gradview;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -13,28 +12,17 @@ import java.util.List;
  *
  * @author Christian Skarby
  */
-public class NonContiguous1DView {
+public class NonContiguous1DView implements INDArray1DView {
 
     private final List<INDArray> view = new ArrayList<>();
     private long length = 0;
 
-    public void addView(INDArray array, long begin, long end) {
-        INDArray viewSlice = array.get(NDArrayIndex.interval(begin, end));
-        addView(viewSlice);
-    }
-
     public void addView(INDArray viewSlice) {
-        if(viewSlice.isColumnVectorOrScalar()) {
-            throw new IllegalArgumentException("Must be vector or scalar! Had shape: " + Arrays.toString(viewSlice.shape()));
-        }
         length += viewSlice.length();
         view.add(viewSlice);
     }
 
-    /**
-     * Sets the view to the given {@link INDArray}
-     * @param toAssign view will be set to this. Must be same size as view
-     */
+    @Override
     public void assignFrom(INDArray toAssign) {
         if(toAssign.length() != length) {
             throw new IllegalArgumentException("Array to assignFrom must have same length! " +
@@ -47,15 +35,12 @@ public class NonContiguous1DView {
 
         long ptr = 0;
         for(INDArray viewSlice: view) {
-            viewSlice.assign(toAssign.get(NDArrayIndex.interval(ptr, ptr + viewSlice.length())));
+            viewSlice.assign(toAssign.get(NDArrayIndex.interval(ptr, ptr + viewSlice.length())).reshape(viewSlice.shape()));
             ptr += viewSlice.length();
         }
     }
 
-    /**
-     * Sets the values of the given {@link INDArray} to the values of the view
-     * @param assignTo will be set to state of the view. Must be same size as view
-     */
+    @Override
     public void assignTo(INDArray assignTo) {
         if(assignTo.length() != length) {
             throw new IllegalArgumentException("Array assignTo must have same length! " +
@@ -67,24 +52,19 @@ public class NonContiguous1DView {
 
         long ptr = 0;
         for(INDArray viewSlice: view) {
-            assignTo.put(new INDArrayIndex[] {NDArrayIndex.interval(ptr, ptr + viewSlice.length())}, viewSlice);
+            assignTo.put(new INDArrayIndex[] {NDArrayIndex.interval(ptr, ptr + viewSlice.length())}, viewSlice.reshape(viewSlice.length()));
             ptr += viewSlice.length();
         }
     }
 
-    /**
-     * Return the current length (total number of elements) of the view
-     * @return the current length of the view
-     */
+    @Override
     public long length() {
         return length;
     }
 
-    /**
-     * Clears the view
-     */
-    public void clear() {
-        view.clear();
-        length = 0;
+    @Override
+    public String toString() {
+        return view.toString();
     }
+
 }

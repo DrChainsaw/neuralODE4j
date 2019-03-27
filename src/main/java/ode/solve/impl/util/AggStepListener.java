@@ -24,9 +24,9 @@ public class AggStepListener implements StepListener {
     }
 
     @Override
-    public void step(INDArray currTime, INDArray step, INDArray error, INDArray y) {
+    public void step(SolverState solverState, INDArray step, INDArray error) {
         for (StepListener listener : listeners) {
-            listener.step(currTime, step, error, y);
+            listener.step(solverState, step, error);
         }
     }
 

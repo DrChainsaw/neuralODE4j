@@ -37,6 +37,9 @@ class Main {
 
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
+    @Parameter(names = {"-help", "-h"}, description = "Prints help message")
+    private boolean help = false;
+
     @Parameter(names = "-trainBatchSize", description = "Batch size to use for training")
     private int trainBatchSize = 128;
 
@@ -85,6 +88,11 @@ class Main {
         JCommander jCommander = parbuilder.build();
         jCommander.parse(args);
 
+        if(main.help) {
+            jCommander.usage();
+            System.exit(0);
+        }
+
         final ModelFactory factory = modelCommands.get(jCommander.getParsedCommand());
 
         main.init(factory.create(), factory.name());
@@ -103,7 +111,7 @@ class Main {
     }
 
     private void addListeners() {
-        final File savedir = new File("savedmodels" + File.separator + modelName);
+        final File savedir = new File("savedmodels" + File.separator + "MNIST" + File.separator + modelName);
         log.info("Models will be saved in: " + savedir.getAbsolutePath());
         savedir.mkdirs();
         model.addListeners(

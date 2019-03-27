@@ -115,7 +115,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
                     equation,
                     t.getScalar(0).dup(),
                     yOut.assign(y0),
-                    tableu.c.length() + 1);
+                    tableu.cMid);
 
             listener.begin(t, y0);
 
@@ -134,6 +134,7 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
         final INDArray error = Nd4j.create(1);
         // Alg variable used for new steps
         final INDArray step = stepPolicy.initializeStep(equation, t);
+
         // Alg variable for where next step starts
         final TimeLimit timeLimit = t.argMax().getInt(0) == 1 ?
                 new TimeLimitForwards(t.getDouble(1), equation.time()) :
@@ -170,7 +171,9 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
             // local error is small enough: accept the step,
             equation.update();
 
-            listener.step(equation.time(), step, error, equation.getCurrentState());
+            listener.step(equation, step, error);
+
+            equation.shiftDerivative();
 
             return true;
         }

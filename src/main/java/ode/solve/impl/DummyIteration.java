@@ -4,6 +4,7 @@ import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.api.StepListener;
 import ode.solve.impl.util.AggStepListener;
+import ode.solve.impl.util.StateContainer;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -32,7 +33,11 @@ public class DummyIteration implements FirstOrderSolver {
 
         for (int i = 0; i < nrofIters; i++) {
             next = equation.calculateDerivative(next, t.getColumn(0), yOut);
-            listener.step(t.getColumn(0), Nd4j.zeros(1), Nd4j.zeros(1), next);
+            listener.step(
+                    new StateContainer(t.getColumn(0),
+                            next,
+                            Nd4j.zeros(next.shape())),
+                    Nd4j.zeros(1), Nd4j.zeros(1));
         }
 
         listener.done();

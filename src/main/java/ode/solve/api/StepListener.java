@@ -1,5 +1,6 @@
 package ode.solve.api;
 
+import ode.solve.impl.util.SolverState;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 /**
@@ -18,12 +19,11 @@ public interface StepListener {
 
     /**
      * Indicates a step has been taken
-     * @param currTime Current time (after step has been taken
+     * @param solverState Current state of the solver
      * @param step Taken step
      * @param error Estimated error
-     * @param y current state (i.e estimated state at currTime)
      */
-    void step(INDArray currTime, INDArray step, INDArray error, INDArray y);
+    void step(SolverState solverState, INDArray step, INDArray error);
 
     /**
      * Indicates that previous step was the last step taken

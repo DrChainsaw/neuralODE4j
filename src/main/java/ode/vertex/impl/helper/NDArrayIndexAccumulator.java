@@ -1,4 +1,4 @@
-package ode.vertex.impl;
+package ode.vertex.impl.helper;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.INDArrayIndex;
@@ -10,12 +10,12 @@ import org.nd4j.linalg.indexing.NDArrayIndexAll;
  *
  * @author Christian Skarby
  */
-class NDArrayIndexAccumulator {
+public class NDArrayIndexAccumulator {
 
     private final INDArrayIndex[] state;
     private final INDArray array;
 
-    NDArrayIndexAccumulator(INDArray array) {
+    public NDArrayIndexAccumulator(INDArray array) {
         this.array = array;
         state = new INDArrayIndex[array.shape().length];
         for(int i = 0; i < array.shape().length; i++) {
@@ -23,7 +23,9 @@ class NDArrayIndexAccumulator {
         }
     }
 
-    NDArrayIndexAccumulator increment(INDArray toAdd) {
+    public NDArrayIndexAccumulator increment(INDArray toAdd) {
+        if(toAdd.isEmpty()) return this;
+
         for(int dim = 0; dim < toAdd.shape().length; dim++) {
             if(toAdd.size(dim) != array.size(dim)) {
                 final long curr = state[dim] instanceof NDArrayIndexAll ? 0 : state[dim].end();

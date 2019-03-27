@@ -18,6 +18,7 @@ public class ButcherTableu {
     public final INDArray b;
     public final INDArray bStar;
     public final INDArray c;
+    public final double[] cMid;
 
     /**
      * Create a new {@link Builder} instance
@@ -27,11 +28,12 @@ public class ButcherTableu {
         return new Builder();
     }
 
-    private ButcherTableu(INDArray[] a, INDArray b, INDArray bStar, INDArray c) {
+    private ButcherTableu(INDArray[] a, INDArray b, INDArray bStar, INDArray c, double[] cMid) {
         this.a = a;
         this.b = b;
         this.bStar = bStar;
         this.c = c;
+        this.cMid = cMid;
     }
 
     /**
@@ -46,6 +48,7 @@ public class ButcherTableu {
         private double[] b;
         private double[] bStar;
         private double[] c;
+        private double[] cMid;
 
         public Builder a(double[][] a) {
             cache.clear();
@@ -67,6 +70,11 @@ public class ButcherTableu {
             this.c = c; return this;
         }
 
+        public Builder cMid(double[] cMid) {
+            cache.clear();
+            this.cMid = cMid; return this;
+        }
+
         public ButcherTableu build() {
             ButcherTableu tableu = cache.get(Nd4j.dataType());
             if(tableu == null) {
@@ -78,7 +86,8 @@ public class ButcherTableu {
                         aArr,
                         Nd4j.create(b),
                         Nd4j.create(bStar),
-                        Nd4j.create(c));
+                        Nd4j.create(c),
+                        cMid);
                 cache.put(Nd4j.dataType(), tableu);
             }
             return  tableu;

@@ -1,6 +1,7 @@
 package util.listen.step;
 
 import ode.solve.api.StepListener;
+import ode.solve.impl.util.SolverState;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +48,7 @@ public class StepCounter implements StepListener {
     }
 
     @Override
-    public void step(INDArray currTime, INDArray step, INDArray error, INDArray y) {
+    public void step(SolverState solverState, INDArray step, INDArray error) {
         nrofSteps++;
     }
 
