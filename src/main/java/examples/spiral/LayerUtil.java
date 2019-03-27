@@ -32,6 +32,9 @@ class LayerUtil {
                 // of magic numbers and odd default values results in the equivalent of UNIFORM. The spiral experiment
                 // is stupidly sensitive to hyper parameters and weight (and bias) init is no exception to this.
                 .weightInit(WeightInit.UNIFORM)
+                // Original implementation does not seem to use any regularization, but I could not make this experiment work without it
+                .l2(0.0005)
+                .l2Bias(0.001)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(new Adam(0.01))
                 .graphBuilder()
