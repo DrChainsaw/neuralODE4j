@@ -3,6 +3,7 @@ package ode.vertex.impl.helper.backward;
 import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
 import ode.vertex.impl.gradview.NonContiguous1DView;
+import ode.vertex.impl.helper.NoTimeInput;
 import ode.vertex.impl.helper.backward.timegrad.CalcTimeGrad;
 import ode.vertex.impl.helper.backward.timegrad.NoTimeGrad;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -49,7 +50,7 @@ public class SingleStepAdjointTest {
         assertEquals("Incorrect number of input gradients!", 1, gradients.length);
 
         final INDArray inputGrad = gradients[0];
-        assertArrayEquals("Incorrect input gradient shape!", inputArrays.getLastInputs()[0].shape(), inputGrad.shape());
+        assertArrayEquals("Incorrect input gradient shape!", inputArrays.getGraphInputOutput().y0().shape(), inputGrad.shape());
 
         final INDArray parGrad = graph.getGradientsViewArray();
         assertNotEquals("Expected non-zero parameter gradient!", 0.0, parGrad.sumNumber().doubleValue(),1e-10);
@@ -78,7 +79,7 @@ public class SingleStepAdjointTest {
 
         final INDArray inputGrad = gradients[0];
         final INDArray timeGrad = gradients[1];
-        assertArrayEquals("Incorrect input gradient shape!", inputArrays.getLastInputs()[0].shape(), inputGrad.shape());
+        assertArrayEquals("Incorrect input gradient shape!", inputArrays.getGraphInputOutput().y0().shape(), inputGrad.shape());
         assertArrayEquals("Incorrect time gradient shape!", time.shape(), timeGrad.shape());
 
         final INDArray parGrad = graph.getGradientsViewArray();
@@ -96,7 +97,7 @@ public class SingleStepAdjointTest {
         realGrads.addView(graph.getGradientsViewArray());
 
         return new OdeHelperBackward.InputArrays(
-                new INDArray[]{input},
+                new NoTimeInput(new INDArray[]{input}),
                 output,
                 epsilon,
                 realGrads

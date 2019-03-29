@@ -29,7 +29,7 @@ public class FixedStep implements OdeHelperForward {
     }
 
     @Override
-    public INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, INDArray[] inputs) {
-        return helper.solve(graph, wsMgr, inputs);
+    public INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, GraphInput input) {
+        return helper.solve(graph, wsMgr, input);
     }
 }

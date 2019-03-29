@@ -119,7 +119,7 @@ public class OdeGraphHelper {
         final LayerWorkspaceMgr innerWorkspaceMgr = createWorkspaceMgr(workspaceMgr, getFunction());
 
         getFunction().getConfiguration().setIterationCount(0);
-        final INDArray output = odeHelperForward.solve(getFunction(), innerWorkspaceMgr, inputs);
+        final INDArray output = odeHelperForward.solve(getFunction(), innerWorkspaceMgr, new NoTimeInput(inputs));
         log.debug("Nrof func eval forward " + getFunction().getIterationCount());
 
         odeFunction.setLastOutput(output.detach());
@@ -133,7 +133,7 @@ public class OdeGraphHelper {
             INDArray[] lastInputs) {
 
         final OdeHelperBackward.InputArrays inputArrays = new OdeHelperBackward.InputArrays(
-                lastInputs,
+                new NoTimeInput(lastInputs),
                 odeFunction.lastOutput(),
                 lossGradient,
                 odeFunction.realGradients()

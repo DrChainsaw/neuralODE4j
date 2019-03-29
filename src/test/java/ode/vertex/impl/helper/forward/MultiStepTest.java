@@ -4,6 +4,7 @@ import ode.solve.api.FirstOrderSolver;
 import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
 import ode.solve.impl.SingleSteppingMultiStepSolver;
+import ode.vertex.impl.helper.NoTimeInput;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.junit.Test;
@@ -38,7 +39,7 @@ public class MultiStepTest {
                 new SingleSteppingMultiStepSolver(solver),
                 t);
 
-        final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new INDArray[]{input}).reshape(expected.shape());
+        final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new NoTimeInput(new INDArray[]{input})).reshape(expected.shape());
 
         for(int row = 0; row < actual.rows(); row++) {
             assertArrayEquals("Incorrect answer!", expected.getRow(row).toDoubleVector(), actual.getRow(row).toDoubleVector(), 1e-3);

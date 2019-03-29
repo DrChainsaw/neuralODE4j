@@ -35,6 +35,7 @@ import java.util.List;
 public class BackpropagateAdjoint implements FirstOrderEquation {
 
     private final AugmentedDynamics augmentedDynamics;
+    private final GraphBackwardsOutput graphBackwardsOutput;
     private final FirstOrderEquation forwardPass;
     private final GraphInfo graphInfo;
 
@@ -48,9 +49,10 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
     public BackpropagateAdjoint(
             AugmentedDynamics augmentedDynamics,
-            FirstOrderEquation forwardPass,
+            GraphBackwardsOutput graphBackwardsOutput, FirstOrderEquation forwardPass,
             GraphInfo graphInfo) {
         this.augmentedDynamics = augmentedDynamics;
+        this.graphBackwardsOutput = graphBackwardsOutput;
         this.forwardPass = forwardPass;
         this.graphInfo = graphInfo;
     }
@@ -71,9 +73,8 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             final List<INDArray> ret = backPropagate(augmentedDynamics.zAdjoint().negi());
 
             // Note: z updated above
-            augmentedDynamics.updateZAdjoint(ret);
             graphInfo.realGradients.assignTo(augmentedDynamics.paramAdjoint());
-            augmentedDynamics.tAdjoint().assign(0); // Nothing depends on t as of yet.
+            graphBackwardsOutput.update(ret, augmentedDynamics);
 
             augmentedDynamics.transferTo(fzAug);
 

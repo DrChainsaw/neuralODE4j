@@ -3,6 +3,7 @@ package ode.vertex.impl.helper.forward;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
+import ode.vertex.impl.helper.NoTimeInput;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.junit.Test;
@@ -36,7 +37,7 @@ public class InputStepTest {
                 solver,
                 1, false);
 
-        final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new INDArray[]{input, Nd4j.linspace(0, 1, 2)});
+        final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new NoTimeInput(new INDArray[]{input, Nd4j.linspace(0, 1, 2)}));
 
         assertArrayEquals("Incorrect answer!", expected.toDoubleVector(),actual.toDoubleVector(), 1e-3);
     }
@@ -60,7 +61,7 @@ public class InputStepTest {
                 solver,
                 1, false);
 
-        final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new INDArray[]{input, t}).reshape(expected.shape());
+        final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new NoTimeInput(new INDArray[]{input, t})).reshape(expected.shape());
 
         for(int row = 0; row < actual.rows(); row++) {
             assertArrayEquals("Incorrect answer!", expected.getRow(row).toDoubleVector(), actual.getRow(row).toDoubleVector(), 1e-3);

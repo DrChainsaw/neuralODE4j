@@ -3,6 +3,7 @@ package ode.vertex.impl.helper.backward;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import ode.vertex.impl.gradview.INDArray1DView;
+import ode.vertex.impl.helper.GraphInputOutput;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -25,7 +26,7 @@ public interface OdeHelperBackward {
     @Getter @AllArgsConstructor
     class InputArrays {
 
-        private final INDArray[] lastInputs;
+        private final GraphInputOutput graphInputOutput;
         private final INDArray lastOutput;
         private final INDArray lossGradient;
         private final INDArray1DView realGradientView;

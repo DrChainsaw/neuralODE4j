@@ -1,5 +1,6 @@
 package ode.vertex.impl.helper.forward;
 
+import ode.vertex.impl.helper.NoTimeInput;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
@@ -45,7 +46,7 @@ public class ForwardPassTest {
 
         final INDArray input = Nd4j.arange(nrofInputs);
         final INDArray expected = input.mul(mul);
-        final INDArray actual = new ForwardPass(graph, LayerWorkspaceMgr.noWorkspaces(), false, new INDArray[]{input})
+        final INDArray actual = new ForwardPass(graph, LayerWorkspaceMgr.noWorkspaces(), false, new NoTimeInput(new INDArray[]{input}))
                 .calculateDerivative(input, Nd4j.scalar(0), input.dup());
 
         assertEquals("Incorrect output!", expected, actual);

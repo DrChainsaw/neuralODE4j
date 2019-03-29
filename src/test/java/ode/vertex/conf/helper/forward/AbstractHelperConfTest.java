@@ -1,5 +1,6 @@
 package ode.vertex.conf.helper.forward;
 
+import ode.vertex.impl.helper.NoTimeInput;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
@@ -46,7 +47,7 @@ abstract class AbstractHelperConfTest {
     @Test
     public void instantiateAndSolveConv() {
         final ode.vertex.impl.helper.forward.OdeHelperForward helper = create().instantiate();
-        final INDArray output = helper.solve(createGraph(), LayerWorkspaceMgr.noWorkspaces(), createInputs(Nd4j.randn(new long[] {5, 2, 3, 3})));
+        final INDArray output = helper.solve(createGraph(), LayerWorkspaceMgr.noWorkspaces(), new NoTimeInput(createInputs(Nd4j.randn(new long[] {5, 2, 3, 3}))));
         assertNotEquals("Expected non-zero output!", 0, output.sumNumber().doubleValue() ,1e-10);
     }
 

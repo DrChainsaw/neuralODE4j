@@ -1,6 +1,7 @@
 package ode.vertex.conf.helper.backward;
 
 import ode.vertex.impl.gradview.NonContiguous1DView;
+import ode.vertex.impl.helper.NoTimeInput;
 import ode.vertex.impl.helper.backward.OdeHelperBackward.InputArrays;
 import ode.vertex.impl.helper.backward.OdeHelperBackward.MiscPar;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
@@ -179,7 +180,7 @@ abstract class AbstractHelperConfTest {
         realGrads.addView(graph.getGradientsViewArray());
 
         return new InputArrays(
-                createInputs(input, nrofTimeSteps),
+                new NoTimeInput(createInputs(input, nrofTimeSteps)),
                 output,
                 epsilon,
                 realGrads
