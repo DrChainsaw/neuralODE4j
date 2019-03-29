@@ -1,7 +1,10 @@
 package ode.vertex.conf;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import ode.solve.conf.DormandPrince54Solver;
+import ode.vertex.conf.helper.GraphInputOutputFactory;
+import ode.vertex.conf.helper.NoTimeInputFactory;
 import ode.vertex.conf.helper.OdeHelper;
 import ode.vertex.conf.helper.backward.FixedStepAdjoint;
 import ode.vertex.conf.helper.backward.OdeHelperBackward;
@@ -39,12 +42,14 @@ import org.nd4j.shade.jackson.annotation.JsonProperty;
  * @author Christian Skarby
  */
 @Data
+@EqualsAndHashCode(callSuper = false)
 public class OdeVertex extends GraphVertex {
 
     protected ComputationGraphConfiguration conf;
     protected String firstVertex;
     protected OdeHelperForward odeForwardConf;
     protected OdeHelperBackward odeBackwardConf;
+    protected GraphInputOutputFactory graphInputOutputFactory;
     protected GradientViewFactory gradientViewFactory;
 
     public OdeVertex(
@@ -52,35 +57,25 @@ public class OdeVertex extends GraphVertex {
             @JsonProperty("firstVertex") String firstVertex,
             @JsonProperty("odeForwardConf") OdeHelperForward odeForwardConf,
             @JsonProperty("odeBackwardConf") OdeHelperBackward odeBackwardConf,
+            @JsonProperty("graphInputOutputFactory") GraphInputOutputFactory graphInputOutputFactory,
             @JsonProperty("gradientViewFactory") GradientViewFactory gradientViewFactory) {
         this.conf = conf;
         this.firstVertex = firstVertex;
         this.odeForwardConf = odeForwardConf;
         this.odeBackwardConf = odeBackwardConf;
+        this.graphInputOutputFactory = graphInputOutputFactory;
         this.gradientViewFactory = gradientViewFactory;
     }
 
     @Override
     public GraphVertex clone() {
-        return new OdeVertex(conf.clone(), firstVertex, odeForwardConf.clone(), odeBackwardConf.clone(), gradientViewFactory.clone());
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof OdeVertex)) {
-            return false;
-        }
-        final OdeVertex other = (OdeVertex) o;
-        return conf.equals(other.conf)
-                && firstVertex.equals(other.firstVertex)
-                && odeForwardConf.equals(other.odeForwardConf)
-                && odeBackwardConf.equals(other.odeBackwardConf)
-                && gradientViewFactory.equals(other.gradientViewFactory);
-    }
-
-    @Override
-    public int hashCode() {
-        return conf.hashCode();
+        return new OdeVertex(
+                conf.clone(),
+                firstVertex,
+                odeForwardConf.clone(),
+                odeBackwardConf.clone(),
+                graphInputOutputFactory.clone(),
+                gradientViewFactory.clone());
     }
 
     @Override
@@ -141,6 +136,7 @@ public class OdeVertex extends GraphVertex {
                 new OdeGraphHelper(
                         odeForwardConf.instantiate(),
                         odeBackwardConf.instantiate(),
+                        graphInputOutputFactory,
                         new OdeGraphHelper.CompGraphAsOdeFunction(
                                 innerGraph,
                                 // Hacky handling for legacy models. To be removed...
@@ -165,6 +161,7 @@ public class OdeVertex extends GraphVertex {
         private final String first;
         private OdeHelperForward odeForwardConf = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2), true);
         private OdeHelperBackward odeBackwardConf = new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.arange(2));
+        private GraphInputOutputFactory graphInputOutputFactory = new NoTimeInputFactory();
         private GradientViewFactory gradientViewFactory = new GradientViewSelectionFromBlacklisted();
 
 
@@ -258,6 +255,7 @@ public class OdeVertex extends GraphVertex {
                     first,
                     odeForwardConf,
                     odeBackwardConf,
+                    graphInputOutputFactory,
                     gradientViewFactory);
         }
 

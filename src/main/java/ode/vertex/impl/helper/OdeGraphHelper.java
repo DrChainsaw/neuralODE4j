@@ -1,5 +1,6 @@
 package ode.vertex.impl.helper;
 
+import ode.vertex.conf.helper.GraphInputOutputFactory;
 import ode.vertex.impl.gradview.GradientViewFactory;
 import ode.vertex.impl.gradview.INDArray1DView;
 import ode.vertex.impl.gradview.ParameterGradientView;
@@ -30,11 +31,13 @@ public class OdeGraphHelper {
 
     private final OdeHelperForward odeHelperForward;
     private final OdeHelperBackward odeHelperBackward;
+    private final GraphInputOutputFactory graphInputOutputFactory;
     private final CompGraphAsOdeFunction odeFunction;
 
-    public OdeGraphHelper(OdeHelperForward odeHelperForward, OdeHelperBackward odeHelperBackward, CompGraphAsOdeFunction odeFunction) {
+    public OdeGraphHelper(OdeHelperForward odeHelperForward, OdeHelperBackward odeHelperBackward, GraphInputOutputFactory graphInputOutputFactory, CompGraphAsOdeFunction odeFunction) {
         this.odeHelperForward = odeHelperForward;
         this.odeHelperBackward = odeHelperBackward;
+        this.graphInputOutputFactory = graphInputOutputFactory;
         this.odeFunction = odeFunction;
     }
 
@@ -69,10 +72,10 @@ public class OdeGraphHelper {
 
         Map<String, INDArray> paramTable(boolean backpropOnly) {
             final Map<String, INDArray> output = new HashMap<>();
-            for(GraphVertex vertex: function.getVertices()) {
+            for (GraphVertex vertex : function.getVertices()) {
                 final Map<String, INDArray> partable = vertex.paramTable(backpropOnly);
-                if(partable != null) {
-                    for(Map.Entry<String, INDArray> parEntry: partable.entrySet()) {
+                if (partable != null) {
+                    for (Map.Entry<String, INDArray> parEntry : partable.entrySet()) {
                         output.put(
                                 gradientViewFactory.paramNameMapping().map(vertex.getVertexName(), parEntry.getKey()),
                                 parEntry.getValue());
@@ -105,8 +108,9 @@ public class OdeGraphHelper {
      * to do this:
      * <br><br>
      * * BatchNormalization: The global variance and mean are just the (sliding) average of the batch dittos.
-     *                         However, in order to support distributed training the updates are performed by adding
-     *                         the change to the state as a gradient even through it is not really.
+     * However, in order to support distributed training the updates are performed by adding
+     * the change to the state as a gradient even through it is not really.
+     *
      * @param backpropGradientsViewArray View of parameter gradients
      */
     public void setBackpropGradientsViewArray(INDArray backpropGradientsViewArray) {
@@ -119,7 +123,7 @@ public class OdeGraphHelper {
         final LayerWorkspaceMgr innerWorkspaceMgr = createWorkspaceMgr(workspaceMgr, getFunction());
 
         getFunction().getConfiguration().setIterationCount(0);
-        final INDArray output = odeHelperForward.solve(getFunction(), innerWorkspaceMgr, new NoTimeInput(inputs));
+        final INDArray output = odeHelperForward.solve(getFunction(), innerWorkspaceMgr, graphInputOutputFactory.create(inputs));
         log.debug("Nrof func eval forward " + getFunction().getIterationCount());
 
         odeFunction.setLastOutput(output.detach());
@@ -133,7 +137,7 @@ public class OdeGraphHelper {
             INDArray[] lastInputs) {
 
         final OdeHelperBackward.InputArrays inputArrays = new OdeHelperBackward.InputArrays(
-                new NoTimeInput(lastInputs),
+                graphInputOutputFactory.create(lastInputs),
                 odeFunction.lastOutput(),
                 lossGradient,
                 odeFunction.realGradients()
@@ -151,14 +155,15 @@ public class OdeGraphHelper {
         return new Pair<>(odeFunction.parameterGradientView.allGradientsPerParam(), gradients);
     }
 
-        /**
-         * Changes names of  workspaces associated with certain {@link ArrayType}s in order to avoid workspace conflicts
-         * due to "graph in graph".
-         * @param outerWsMgr workspace manager
-         * @return LayerWorkspaceMgr with new workspace names but using the same workspace configs as in {@link ComputationGraph}
-         */
+    /**
+     * Changes names of  workspaces associated with certain {@link ArrayType}s in order to avoid workspace conflicts
+     * due to "graph in graph".
+     *
+     * @param outerWsMgr workspace manager
+     * @return LayerWorkspaceMgr with new workspace names but using the same workspace configs as in {@link ComputationGraph}
+     */
     private LayerWorkspaceMgr createWorkspaceMgr(final LayerWorkspaceMgr outerWsMgr, ComputationGraph graph) {
-        if(outerWsMgr == LayerWorkspaceMgr.noWorkspacesImmutable()) {
+        if (outerWsMgr == LayerWorkspaceMgr.noWorkspacesImmutable()) {
             // This can be handled better, but I just CBA to check presence for every array type right now...
             return outerWsMgr;
         }
