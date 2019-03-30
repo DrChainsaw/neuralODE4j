@@ -15,6 +15,8 @@ import org.nd4j.linalg.workspace.WorkspacesCloseable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Models back propagation through a undefined number of residual blocks as a first order differential equation using
@@ -90,7 +92,9 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
 
         vertices[topologicalOrder[topologicalOrder.length-1]].setEpsilon(epsilon);
 
-        List<INDArray> outputEpsilons = new ArrayList<>();
+        // Normal list would be fine, except the order in which the outputs are encountered in the graph is not
+        // guaranteed to be sequential, and list.add(n, y) fails if not all elements 0,...,n-1 are already in the list
+        final Map<Integer, INDArray> outputEpsilons = new TreeMap<>();
 
         boolean[] setVertexEpsilon = new boolean[topologicalOrder.length]; //If true: already set epsilon for this vertex; later epsilons should be *added* to the existing one, not set
         for (int i = topologicalOrder.length - 1; i >= 0; i--) {
@@ -109,7 +113,7 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
                 final String inputName = vertices[vertexIndices.getVertexIndex()].getVertexName();
                 if (graphInfo.graph.getConfiguration().getNetworkInputs().contains(
                         inputName)) {
-                    outputEpsilons.add(graphInfo.graph.getConfiguration().getNetworkInputs().indexOf(inputName),
+                    outputEpsilons.put(graphInfo.graph.getConfiguration().getNetworkInputs().indexOf(inputName),
                             epsilons[vertexIndices.getVertexEdgeNumber()]);
                 }
             }
@@ -134,6 +138,6 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
             }
         }
 
-        return outputEpsilons;
+        return new ArrayList<>(outputEpsilons.values());
     }
 }

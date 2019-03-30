@@ -28,7 +28,7 @@ public class TimeInput implements GraphInputOutput {
         final INDArray[] inputs = source.getInputsFrom(y, t);
         final INDArray[] withTime = new INDArray[inputs.length + 1];
         System.arraycopy(inputs, 0, withTime, 0, inputs.length);
-        withTime[inputs.length] = t;
+        withTime[inputs.length] = t.reshape(1,1);
         return withTime;
     }
 

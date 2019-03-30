@@ -37,8 +37,8 @@ public class OdeVertexTest {
                         new Convolution2D.Builder(3, 3)
                                 .nOut(nOut)
                                 .convolutionMode(ConvolutionMode.Same).build(), "input")
-                .addVertex("1", new ode.vertex.conf.OdeVertex.Builder("ode0",
-                        new BatchNormalization.Builder().build())
+                .addVertex("1", new ode.vertex.conf.OdeVertex.Builder
+                        (new NeuralNetConfiguration.Builder(), "ode0", new BatchNormalization.Builder().build())
                         .addLayer("ode1",
                                 new Convolution2D.Builder(3, 3)
                                         .nOut(nOut)
@@ -70,13 +70,13 @@ public class OdeVertexTest {
                                 .nOut(nOut)
                                 .activation(new ActivationIdentity())
                                 .convolutionMode(ConvolutionMode.Same).build(), "input")
-                .addLayer("bn",   new BatchNormalization.Builder()
+                .addLayer("bn", new BatchNormalization.Builder()
                         .activation(new ActivationReLU())
                         .build(), "0")
-                .addVertex("1", new ode.vertex.conf.OdeVertex.Builder("ode0",
-                        new BatchNormalization.Builder()
-                                .activation(new ActivationReLU())
-                                .build())
+                .addVertex("1", new ode.vertex.conf.OdeVertex.Builder(
+                        new NeuralNetConfiguration.Builder(), "ode0", new BatchNormalization.Builder()
+                        .activation(new ActivationReLU())
+                        .build())
                         .addLayer("ode1",
                                 new Convolution2D.Builder(3, 3)
                                         .nOut(nOut)
@@ -93,7 +93,7 @@ public class OdeVertexTest {
 
         graph.init();
         final INDArray before = graph.getVertex("1").params().dup();
-        graph.fit(new DataSet(Nd4j.randn(new long[]{1, 1, 9, 9}), Nd4j.create(new double[] {0,1,0})));
+        graph.fit(new DataSet(Nd4j.randn(new long[]{1, 1, 9, 9}), Nd4j.create(new double[]{0, 1, 0})));
         assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("1").params().dup());
     }
 
@@ -109,8 +109,8 @@ public class OdeVertexTest {
                 .addInputs("input", "time")
                 .setInputTypes(InputType.feedForward(5), InputType.feedForward(nrofTimeSteps))
                 .addLayer("0", new DenseLayer.Builder().nOut(nOut).build(), "input")
-                .addVertex("odeVertex", new ode.vertex.conf.OdeVertex.Builder("ode0",
-                       new DenseLayer.Builder().nOut(nOut).build())
+                .addVertex("odeVertex", new ode.vertex.conf.OdeVertex.Builder(
+                        new NeuralNetConfiguration.Builder(), "ode0", new DenseLayer.Builder().nOut(nOut).build())
                         .odeConf(new InputStep(new DormandPrince54Solver(), 1))
                         .build(), "0", "time")
                 .setOutputs("output")
@@ -122,8 +122,39 @@ public class OdeVertexTest {
         final INDArray before = graph.getVertex("odeVertex").params().dup();
         final int batchSize = 3;
         graph.fit(new MultiDataSet(
-                new INDArray[] {Nd4j.randn(new long[]{batchSize, 5}),  Nd4j.linspace(0, 2, nrofTimeSteps)},
-                new INDArray[] {Nd4j.repeat(Nd4j.create(new double[] {0,1,0}).transposei(), batchSize*(int)nrofTimeSteps)}));
+                new INDArray[]{Nd4j.randn(new long[]{batchSize, 5}), Nd4j.linspace(0, 2, nrofTimeSteps)},
+                new INDArray[]{Nd4j.repeat(Nd4j.create(new double[]{0, 1, 0}).transposei(), batchSize * (int) nrofTimeSteps)}));
+        assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
+    }
+
+    /**
+     * Smoke test to see that it is possible to do a forward pass when time is one of the inputs
+     */
+    @Test
+    public void fitWithFunctionOfTime() {
+        final long nOut = 8;
+        final long nrofTimeSteps = 10;
+        final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
+                .graphBuilder()
+                .addInputs("input", "time")
+                .setInputTypes(InputType.feedForward(5), InputType.feedForward(nrofTimeSteps))
+                .addLayer("0", new DenseLayer.Builder().nOut(nOut).build(), "input")
+                .addVertex("odeVertex", new ode.vertex.conf.OdeVertex.Builder(
+                        new NeuralNetConfiguration.Builder(), "ode0", new DenseLayer.Builder().nOut(nOut/2).build())
+                        .addTimeLayer("ode1", new DenseLayer.Builder().nOut(nOut).build(), "ode0")
+                        .odeConf(new InputStep(new DormandPrince54Solver(), 1))
+                        .build(), "0", "time")
+                .setOutputs("output")
+                .addLayer("output", new RnnOutputLayer.Builder().nOut(3).build(), "odeVertex")
+                .build());
+
+        graph.init();
+
+        final INDArray before = graph.getVertex("odeVertex").params().dup();
+        final int batchSize = 1;
+        graph.fit(new MultiDataSet(
+                new INDArray[]{Nd4j.randn(new long[]{batchSize, 5}), Nd4j.linspace(0, 2, nrofTimeSteps)},
+                new INDArray[]{Nd4j.repeat(Nd4j.create(new double[]{0, 1, 0}).transposei(), batchSize * (int) nrofTimeSteps)}));
         assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
     }
 }

@@ -6,6 +6,7 @@ import ode.solve.conf.DormandPrince54Solver;
 import ode.vertex.conf.helper.GraphInputOutputFactory;
 import ode.vertex.conf.helper.NoTimeInputFactory;
 import ode.vertex.conf.helper.OdeHelper;
+import ode.vertex.conf.helper.TimeInputFactory;
 import ode.vertex.conf.helper.backward.FixedStepAdjoint;
 import ode.vertex.conf.helper.backward.OdeHelperBackward;
 import ode.vertex.conf.helper.forward.FixedStep;
@@ -147,7 +148,8 @@ public class OdeVertex extends GraphVertex {
 
     @Override
     public InputType getOutputType(int layerIndex, InputType... vertexInputs) throws InvalidInputTypeException {
-        return odeForwardConf.getOutputType(conf, vertexInputs);
+        final InputType[] graphInputs = graphInputOutputFactory.getInputType(vertexInputs);
+        return odeForwardConf.getOutputType(conf, graphInputs);
     }
 
     @Override
@@ -163,16 +165,6 @@ public class OdeVertex extends GraphVertex {
         private OdeHelperBackward odeBackwardConf = new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.arange(2));
         private GraphInputOutputFactory graphInputOutputFactory = new NoTimeInputFactory();
         private GradientViewFactory gradientViewFactory = new GradientViewSelectionFromBlacklisted();
-
-
-        public Builder(String name, Layer layer) {
-            graphBuilder = new NeuralNetConfiguration.Builder().graphBuilder();
-            final String inputName = this.toString() + "_input";
-            graphBuilder
-                    .addInputs(inputName)
-                    .addLayer(name, layer, inputName);
-            first = name;
-        }
 
         public Builder(NeuralNetConfiguration.Builder globalConf, String name, Layer layer) {
             graphBuilder = globalConf.clone().graphBuilder();
@@ -197,6 +189,44 @@ public class OdeVertex extends GraphVertex {
         public Builder addVertex(String name, GraphVertex vertex, String... inputs) {
             graphBuilder.addVertex(name, vertex, inputs);
             return this;
+        }
+
+        /**
+         * Add a layer which in addition to the given inputs also takes the current time in the ODE solver as an input.
+         * Note that time is a scalar so it is usually required to at least duplicate it to the mini batch size.
+         *
+         * @see ComputationGraphConfiguration.GraphBuilder#addLayer(String, Layer, String...)
+         */
+        public Builder addTimeLayer(String name, Layer layer, String... inputs) {
+            final String[] withTime = setTimeInputs(inputs);
+            return addLayer(name, layer, withTime);
+        }
+
+        /**
+         /**
+         * Add a vertex which in addition to the given inputs also takes the current time in the ODE solver as an input.
+         * Note that time is a scalar so it is usually required to at least duplicate it to the mini batch size.
+         *
+         * @see ComputationGraphConfiguration.GraphBuilder#addVertex(String, GraphVertex, String...)
+         */
+        public Builder addTimeVertex(String name, GraphVertex vertex, String... inputs) {
+            final String[] withTime = setTimeInputs(inputs);
+            return addVertex(name, vertex, withTime);
+        }
+
+        private String[] setTimeInputs(String[] inputs) {
+            graphInputOutputFactory(new TimeInputFactory());
+
+            final String timeInputName = this.toString() + "_timeInput";
+
+            if(!graphBuilder.getNetworkInputs().contains(timeInputName)) {
+                graphBuilder.addInputs(timeInputName);
+            }
+
+            final String[] withTime = new String[inputs.length + 1];
+            System.arraycopy(inputs, 0, withTime, 0, inputs.length);
+            withTime[inputs.length] = timeInputName;
+            return withTime;
         }
 
         /**
@@ -233,13 +263,24 @@ public class OdeVertex extends GraphVertex {
         }
 
         /**
-         * Sets the {@link GradientViewFactory} to use
+         * Sets the {@link GradientViewFactory} to use. Typically not set as default should cover all cases.
          *
          * @param gradientViewFactory Factory for gradient views
          * @return the Builder for fluent API
          */
         public Builder gradientViewFactory(GradientViewFactory gradientViewFactory) {
             this.gradientViewFactory = gradientViewFactory;
+            return this;
+        }
+
+        /**
+         * Sets the {@link GraphInputOutputFactory} to use
+         *
+         * @param graphInputOutputFactory Factory for graph input and output to use. Is typically set automatically.
+         * @return the Builder for fluent API
+         */
+        public Builder graphInputOutputFactory(GraphInputOutputFactory graphInputOutputFactory) {
+            this.graphInputOutputFactory = graphInputOutputFactory;
             return this;
         }
 

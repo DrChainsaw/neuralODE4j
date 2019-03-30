@@ -39,7 +39,8 @@ public class OdeVertexTest {
      */
     @Test
     public void testSerializeDeserialize() throws IOException {
-        final GraphVertex vertex = new OdeVertex.Builder("1", new BatchNormalization.Builder().nOut(3).build())
+        final GraphVertex vertex = new OdeVertex.Builder(
+                new NeuralNetConfiguration.Builder(), "1", new BatchNormalization.Builder().nOut(3).build())
                 .addLayer("2", new ConvolutionLayer.Builder(3, 3).nOut(3).build(), "1")
                 .build();
 
@@ -67,7 +68,8 @@ public class OdeVertexTest {
                         .nOut(6)
                         .build(), "input")
                 .addVertex("2",
-                        new OdeVertex.Builder("ode1", new BatchNormalization.Builder().nOut(6).build())
+                        new OdeVertex.Builder(
+                                new NeuralNetConfiguration.Builder(), "ode1", new BatchNormalization.Builder().nOut(6).build())
                                 .addLayer("ode2", new Convolution2D.Builder(3, 3).convolutionMode(ConvolutionMode.Same)
                                         .nOut(6)
                                         .build(), "ode1")

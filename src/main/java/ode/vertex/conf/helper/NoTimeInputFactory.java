@@ -3,6 +3,7 @@ package ode.vertex.conf.helper;
 import lombok.EqualsAndHashCode;
 import ode.vertex.impl.helper.GraphInputOutput;
 import ode.vertex.impl.helper.NoTimeInput;
+import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 /**
@@ -21,5 +22,10 @@ public class NoTimeInputFactory implements GraphInputOutputFactory {
     @Override
     public GraphInputOutputFactory clone() {
         return new NoTimeInputFactory();
+    }
+
+    @Override
+    public InputType[] getInputType(InputType... vertexInputs) {
+        return vertexInputs;
     }
 }

@@ -305,7 +305,8 @@ public class MultiStepAdjointTest {
         String next = "y0";
         builder.addInputs(next, "time");
 
-        builder.addVertex("ode", new OdeVertex.Builder("0", new DenseLayer.Builder()
+        builder.addVertex("ode", new OdeVertex.Builder(
+                builder.getGlobalConfiguration(), "0", new DenseLayer.Builder()
                 .activation(new ActivationIdentity())
                 .weightInit(new ConstantDistribution(0.2))
                 .biasInit(3)
