@@ -23,7 +23,9 @@ public class OutputTypeFromConfig implements OutputTypeHelper {
         }
 
         if(inputTypeMap.size() != 1) {
-            throw new IllegalStateException("Can only support one single output!");
+            throw new IllegalStateException("Can only support one single output! Make sure the computation graph has " +
+                    "exactly one layer which is not input to any other layer. Vertices " + inputTypeMap.keySet() + " are " +
+                    "not input to any other layer!");
         }
 
         return inputTypeMap.values().iterator().next();

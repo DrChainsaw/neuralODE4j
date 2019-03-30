@@ -60,6 +60,8 @@ public class ForwardPass implements FirstOrderEquation {
 
     @Nullable
     private void evaluate(INDArray[] inputs, INDArray output) {
+
+        graph.setInputs(inputs);
         //TODO: Might want to have internal workspace handling to conserve memory
         final int[] topologicalOrder = graph.topologicalSortOrder();
         final NDArrayIndexAccumulator outputAccum = new NDArrayIndexAccumulator(output);

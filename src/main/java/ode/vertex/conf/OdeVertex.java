@@ -25,6 +25,7 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
+import util.preproc.DuplicateScalarToShape;
 
 /**
  * Configuration of an ODE block. Contains a {@link ComputationGraphConfiguration} which defines the structure of the
@@ -157,6 +158,9 @@ public class OdeVertex extends GraphVertex {
         return conf.getMemoryReport(inputTypes);
     }
 
+    /**
+     * Builds {@link OdeVertex}es.
+     */
     public static class Builder {
 
         private final ComputationGraphConfiguration.GraphBuilder graphBuilder;
@@ -166,6 +170,12 @@ public class OdeVertex extends GraphVertex {
         private GraphInputOutputFactory graphInputOutputFactory = new NoTimeInputFactory();
         private GradientViewFactory gradientViewFactory = new GradientViewSelectionFromBlacklisted();
 
+        /**
+         * Constructs a Builder for an {@link OdeVertex}
+         * @param globalConf Configuration to use for internal graph
+         * @param name Name of first layer
+         * @param layer First layer in internal graph
+         */
         public Builder(NeuralNetConfiguration.Builder globalConf, String name, Layer layer) {
             graphBuilder = globalConf.clone().graphBuilder();
             final String inputName = this.toString() + "_input";
@@ -173,6 +183,25 @@ public class OdeVertex extends GraphVertex {
                     .addInputs(inputName)
                     .addLayer(name, layer, inputName);
             first = name;
+        }
+
+        /**
+         * Constructs a Builder for an {@link OdeVertex}
+         * @param globalConf Configuration to use for internal graph
+         * @param name Name of first vertex
+         * @param vertex First vertex in internal graph
+         * @param timeAsInput True if current time of the ODE solver shall be input to vertex as well
+         */
+        public Builder(NeuralNetConfiguration.Builder globalConf, String name, GraphVertex vertex, boolean timeAsInput) {
+            graphBuilder = globalConf.clone().graphBuilder();
+            final String inputName = this.toString() + "_input";
+            first = name;
+            graphBuilder.addInputs(inputName);
+            if(timeAsInput) {
+                addTimeVertex(name, vertex, inputName);
+            } else {
+                addVertex(name, vertex, inputName);
+            }
         }
 
         /**
@@ -192,14 +221,14 @@ public class OdeVertex extends GraphVertex {
         }
 
         /**
-         * Add a layer which in addition to the given inputs also takes the current time in the ODE solver as an input.
-         * Note that time is a scalar so it is usually required to at least duplicate it to the mini batch size.
+         * Add a layer which takes current time in the ODE solver as input. A {@link DuplicateScalarToShape} is added
+         * so that mini batch size is the same as for other layers
          *
-         * @see ComputationGraphConfiguration.GraphBuilder#addLayer(String, Layer, String...)
          */
-        public Builder addTimeLayer(String name, Layer layer, String... inputs) {
-            final String[] withTime = setTimeInputs(inputs);
-            return addLayer(name, layer, withTime);
+        public Builder addTimeLayer(String name, Layer layer) {
+            final String[] withTime = setTimeInputs(new String[0]);
+            graphBuilder.addLayer(name, layer, new DuplicateScalarToShape(), withTime);
+            return this;
         }
 
         /**

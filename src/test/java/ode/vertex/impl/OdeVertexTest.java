@@ -4,6 +4,7 @@ import ode.solve.conf.DormandPrince54Solver;
 import ode.vertex.conf.helper.InputStep;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.graph.ScaleVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -98,7 +99,7 @@ public class OdeVertexTest {
     }
 
     /**
-     * Smoke test to see that it is possible to do a forward pass when time is one of the inputs
+     * Smoke test to see that it is possible to fit when time is one of the inputs
      */
     @Test
     public void fitWithTimeAsInput() {
@@ -128,7 +129,7 @@ public class OdeVertexTest {
     }
 
     /**
-     * Smoke test to see that it is possible to do a forward pass when time is one of the inputs
+     * Smoke test to see that it is possible to fit when time is one of the inputs
      */
     @Test
     public void fitWithFunctionOfTime() {
@@ -139,11 +140,16 @@ public class OdeVertexTest {
                 .addInputs("input", "time")
                 .setInputTypes(InputType.feedForward(5), InputType.feedForward(nrofTimeSteps))
                 .addLayer("0", new DenseLayer.Builder().nOut(nOut).build(), "input")
-                .addVertex("odeVertex", new ode.vertex.conf.OdeVertex.Builder(
-                        new NeuralNetConfiguration.Builder(), "ode0", new DenseLayer.Builder().nOut(nOut/2).build())
-                        .addTimeLayer("ode1", new DenseLayer.Builder().nOut(nOut).build(), "ode0")
-                        .odeConf(new InputStep(new DormandPrince54Solver(), 1))
-                        .build(), "0", "time")
+
+                .addVertex("odeVertex",
+                        new ode.vertex.conf.OdeVertex.Builder(new NeuralNetConfiguration.Builder(),
+                                "ode0", new DenseLayer.Builder().nOut(nOut / 2).build())
+
+                                .addTimeLayer("ode1", new DenseLayer.Builder().nOut(nOut / 2).build())
+
+                                .addLayer("ode3", new DenseLayer.Builder().nOut(nOut).build(), "ode0", "ode1")
+                                .odeConf(new InputStep(new DormandPrince54Solver(), 1))
+                                .build(), "0", "time")
                 .setOutputs("output")
                 .addLayer("output", new RnnOutputLayer.Builder().nOut(3).build(), "odeVertex")
                 .build());
@@ -151,10 +157,43 @@ public class OdeVertexTest {
         graph.init();
 
         final INDArray before = graph.getVertex("odeVertex").params().dup();
-        final int batchSize = 1;
+        final int batchSize = 5;
         graph.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 5}), Nd4j.linspace(0, 2, nrofTimeSteps)},
                 new INDArray[]{Nd4j.repeat(Nd4j.create(new double[]{0, 1, 0}).transposei(), batchSize * (int) nrofTimeSteps)}));
+        assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
+    }
+
+    /**
+     * Smoke test to see that it is possible to fit when the first vertex of the internal graph is a graph vertex
+     */
+    @Test
+    public void fitWithFirstVertex() {
+        final long nOut = 8;
+        final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
+                .graphBuilder()
+                .addInputs("input")
+                .setInputTypes(InputType.feedForward(5))
+                .addLayer("0", new DenseLayer.Builder().nOut(nOut).build(), "input")
+
+                .addVertex("odeVertex",
+                        new ode.vertex.conf.OdeVertex.Builder(new NeuralNetConfiguration.Builder(),
+                                "ode0", new ScaleVertex(0.1), false)
+
+                                .addLayer("ode1", new DenseLayer.Builder().nOut(nOut).build(), "ode0")
+
+                                .build(), "0")
+                .setOutputs("output")
+                .addLayer("output", new RnnOutputLayer.Builder().nOut(3).build(), "odeVertex")
+                .build());
+
+        graph.init();
+
+        final INDArray before = graph.getVertex("odeVertex").params().dup();
+        final int batchSize = 5;
+        graph.fit(new MultiDataSet(
+                new INDArray[]{Nd4j.randn(new long[]{batchSize, 5})},
+                new INDArray[]{Nd4j.repeat(Nd4j.create(new double[]{0, 1, 0}).transposei(), batchSize)}));
         assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
     }
 }
