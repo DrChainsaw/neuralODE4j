@@ -1,9 +1,11 @@
 package ode.vertex.impl;
 
 import ode.solve.conf.DormandPrince54Solver;
+import ode.vertex.conf.ShapeMatchVertex;
 import ode.vertex.conf.helper.InputStep;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.graph.MergeVertex;
 import org.deeplearning4j.nn.conf.graph.ScaleVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
@@ -179,6 +181,39 @@ public class OdeVertexTest {
                 .addVertex("odeVertex",
                         new ode.vertex.conf.OdeVertex.Builder(new NeuralNetConfiguration.Builder(),
                                 "ode0", new ScaleVertex(0.1), false)
+
+                                .addLayer("ode1", new DenseLayer.Builder().nOut(nOut).build(), "ode0")
+
+                                .build(), "0")
+                .setOutputs("output")
+                .addLayer("output", new RnnOutputLayer.Builder().nOut(3).build(), "odeVertex")
+                .build());
+
+        graph.init();
+
+        final INDArray before = graph.getVertex("odeVertex").params().dup();
+        final int batchSize = 5;
+        graph.fit(new MultiDataSet(
+                new INDArray[]{Nd4j.randn(new long[]{batchSize, 5})},
+                new INDArray[]{Nd4j.repeat(Nd4j.create(new double[]{0, 1, 0}).transposei(), batchSize)}));
+        assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
+    }
+
+    /**
+     * Smoke test to see that it is possible to fit when the first vertex of the internal graph is a graph vertex
+     */
+    @Test
+    public void fitWithFirstTimeVertex() {
+        final long nOut = 8;
+        final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
+                .graphBuilder()
+                .addInputs("input")
+                .setInputTypes(InputType.feedForward(5))
+                .addLayer("0", new DenseLayer.Builder().nOut(nOut).build(), "input")
+
+                .addVertex("odeVertex",
+                        new ode.vertex.conf.OdeVertex.Builder(new NeuralNetConfiguration.Builder(),
+                                "ode0", new ShapeMatchVertex(new MergeVertex()), true)
 
                                 .addLayer("ode1", new DenseLayer.Builder().nOut(nOut).build(), "ode0")
 
