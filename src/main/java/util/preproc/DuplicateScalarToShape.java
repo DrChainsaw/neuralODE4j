@@ -38,12 +38,7 @@ public class DuplicateScalarToShape implements InputPreProcessor {
             throw new IllegalArgumentException("Can only process scalar input. Got: " + Arrays.toString(input.shape()));
         }
         long[] tmpShape = getShapeFor(miniBatchSize);
-        int length = 1;
-        for(long l: tmpShape) {
-            length *= l;
-        }
-
-        return workspaceMgr.leverageTo(ArrayType.ACTIVATIONS, Nd4j.repeat(input, length).reshape(tmpShape));
+        return workspaceMgr.createUninitialized(ArrayType.ACTIVATIONS, tmpShape).assign(input.sumNumber());
     }
 
     long[] getShapeFor(int miniBatchSize) {

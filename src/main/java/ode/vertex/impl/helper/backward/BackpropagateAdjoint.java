@@ -63,10 +63,10 @@ public class BackpropagateAdjoint implements FirstOrderEquation {
     public INDArray calculateDerivative(INDArray zAug, INDArray t, INDArray fzAug) {
         augmentedDynamics.updateFrom(zAug);
 
-        // Note: Will also update z
-        forwardPass.calculateDerivative(augmentedDynamics.z().dup(), t, augmentedDynamics.z());
-
         try (WorkspacesCloseable ws = graphInfo.workspaceMgr.notifyScopeEntered(ArrayType.ACTIVATIONS, ArrayType.ACTIVATION_GRAD)) {
+
+            // Note: Will also update z
+            forwardPass.calculateDerivative(augmentedDynamics.z().dup(), t, augmentedDynamics.z());
 
             // Seems like some layers let previous gradients influence their new gradients. I haven't really figured out
             // why but it seems to have a detrimental effect on the accuracy and general stability

@@ -1,4 +1,4 @@
-package examples.spiral.listener;
+package util.listen.training;
 
 import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.nn.graph.ComputationGraph;

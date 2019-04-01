@@ -4,7 +4,6 @@ import ch.qos.logback.classic.Level;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import examples.spiral.listener.IterationHook;
-import examples.spiral.listener.PlotActivations;
 import examples.spiral.listener.PlotDecodedOutput;
 import examples.spiral.listener.SpiralPlot;
 import org.apache.commons.io.filefilter.OrFileFilter;
@@ -21,6 +20,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.listen.training.NanScoreWatcher;
+import util.listen.training.PlotActivations;
 import util.listen.training.ZeroGrad;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
@@ -100,6 +100,10 @@ class Main {
 
         JCommander jCommander = parbuilder.build();
         jCommander.parse(args);
+
+        if(main.help) {
+            jCommander.usage();
+        }
 
         return modelCommands.get(jCommander.getParsedCommand());
     }

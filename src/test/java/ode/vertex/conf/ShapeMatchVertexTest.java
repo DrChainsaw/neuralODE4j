@@ -90,6 +90,25 @@ public class ShapeMatchVertexTest {
     }
 
     /**
+     * Test that output type is as expected when a merge vertex is used
+     */
+    @Test
+    public void getOutputTypeMergeVertex() {
+        final InputType inputType1 = InputType.convolutional(3, 4, 5);
+        final InputType inputType2 = InputType.convolutional(3, 4, 1);
+        final MergeVertex expected = new MergeVertex();
+
+        // Note, type of "expected" matters!
+        final InputType actual = new ShapeMatchVertex(expected)
+                .getOutputType(-1, inputType1, InputType.feedForward(1));
+
+        assertEquals("Incorrect output type!",
+                expected.getOutputType(-1, inputType1, inputType2),
+                actual);
+
+    }
+
+    /**
      * Test memory report
      */
     @Test
