@@ -22,6 +22,7 @@ import util.random.SeededRandomFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
@@ -133,12 +134,34 @@ class Main {
 
         if (plotTime) {
             final Plot<Integer, Double> timePlot = new RealTimePlot<>("Time steps to integrate over", savedir.getAbsolutePath());
-            model.addListeners(new PlotActivations(timePlot, "timeTrain", new String[]{"t0", "t1"}));
+            model.addListeners(
+                    new PlotActivations(timePlot, "timeTrain", new String[]{"t0", "t1"}),
+                    new EpochHook(1, new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                timePlot.storePlotData();
+                            } catch (IOException e) {
+                                throw new UncheckedIOException(e);
+                            }
+                        }
+                    }));
         }
 
         if (plotScore) {
             final Plot<Integer, Double> scorePlot = new RealTimePlot<>("Training score", savedir.getAbsolutePath());
-            model.addListeners(new PlotScore(scorePlot));
+            model.addListeners(new PlotScore(scorePlot),
+                    new PlotScore(scorePlot, 0.05),
+                    new EpochHook(1, new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                scorePlot.storePlotData();
+                            } catch (IOException e) {
+                                throw new UncheckedIOException(e);
+                            }
+                        }
+                    }));
         }
     }
 

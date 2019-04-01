@@ -13,17 +13,32 @@ import util.plot.RealTimePlot;
 public class PlotScore extends BaseTrainingListener {
 
     private final Plot<Integer, Double> plot;
+    private final double alpha;
+
+    private double avgScore = Double.NaN;
 
     public PlotScore() {
         this(new RealTimePlot<>("Score", ""));
     }
 
     public PlotScore(Plot<Integer, Double> plot) {
-        this.plot = plot;
+        this(plot, 1);
     }
+
+    public PlotScore(Plot<Integer, Double> plot, double alpha) {
+        this.plot = plot;
+        this.alpha = alpha;
+    }
+
 
     @Override
     public void iterationDone(Model model, int iteration, int epoch) {
-        plot.plotData("Score", iteration, model.score());
+        if(Double.isNaN(avgScore)) {
+            avgScore = model.score();
+        } else {
+            avgScore = alpha * model.score() + (1 - alpha) * avgScore;
+        }
+
+        plot.plotData("Score" + (alpha == 1.0 ? "" : "_"+alpha), iteration, avgScore);
     }
 }
