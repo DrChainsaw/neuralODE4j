@@ -2,16 +2,13 @@ package examples.cifar10;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-import org.datavec.image.loader.CifarLoader;
-import org.deeplearning4j.datasets.iterator.impl.CifarDataSetIterator;
+import com.beust.jcommander.ParametersDelegate;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
-import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.nd4j.evaluation.classification.Evaluation;
-import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.dataset.api.iterator.DataSetIteratorFactory;
 import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;
-import org.nd4j.linalg.dataset.api.preprocessor.CompositeDataSetPreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,14 +18,13 @@ import util.listen.training.PlotScore;
 import util.listen.training.ZeroGrad;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
-import util.preproc.ShiftDim;
 import util.random.SeededRandomFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Example of supervised learning on CIFAR10.
@@ -39,26 +35,14 @@ class Main {
 
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
+    static final String CHECKPOINT_NAME = "last_checkpoint.zip";
+    static final String BEST_EVAL_NAME = "best_epoch_";
+
     @Parameter(names = {"-help", "-h"}, description = "Prints help message")
     private boolean help = false;
 
-    @Parameter(names = "-trainBatchSize", description = "Batch size to use for training")
-    private int trainBatchSize = 32;
-
-    @Parameter(names = "-evalBatchSize", description = "Batch size to use for validation")
-    private int evalBatchSize = 32;
-
     @Parameter(names = "-nrofEpochs", description = "Number of epochs to train over")
     private int nrofEpochs = 50;
-
-    @Parameter(names = "-nrofTrainExamples", description = "Number of examples to use for training")
-    private int nrofTrainExamples = CifarLoader.NUM_TRAIN_IMAGES;
-
-    @Parameter(names = "-nrofTestExamples", description = "Number of examples to use for validation")
-    private int nrofTestExamples = CifarLoader.NUM_TEST_IMAGES;
-
-    @Parameter(names = "-dataAug", description = "Use data augmentation for training if set to true", arity = 1)
-    private boolean useDataAugmentation = true;
 
     @Parameter(names = "-plotTime", description = "Set to true to plot how time steps evolve over training iterations")
     private boolean plotTime = false;
@@ -66,8 +50,19 @@ class Main {
     @Parameter(names = "-plotScore", description = "Set to true to plot how time steps evolve over training iterations")
     private boolean plotScore = false;
 
+    @Parameter(names = "-newModel", description = "Set to true to overwrite any existing model")
+    private boolean newModel = false;
+
+    @Parameter(names = "-saveDir", description = "Directory to save models in")
+    private String saveDir = "savedmodels";
+
+    @ParametersDelegate
+    public DataSetIteratorFactory trainFactory = new Cifar10TrainDataProvider();
+
+    @ParametersDelegate
+    public DataSetIteratorFactory evalFactory = new Cifar10TestDataProvider();
+
     private ComputationGraph model;
-    private String modelName;
     private ModelFactory modelFactory;
 
     public static void main(String[] args) throws IOException {
@@ -84,7 +79,7 @@ class Main {
         }
     }
 
-    private static Main parseArgs(String[] args) {
+    static Main parseArgs(String... args) {
 
         final Main main = new Main();
         final Map<String, ModelFactory> modelCommands = new HashMap<>();
@@ -107,14 +102,16 @@ class Main {
 
         final ModelFactory factory = modelCommands.get(jCommander.getParsedCommand());
 
-        main.init(factory);
+        main.init(
+                main.newModel
+                        ? factory
+                        : new DeserializingModelFactory(Paths.get(main.saveDir(factory), CHECKPOINT_NAME).toFile(), factory));
         return main;
     }
 
-    private void init(ModelFactory factory) {
+    void init(ModelFactory factory) {
         this.modelFactory = factory;
         this.model = factory.create();
-        this.modelName = factory.name();
         long cnt = 0;
         for (GraphVertex vertex : model.getVertices()) {
             log.trace("vertex: " + vertex.getVertexName() + " nrof params: " + vertex.numParams());
@@ -123,18 +120,13 @@ class Main {
         log.info("Nrof parameters in model: " + cnt);
     }
 
-    private void addListeners() {
-        final File savedir = saveDir(modelName);
+    void addListeners() {
+        final File savedir = new File(saveDir());
         log.info("Models will be saved in: " + savedir.getAbsolutePath());
         savedir.mkdirs();
         model.addListeners(
                 new ZeroGrad(),
                 new PerformanceListener(1, true),
-                new CheckpointListener.Builder(savedir.getAbsolutePath())
-                        .keepLast(1)
-                        .deleteExisting(true)
-                        .saveEveryEpoch()
-                        .build(),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
                 }));
@@ -150,9 +142,9 @@ class Main {
         }
     }
 
-    private void run() throws IOException {
-        final MultiDataSetIterator trainIter = createDataSetIter(true);
-        final MultiDataSetIterator evalIter = createDataSetIter(false);
+    void run() throws IOException {
+        final MultiDataSetIterator trainIter = modelFactory.wrapIter(trainFactory.create());
+        final MultiDataSetIterator evalIter = modelFactory.wrapIter(evalFactory.create());
 
         Nd4j.getMemoryManager().setAutoGcWindow(5000);
         double bestAccuracy = 0;
@@ -165,29 +157,18 @@ class Main {
 
             if (evaluation.accuracy() > bestAccuracy) {
                 bestAccuracy = evaluation.accuracy();
-                model.save(saveDir(modelName + File.separator +  "best_epoch_" + epoch + ".zip"));
+                model.save(Paths.get(saveDir(), BEST_EVAL_NAME + epoch + ".zip").toFile());
             }
+            model.save(Paths.get(saveDir(), CHECKPOINT_NAME).toFile());
         }
     }
 
-    private static File saveDir(String modelName) {
-        return new File("savedmodels" + File.separator + "CIFAR10" + File.separator + modelName);
+    String saveDir() {
+        return saveDir(modelFactory);
     }
 
-    private MultiDataSetIterator createDataSetIter(boolean train) {
-
-        final DataSetIterator iter = new CifarDataSetIterator(
-                train ? trainBatchSize : evalBatchSize,
-                train ? nrofTrainExamples : nrofTestExamples,
-                train);
-
-        if (train && useDataAugmentation) {
-            iter.setPreProcessor(new CompositeDataSetPreProcessor(
-                    new ShiftDim(2, new Random(666), 4),
-                    new ShiftDim(3, new Random(667), 4)
-            ));
-        }
-
-        return modelFactory.wrapIter(iter);
+    String saveDir(ModelFactory modelFactory) {
+        return Paths.get(saveDir, "CIFAR10", modelFactory.name()).toString();
     }
+
 }

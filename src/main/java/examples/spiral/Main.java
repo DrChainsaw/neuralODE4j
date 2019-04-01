@@ -6,12 +6,9 @@ import com.beust.jcommander.Parameter;
 import examples.spiral.listener.IterationHook;
 import examples.spiral.listener.PlotDecodedOutput;
 import examples.spiral.listener.SpiralPlot;
-import org.apache.commons.io.filefilter.OrFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.deeplearning4j.nn.graph.ComputationGraph;
-import org.deeplearning4j.optimize.listeners.CheckpointListener;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
-import org.deeplearning4j.util.ModelSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
@@ -22,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import util.listen.training.NanScoreWatcher;
 import util.listen.training.PlotActivations;
 import util.listen.training.ZeroGrad;
+import util.plot.NoPlot;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
 import util.random.SeededRandomFactory;
@@ -30,10 +28,10 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * Main class for spiral example. Reimplementation of https://github.com/rtqichen/torchdiffeq/blob/master/examples/latent_ode.py
@@ -43,6 +41,8 @@ import java.util.*;
 class Main {
 
     private static final Logger log = LoggerFactory.getLogger(Main.class);
+
+    static final String CHECKPOINT_NAME = "last_checkpoint.zip";
 
     @Parameter(names = {"-help", "-h"}, description = "Prints help message")
     private boolean help = false;
@@ -62,13 +62,23 @@ class Main {
     @Parameter(names = "-nrofLatentDims", description = "Number of latent dimensions to use")
     private long nrofLatentDims = 4;
 
+    @Parameter(names = "-saveDir", description = "Directory to save models in")
+    private String saveDir = "savedmodels";
+
     @Parameter(names = "-newModel", description = "Load latest checkpoint (if available) if set to false. If true or if " +
             "no checkpoint exists, a new model will be created")
     private boolean newModel = false;
 
+    @Parameter(names = "-saveEveryNIterations", description = "Sets how often to save a checkpoint")
+    private int saveEveryNIterations = 100;
+
+    @Parameter(names = "-noPlot", description = "Set to suppress plotting of training progress and results")
+    private boolean noPlot = false;
+
     private TimeVae model;
     private String modelName;
     private SpiralIterator iterator;
+    private Plot.Factory plotBackend;
 
     public static void main(String[] args) throws IOException {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
@@ -79,14 +89,14 @@ class Main {
         final Main main = new Main();
         final ModelFactory factory = parseArgs(main, args);
 
-        if(!main.help) {
+        if (!main.help) {
             createModel(main, factory);
             main.addListeners();
             main.run();
         }
     }
 
-    private static ModelFactory parseArgs(Main main, String[] args) throws IOException {
+    static ModelFactory parseArgs(Main main, String... args) {
 
         final Map<String, ModelFactory> modelCommands = new HashMap<>();
         modelCommands.put("odenet", new OdeNetModel());
@@ -101,7 +111,7 @@ class Main {
         JCommander jCommander = parbuilder.build();
         jCommander.parse(args);
 
-        if(main.help) {
+        if (main.help) {
             jCommander.usage();
         }
 
@@ -109,69 +119,44 @@ class Main {
     }
 
     @NotNull
-    private static Main createModel(Main main, ModelFactory factory) throws IOException {
-        final File saveDir = saveDir(factory.name());
+    static Main createModel(Main main, ModelFactory factory) throws IOException {
+        final String saveDir = main.saveDir(factory.name());
 
+        final ModelFactory factoryToUse;
         if (!main.newModel) {
+            factoryToUse = new DeserializingModelFactory(Paths.get(saveDir, CHECKPOINT_NAME).toFile(), factory);
+        } else {
 
-            final File[] files = ageOrder(saveDir.listFiles((FilenameFilter)
-                    new OrFileFilter(
-                            new WildcardFileFilter("checkpoint_*_ComputationGraph.zip"),
-                            new WildcardFileFilter("checkpoint_*_ComputationGraph_bck.zip"))));
-            if (files != null && files.length > 0) {
-                final Path modelFile = Paths.get(files[files.length - 1].getAbsolutePath());
-                log.info("Restoring model from file: " + modelFile);
-
-                if (!modelFile.getFileName().toString().matches(".*_bck\\.zip")) {
-                    // Because checkpoint listener deletes all files matching the checkpoint_*_ComputationGraph.zip pattern.
-                    final Path backupFile = Paths.get(modelFile.toString().replace(".", "_bck."));
-                    Files.copy(modelFile, backupFile, StandardCopyOption.REPLACE_EXISTING);
+            // Else, delete all saved plots and initialize a new model
+            final File[] plotFiles = new File(saveDir).listFiles((FilenameFilter) new WildcardFileFilter("*.plt"));
+            if (plotFiles != null) {
+                for (File plotFile : plotFiles) {
+                    Files.delete(Paths.get(plotFile.getAbsolutePath()));
                 }
-
-                final ComputationGraph graph = ModelSerializer.restoreComputationGraph(modelFile.toFile(), true);
-                main.init(factory.createFrom(graph),
-                        factory.name(),
-                        factory.getPreProcessor(main.nrofLatentDims));
-                return main;
             }
-        }
-
-        // Else, delete all saved plots and initialize a new model
-        final File[] plotFiles = saveDir.listFiles((FilenameFilter) new WildcardFileFilter("*.plt"));
-        if(plotFiles != null) {
-            for (File plotFile : plotFiles) {
-                Files.delete(Paths.get(plotFile.getAbsolutePath()));
-            }
+            factoryToUse = factory;
         }
 
         main.init(
-                factory.createNew(main.nrofTimeStepsForTraining, main.noiseSigma, main.nrofLatentDims),
-                factory.name(),
-                factory.getPreProcessor(main.nrofLatentDims));
+                factoryToUse.createNew(main.nrofTimeStepsForTraining, main.noiseSigma, main.nrofLatentDims),
+                factoryToUse.name(),
+                factoryToUse.getPreProcessor(main.nrofLatentDims));
         return main;
     }
 
-    private static File[] ageOrder(File[] files) {
-        if (files == null) {
-            return null;
-        }
-
-        Arrays.sort(files, new Comparator<File>() {
-            @Override
-            public int compare(File o1, File o2) {
-                return Long.compare(o1.lastModified(), o2.lastModified());
-            }
-        });
-        return files;
+    String saveDir() {
+        return saveDir(modelName);
     }
 
-    private static File saveDir(String modelName) {
-        return new File("savedmodels" + File.separator + "spiral" + File.separator + modelName);
+    String saveDir(String modelName) {
+        return Paths.get(saveDir, "spiral", modelName).toString();
     }
 
     private void init(TimeVae model, String modelName, MultiDataSetPreProcessor preProcessor) {
         this.model = model;
         this.modelName = modelName;
+
+        plotBackend = noPlot ? new NoPlot.Factory() : new RealTimePlot.Factory(saveDir());
 
         final SpiralFactory spiralFactory = new SpiralFactory(0, 0.3, 0, 6 * Math.PI, 500);
         this.iterator = new SpiralIterator(
@@ -180,28 +165,33 @@ class Main {
         iterator.setPreProcessor(preProcessor);
     }
 
-    private void addListeners() {
-        final File savedir = saveDir(modelName);
+    void addListeners() {
+        final File savedir = new File(saveDir());
         log.info("Models will be saved in: " + savedir.getAbsolutePath());
         savedir.mkdirs();
 
-        setupOutputPlotting(savedir);
+        setupOutputPlotting();
+        setupMeanAndLogVarPlotting();
 
-        final Plot<Integer, Double> meanAndLogVarPlot = new RealTimePlot<>("Mean and log(var) of z0", savedir.getAbsolutePath());
-
-        final int saveEveryNIterations = 20;
         model.trainingModel().addListeners(
                 new ZeroGrad(),
                 new PerformanceListener(1, true),
-                new CheckpointListener.Builder(savedir.getAbsolutePath())
-                        .keepLast(1)
-                        .deleteExisting(true)
-                        .saveEveryNIterations(saveEveryNIterations, true)
-                        .build(),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
-                }),
-                new PlotActivations(meanAndLogVarPlot, model.qzMeanAndLogVarName(), new String[] {"qz0Mean" , "qz0Log(Var)"}),
+                }));
+    }
+
+    private void setupOutputPlotting() {
+        final SpiralPlot outputPlot = new SpiralPlot(plotBackend.newPlot("Training Output"));
+        for (int batchNrToPlot = 0; batchNrToPlot < Math.min(trainBatchSize, 4); batchNrToPlot++) {
+            outputPlot.plot("True output " + batchNrToPlot, iterator.next().getLabels(0), batchNrToPlot);
+            model.trainingModel().addListeners(new PlotDecodedOutput(outputPlot, model.outputName(), batchNrToPlot));
+        }
+    }
+
+    private void setupMeanAndLogVarPlotting() {
+        final Plot<Integer, Double> meanAndLogVarPlot = plotBackend.newPlot("Mean and log(var) of z0");
+        model.trainingModel().addListeners(new PlotActivations(meanAndLogVarPlot, model.qzMeanAndLogVarName(), new String[]{"qz0Mean", "qz0Log(Var)"}),
                 new IterationHook(saveEveryNIterations, () -> {
                     try {
                         meanAndLogVarPlot.storePlotData();
@@ -211,28 +201,28 @@ class Main {
                 }));
     }
 
-    private void setupOutputPlotting(File savedir) {
-        final SpiralPlot outputPlot = new SpiralPlot(new RealTimePlot<>("Training Output", savedir.getAbsolutePath()));
-        for (int batchNrToPlot = 0; batchNrToPlot < Math.min(trainBatchSize, 4); batchNrToPlot++) {
-            outputPlot.plot("True output " + batchNrToPlot, iterator.next().getLabels(0), batchNrToPlot);
-            model.trainingModel().addListeners(new PlotDecodedOutput(outputPlot, model.outputName(), batchNrToPlot));
-        }
-    }
 
-    private void run() throws IOException {
+    void run() throws IOException {
         final ComputationGraph trainingModel = model.trainingModel();
-        final Plot<Double, Double> samplePlot = new RealTimePlot<>("Reconstruction", saveDir(modelName).getAbsolutePath());
+
+        final Plot<Double, Double> samplePlot = plotBackend.newPlot("Reconstruction");
+
         for (int i = trainingModel.getIterationCount(); i < nrofTrainIters; i++) {
             trainingModel.fit(iterator.next());
+
 
             if (i > 0 && i % 100 == 0) {
                 drawSample(0, samplePlot);
                 samplePlot.savePicture("_iter" + trainingModel.getIterationCount());
             }
+
+            if (i > 0 && i % saveEveryNIterations == 0) {
+                trainingModel.save(Paths.get(saveDir(), CHECKPOINT_NAME).toFile());
+            }
         }
 
         for (int i = 0; i < Math.min(trainBatchSize, 8); i++) {
-            final Plot<Double, Double> plot = new RealTimePlot<>("Reconstruction " + i, saveDir(modelName).getAbsolutePath());
+            final Plot<Double, Double> plot = plotBackend.newPlot("Reconstruction " + i);
             drawSample(i, plot);
             plot.savePicture("");
         }

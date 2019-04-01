@@ -29,7 +29,7 @@ abstract class AbstractHelperConfTest {
     /**
      * Create a {@link OdeHelperBackward} which shall be tested
      *
-     * @param nrofTimeSteps Number of time steps to create helper for
+     * @param nrofTimeSteps Number of time steps to newPlot helper for
      * @return a new {@link OdeHelperBackward}
      */
     abstract OdeHelperBackward create(int nrofTimeSteps, boolean needTimeGradient);
@@ -38,7 +38,7 @@ abstract class AbstractHelperConfTest {
      * Create inputs from a given input array
      *
      * @param input input array
-     * @param nrofTimeSteps number of time steps to create input for
+     * @param nrofTimeSteps number of time steps to newPlot input for
      * @return all needed inputs
      */
     abstract INDArray[] createInputs(INDArray input, int nrofTimeSteps);

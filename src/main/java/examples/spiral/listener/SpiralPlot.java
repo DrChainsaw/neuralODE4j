@@ -23,7 +23,7 @@ public class SpiralPlot {
     /**
      * Create a label in the plot. Call this method before plotting anything in any label in the same plot to avoid
      * null pointer exceptions in the plot thread.
-     * @param label Series to create
+     * @param label Series to newPlot
      */
     public void createSeries(String label) {
         plot.createSeries(label);

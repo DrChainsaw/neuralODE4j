@@ -36,7 +36,7 @@ public class ShapeMatchVertexTest {
     }
 
     /**
-     * Test that numParams is correct. Kinda bad test case as I CBA to create a mock vertex with numParams > 0 as there
+     * Test that numParams is correct. Kinda bad test case as I CBA to newPlot a mock vertex with numParams > 0 as there
      * is no such vertex which also takes more than one input.
      */
     @Test
