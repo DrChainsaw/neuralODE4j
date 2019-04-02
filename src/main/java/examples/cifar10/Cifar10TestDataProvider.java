@@ -14,7 +14,7 @@ import org.nd4j.linalg.dataset.api.iterator.DataSetIteratorFactory;
 public class Cifar10TestDataProvider implements DataSetIteratorFactory {
 
     @Parameter(names = "-evalBatchSize", description = "Batch size to use for validation")
-    private int evalBatchSize = 32;
+    private int evalBatchSize = 24;
 
     @Parameter(names = "-nrofTestExamples", description = "Number of examples to use for validation")
     private int nrofTestExamples = CifarLoader.NUM_TEST_IMAGES;

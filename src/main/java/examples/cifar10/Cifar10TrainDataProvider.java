@@ -18,7 +18,7 @@ import java.util.Random;
 public class Cifar10TrainDataProvider implements DataSetIteratorFactory {
 
     @Parameter(names = "-trainBatchSize", description = "Batch size to use for training")
-    private int trainBatchSize = 32;
+    private int trainBatchSize = 24;
 
     @Parameter(names = "-nrofTrainExamples", description = "Number of examples to use for training")
     private int nrofTrainExamples = CifarLoader.NUM_TRAIN_IMAGES;
