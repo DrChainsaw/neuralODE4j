@@ -2,6 +2,9 @@ package ode.solve.impl.util;
 
 import ode.solve.api.FirstOrderEquation;
 import ode.solve.impl.AdaptiveRungeKuttaSolver;
+import org.nd4j.linalg.api.memory.MemoryWorkspace;
+import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
+import org.nd4j.linalg.api.memory.enums.SpillPolicy;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -12,6 +15,11 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
  * @author Christian Skarby
  */
 public class FirstOrderEquationWithState implements SolverState {
+
+    private final static WorkspaceConfiguration wsConf = WorkspaceConfiguration.builder()
+            .overallocationLimit(0.0)
+            .policySpill(SpillPolicy.REALLOCATE)
+            .build();
 
     private final FirstOrderEquation equation;
     private final INDArray time;
@@ -33,11 +41,13 @@ public class FirstOrderEquationWithState implements SolverState {
 
         void step(INDArray stepCoeffPerStage, INDArray step) {
             // yWorking = y + (stepCoeffPerStage*step) . yDot[0:startState, :]) where . is dot product
-            timeOffset.assign(step);
-            yWorking.assign(y);
-                    yWorking.addi((stepCoeffPerStage.mul(step)).mmul(
-                                    yDotK.get(NDArrayIndex.interval(0, stepCoeffPerStage.length()), NDArrayIndex.all())
-                            ).reshape(y.shape()));
+            try (MemoryWorkspace ws = Nd4j.getWorkspaceManager().getAndActivateWorkspace(wsConf, this.getClass().getSimpleName())) {
+                timeOffset.assign(step);
+                yWorking.assign(y);
+                yWorking.addi((stepCoeffPerStage.mul(step)).mmul(
+                        yDotK.get(NDArrayIndex.interval(0, stepCoeffPerStage.length()), NDArrayIndex.all())
+                ).reshape(y.shape()));
+            }
         }
 
         INDArray getStateDot(long stage) {
@@ -76,6 +86,7 @@ public class FirstOrderEquationWithState implements SolverState {
 
     /**
      * Return the given stage of the derivative of the state
+     *
      * @param stage wanted stage of derivative
      * @return The derivative of the given stage
      */
@@ -86,6 +97,7 @@ public class FirstOrderEquationWithState implements SolverState {
 
     /**
      * Return the current state
+     *
      * @return the current state
      */
     @Override
@@ -95,6 +107,7 @@ public class FirstOrderEquationWithState implements SolverState {
 
     /**
      * Return the current time state
+     *
      * @return the current time state
      */
     @Override
@@ -109,6 +122,7 @@ public class FirstOrderEquationWithState implements SolverState {
 
     /**
      * Estimate the error using the given {@link AdaptiveRungeKuttaSolver.MseComputation}
+     *
      * @param mseComputation Strategy for computing the error
      * @return the computed error
      */
@@ -119,8 +133,9 @@ public class FirstOrderEquationWithState implements SolverState {
     /**
      * Update the working state by taking a step accumulated over all stages up the the given stage. The base step is
      * weighted with the given coefficients for each stage.
+     *
      * @param stepCoeffPerStage Weights for each stage (must be of shape [1, nrofStages]
-     * @param step Base step. Must be a scalar
+     * @param step              Base step. Must be a scalar
      */
     public void step(INDArray stepCoeffPerStage, INDArray step) {
         state.step(stepCoeffPerStage, step);
@@ -139,6 +154,6 @@ public class FirstOrderEquationWithState implements SolverState {
      * Shift the derivative so that previous stage 1 becomes new stage 0 in preparation for next step.
      */
     public void shiftDerivative() {
-        state.yDotK.putRow(0, state.yDotK.getRow(state.yDotK.rows()-1));
+        state.yDotK.putRow(0, state.yDotK.getRow(state.yDotK.rows() - 1));
     }
 }

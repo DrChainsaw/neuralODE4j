@@ -1,5 +1,6 @@
 package examples.cifar10;
 
+import ch.qos.logback.classic.Level;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
@@ -68,7 +69,7 @@ class Main {
 
     public static void main(String[] args) throws IOException {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        //root.setLevel(Level.INFO);
+        root.setLevel(Level.INFO);
 
         SeededRandomFactory.setNd4jSeed(0);
 

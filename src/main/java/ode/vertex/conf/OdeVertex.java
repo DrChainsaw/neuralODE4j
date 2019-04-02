@@ -121,7 +121,7 @@ public class OdeVertex extends GraphVertex {
             }
         };
 
-        if (initializeParams) {
+        if (initializeParams && paramsView != null) {
             innerGraph.init(); // This will init parameters using weight initialization
             paramsView.assign(innerGraph.params());
         }

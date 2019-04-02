@@ -14,6 +14,8 @@ import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.MultiDataSet;
@@ -35,6 +37,20 @@ import static junit.framework.TestCase.assertTrue;
  */
 public class LatentOdeTest {
 
+    private static Level loglevel;
+
+    @BeforeClass
+    public static void getLoglevel() {
+        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        loglevel = root.getLevel();
+    }
+
+    @AfterClass
+    public static void resetLogLevel() {
+        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        root.setLevel(loglevel);
+    }
+
     /**
      * Test that the latent ODE can (over)fit to a simple line
      */
@@ -42,8 +58,6 @@ public class LatentOdeTest {
     public void fitLine() {
         final long nrofTimeSteps = 10;
         final long nrofLatentDims = 4;
-
-        //SeededRandomFactory.setNd4jSeed(0);
 
         final ComputationGraphConfiguration.GraphBuilder builder = new NeuralNetConfiguration.Builder()
                 .seed(666)
