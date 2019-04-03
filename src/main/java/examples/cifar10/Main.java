@@ -128,7 +128,7 @@ class Main {
         savedir.mkdirs();
         model.addListeners(
                 new ZeroGrad(),
-                new PerformanceListener(1, true),
+                new PerformanceListener(10, true),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
                 }));

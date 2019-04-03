@@ -80,7 +80,7 @@ public class ShapeMatchVertex extends BaseGraphVertex {
 
     @Override
     public void setBackpropGradientsViewArray(INDArray backpropGradientsViewArray) {
-
+        // No gradients
     }
 
     @Override

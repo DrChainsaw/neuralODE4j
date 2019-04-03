@@ -47,10 +47,6 @@ public class ShapeMatchVertex extends GraphVertex {
         if(graphVertex.maxVertexInputs() < 2) {
             throw new IllegalArgumentException("Must be able to take more than one input! Got: " + graphVertex);
         }
-        // Handle legacy model. To be removed...
-        if(maskDims == null) {
-            maskDims = Collections.singleton(1);
-        }
         this.maskDims = maskDims;
     }
 
