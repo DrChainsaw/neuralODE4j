@@ -104,6 +104,7 @@ class Main {
 
         if (main.help) {
             jCommander.usage();
+            return main;
         }
 
         final ModelFactory factory = modelCommands.get(jCommander.getParsedCommand());

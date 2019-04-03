@@ -24,6 +24,6 @@ public class Cifar10TestDataProvider implements DataSetIteratorFactory {
         return new CifarDataSetIterator(
                 evalBatchSize,
                 nrofTestExamples,
-                true);
+                false);
     }
 }
