@@ -17,6 +17,7 @@ import util.listen.training.NanScoreWatcher;
 import util.listen.training.PlotActivations;
 import util.listen.training.PlotScore;
 import util.listen.training.ZeroGrad;
+import util.plot.NoPlot;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
 import util.random.SeededRandomFactory;
@@ -38,7 +39,7 @@ class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     static final String CHECKPOINT_NAME = "last_checkpoint.zip";
-    static final String BEST_EVAL_NAME = "best_epoch_";
+    private static final String BEST_EVAL_NAME = "best_epoch_";
 
     @Parameter(names = {"-help", "-h"}, description = "Prints help message")
     private boolean help = false;
@@ -46,11 +47,14 @@ class Main {
     @Parameter(names = "-nrofEpochs", description = "Number of epochs to train over")
     private int nrofEpochs = 50;
 
-    @Parameter(names = "-plotTime", description = "Set to true to plot how time steps evolve over training iterations")
+    @Parameter(names = "-plotTime", description = "Set to plot how time steps evolve over training iterations")
     private boolean plotTime = false;
 
-    @Parameter(names = "-plotScore", description = "Set to true to plot how time steps evolve over training iterations")
+    @Parameter(names = "-plotScore", description = "Set to plot score for each training iteration")
     private boolean plotScore = false;
+
+    @Parameter(names = "-plotEvalAccuracy", description = "Set to plot accuracy after each epoch")
+    private boolean plotEvalAccuracy = false;
 
     @Parameter(names = "-newModel", description = "Set to true to overwrite any existing model")
     private boolean newModel = false;
@@ -172,6 +176,8 @@ class Main {
 
         Nd4j.getMemoryManager().setAutoGcWindow(5000);
         double bestAccuracy = 0;
+
+        final Plot<Integer, Double> evalPlot = plotEvalAccuracy ? new RealTimePlot<>("Eval Accuracy", saveDir()) : new NoPlot<>();
         for (int epoch = model.getEpochCount(); epoch < nrofEpochs; epoch++) {
             log.info("Begin epoch " + epoch);
             model.fit(trainIter);
@@ -179,10 +185,13 @@ class Main {
             final Evaluation evaluation = model.evaluate(evalIter);
             log.info(evaluation.stats() + "\nBest accuracy so far: " + bestAccuracy);
 
+            evalPlot.plotData("Accuracy", epoch, evaluation.accuracy());
             if (evaluation.accuracy() > bestAccuracy) {
                 bestAccuracy = evaluation.accuracy();
                 model.save(Paths.get(saveDir(), BEST_EVAL_NAME + epoch + ".zip").toFile());
+                evalPlot.plotData("Best accuracy", epoch, evaluation.accuracy());
             }
+            evalPlot.storePlotData();
             model.save(Paths.get(saveDir(), CHECKPOINT_NAME).toFile());
         }
     }
