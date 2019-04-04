@@ -28,7 +28,7 @@ public class InceptionResNetV1 implements ModelFactory {
     private static final Logger log = LoggerFactory.getLogger(InceptionResNetV1.class);
 
     @Parameter(names = "-nrofABlocks", description = "Number of type A blocks to insert.")
-    private int nrofABlocks = 4;
+    private int nrofABlocks = 5;
 
     @Parameter(names = "-nrofBBlocks", description = "Number of type A blocks to insert.")
     private int nrofBBlocks = 10;
@@ -65,9 +65,10 @@ public class InceptionResNetV1 implements ModelFactory {
 
         for (int i = 0; i < nrofCBlocks; i++) {
             final String name = "Cblock" + i;
-            next = new ResBlock(name, new InceptionResNetCBlock(name, 128))
+            next = new ResBlock(name, new InceptionResNetCBlock(name, 128), i == nrofCBlocks-1)
                     .add(new Wrap(builder), next);
         }
+
 
         next = new Output().add(new GraphBuilderWrapper.Wrap(builder), next);
         builder.setOutputs(next);

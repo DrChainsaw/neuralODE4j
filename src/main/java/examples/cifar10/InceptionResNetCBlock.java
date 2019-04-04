@@ -21,15 +21,17 @@ public class InceptionResNetCBlock implements Block {
 
     @Override
     public String add(GraphBuilderWrapper builder, String... prev) {
+
+        final String branch0 = new ConvBnRelu(name + ".branch0.1x1",conv1x1(nrofKernels)).add(builder, prev);
+
+        String next = new ConvBnRelu( name + ".branch1.1x1",conv1x1(nrofKernels)).add(builder, prev);
+        next = new ConvBnRelu(name + ".branch1.1x3",conv1x3Same(nrofKernels)).add(builder, next);
+        final String branch1 = new ConvBnRelu(name + ".branch1.3x1", conv3x1Same(nrofKernels)).add(builder, next);
+
         builder
-                .addLayer(name + ".branch0.1x1", conv1x1(nrofKernels), prev)
 
-                .addLayer(name + ".branch1.1x1", conv1x1(nrofKernels), prev)
-                .addLayer(name + ".branch1.1x3", conv1x3Same(nrofKernels), name + ".branch1.1x1")
-                .addLayer(name + ".branch1.3x1", conv3x1Same(nrofKernels), name + ".branch1.1x3")
-
-                .addLayer(name + ".out", conv1x1(1792), name + ".branch0.1x1", name + ".branch1.3x1")
-                .addVertex(name + ".scale", new ScaleVertex(0.1), name + ".out");
+                .addLayer(name + ".out", conv1x1(1792), branch0, branch1)
+                .addVertex(name + ".scale", new ScaleVertex(0.2), name + ".out");
 
         return name + ".scale";
     }

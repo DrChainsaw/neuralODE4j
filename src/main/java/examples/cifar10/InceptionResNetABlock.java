@@ -1,5 +1,7 @@
 package examples.cifar10;
 
+import org.deeplearning4j.nn.conf.graph.ScaleVertex;
+
 import static examples.cifar10.LayerUtil.conv1x1;
 import static examples.cifar10.LayerUtil.conv3x3Same;
 
@@ -23,18 +25,19 @@ public class InceptionResNetABlock implements Block {
     @Override
     public String add(GraphBuilderWrapper builder, String... prev) {
 
+        final String branch0 = new ConvBnRelu(name + ".branch0.1x1", conv1x1(nrofKernels)).add(builder, prev);
+
+        String next = new ConvBnRelu(name + ".branch1.1x1", conv1x1(nrofKernels)).add(builder, prev);
+        final String branch1 = new ConvBnRelu(name + ".branch1.3x3", conv3x3Same(nrofKernels)).add(builder, next);
+
+        next = new ConvBnRelu(name + ".branch2.1x1", conv1x1(nrofKernels)).add(builder, prev);
+        next = new ConvBnRelu(name + ".branch2.3x3a", conv3x3Same(nrofKernels)).add(builder, next);
+        final String branch2 = new ConvBnRelu(name + ".branch2.3x3b", conv3x3Same(nrofKernels)).add(builder, next);
+
         builder
-                .addLayer(name + ".branch0.1x1", conv1x1(nrofKernels), prev)
+                .addLayer(name + ".out", conv1x1(256), branch0, branch1, branch2)
+                .addVertex(name + ".scale", new ScaleVertex(0.17), name + ".out");
 
-                .addLayer(name + ".branch1.1x1", conv1x1(nrofKernels), prev)
-                .addLayer(name + ".branch1.3x3", conv3x3Same(nrofKernels), name + ".branch1.1x1")
-
-                .addLayer(name + ".branch2.1x1", conv1x1(nrofKernels), prev)
-                .addLayer(name + ".branch2.3x3a", conv3x3Same(nrofKernels), name + ".branch2.1x1")
-                .addLayer(name + ".branch2.3x3b", conv3x3Same(nrofKernels), name + ".branch2.3x3a")
-
-                .addLayer(name + ".out", conv1x1(256), name + ".branch0.1x1", name + ".branch1.3x3", name + ".branch2.3x3b");
-
-        return name + ".out";
+        return name + ".scale";
     }
 }

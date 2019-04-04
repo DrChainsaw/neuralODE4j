@@ -192,7 +192,11 @@ public class OdeVertex extends GraphVertex {
          * @param vertex First vertex in internal graph
          * @param timeAsInput True if current time of the ODE solver shall be input to vertex as well
          */
-        public Builder(NeuralNetConfiguration.Builder globalConf, String name, GraphVertex vertex, boolean timeAsInput) {
+        public Builder(NeuralNetConfiguration.Builder globalConf,
+                       String name,
+                       GraphVertex vertex,
+                       boolean timeAsInput,
+                       String ... otherInputs) {
             graphBuilder = globalConf.clone().graphBuilder();
             final String inputName = this.toString() + "_input";
             first = name;

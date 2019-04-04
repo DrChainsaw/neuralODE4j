@@ -17,24 +17,25 @@ public class InceptionReductionBBlock implements Block {
 
     @Override
     public String add(GraphBuilderWrapper builder, String... prev) {
-        builder
-                .addLayer(name + ".branch0.mp3x3", maxPool3x3(2,2), prev)
 
-                .addLayer(name + ".branch1.1x1", conv1x1(256), prev)
-                .addLayer(name + ".branch1.3x3", conv3x3(384, 2,2),name + ".branch1.1x1")
 
-                .addLayer(name + ".branch2.1x1", conv1x1(256), prev)
-                .addLayer(name + ".branch2.3x3", conv3x3(256, 2,2), name + ".branch2.1x1")
+        builder.addLayer(name + ".branch0.mp3x3", maxPool3x3(2,2), prev);
 
-                .addLayer(name + ".branch3.1x1", conv1x1(256), prev)
-                .addLayer(name + ".branch3.3x3a", conv3x3Same(256), name + ".branch3.1x1")
-                .addLayer(name + ".branch3.3x3b", conv3x3(256,2,2), name + ".branch3.3x3a")
+        String next = new ConvBnRelu(name + ".branch1.1x1", conv1x1(256)).add(builder, prev);
+        final String branch1 = new ConvBnRelu(name + ".branch1.3x3", conv3x3(384, 2,2)).add(builder,next);
 
-                .addVertex(name + ".merge", new MergeVertex(),
+        next = new ConvBnRelu(name + ".branch2.1x1", conv1x1(256)).add(builder, prev);
+        final String branch2 = new ConvBnRelu(name + ".branch2.3x3", conv3x3(256, 2,2)).add(builder, next);
+
+        next = new ConvBnRelu(name + ".branch3.1x1", conv1x1(256)).add(builder, prev);
+        next = new ConvBnRelu(name + ".branch3.3x3a", conv3x3Same(256)).add(builder, next);
+        final String branch3 = new ConvBnRelu(name + ".branch3.3x3b", conv3x3(256,2,2)).add(builder, next);
+
+                builder.addVertex(name + ".merge", new MergeVertex(),
                         name + ".branch0.mp3x3",
-                        name + ".branch1.3x3",
-                        name + ".branch2.3x3",
-                        name + ".branch3.3x3b");
+                        branch1,
+                        branch2,
+                        branch3);
 
         return name + ".merge";
     }

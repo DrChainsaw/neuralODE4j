@@ -6,7 +6,6 @@ import ode.vertex.conf.helper.OdeHelper;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.MergeVertex;
 import org.deeplearning4j.nn.conf.layers.ActivationLayer;
-import org.deeplearning4j.nn.conf.layers.BatchNormalization;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
 
 /**
@@ -30,16 +29,19 @@ public class OdeBlockTime implements Block {
 
     @Override
     public String add(GraphBuilderWrapper builder, String... prev) {
-        final OdeVertex.Builder odeBuilder = new OdeVertex.Builder(globalConfig,
-                "relu", new ActivationLayer.Builder().activation(new ActivationReLU()).build())
-                .addLayer("norm", new BatchNormalization.Builder().build(), "relu")
-                .addTimeVertex("timeConc", new ShapeMatchVertex(new MergeVertex()), "norm")
+        final OdeVertex.Builder odeBuilder = new OdeVertex.Builder(
+                globalConfig,
+                "timeConc",
+                new ShapeMatchVertex(new MergeVertex()),
+                true,
+                prev)
                 .odeConf(odeHelper);
 
-        block.add(new GraphBuilderWrapper.Wrap(odeBuilder), "timeConc");
+        String next = block.add(new GraphBuilderWrapper.Wrap(odeBuilder), "timeConc");
+        odeBuilder.addLayer("relu", new ActivationLayer.Builder().activation(new ActivationReLU()).build(), next);
 
         builder.addVertex(name, odeBuilder.build(), prev);
-        builder.addLayer(name+ ".endNorm", new BatchNormalization.Builder().build(), name);
-        return name + ".endNorm";
+
+        return name;
     }
 }

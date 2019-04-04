@@ -1,5 +1,6 @@
 package examples.cifar10;
 
+import lombok.Data;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
@@ -12,7 +13,9 @@ import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
 import org.nd4j.linalg.learning.config.RmsProp;
 import org.nd4j.linalg.schedule.ExponentialSchedule;
+import org.nd4j.linalg.schedule.ISchedule;
 import org.nd4j.linalg.schedule.ScheduleType;
+import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 /**
  * Utils for creating layers for CIFAR 10
@@ -21,9 +24,29 @@ import org.nd4j.linalg.schedule.ScheduleType;
  */
 class LayerUtil {
 
+    @Data
+    static class EverySecondEpoch implements ISchedule {
+
+        private final ISchedule schedule;
+
+        private EverySecondEpoch(@JsonProperty("schedule") ISchedule schedule) {
+            this.schedule = schedule;
+        }
+
+        @Override
+        public double valueAt(int iteration, int epoch) {
+            return schedule.valueAt(iteration, epoch / 2);
+        }
+
+        @Override
+        public ISchedule clone() {
+            return new EverySecondEpoch(schedule);
+        }
+    }
+
     /**
-     * Initialize a GraphBuilder for CIFAR10
-     * @return a GraphBuilder for CIFAR10
+     * Initialize a GraphBuilder for CIFAR10 experiment
+     * @return a GraphBuilder for CIFAR10 experiment
      */
     public static ComputationGraphConfiguration.GraphBuilder initGraphBuilder(long seed, String... inputs) {
         InputType[] inputTypes = {InputType.convolutional(32,32,3)};
@@ -36,7 +59,8 @@ class LayerUtil {
                 .weightInit(WeightInit.RELU)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(new RmsProp.Builder()
-                        .learningRateSchedule(new ExponentialSchedule(ScheduleType.EPOCH, 0.045, 0.94))
+                        .learningRateSchedule(
+                                new EverySecondEpoch(new ExponentialSchedule(ScheduleType.EPOCH, 0.045, 0.94)))
                         .epsilon(1.0)
                         .rmsDecay(0.9)
                         .build()
@@ -203,13 +227,11 @@ class LayerUtil {
     }
 
     /**
-     * Create a {@link BatchNormalization} layer
-     * @param size size of output
+     * Create a {@link BatchNormalization} layer with ReLU activation
      * @return a {@link BatchNormalization}
      */
-    static Layer norm(long size) {
+    static Layer norm() {
         return new BatchNormalization.Builder()
-                .nOut(size)
                 .activation(new ActivationReLU()).build();
     }
 

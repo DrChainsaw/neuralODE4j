@@ -2,13 +2,13 @@ package examples.cifar10;
 
 import com.beust.jcommander.Parameter;
 import org.datavec.image.loader.CifarLoader;
+import org.datavec.image.transform.*;
 import org.deeplearning4j.datasets.iterator.impl.CifarDataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIteratorFactory;
-import org.nd4j.linalg.dataset.api.preprocessor.CompositeDataSetPreProcessor;
-import util.preproc.ShiftDim;
+import org.nd4j.linalg.primitives.Pair;
 
-import java.util.Random;
+import java.util.Arrays;
 
 /**
  * {@link DataSetIteratorFactory} for CIFAR 10 train data set.
@@ -28,18 +28,29 @@ public class Cifar10TrainDataProvider implements DataSetIteratorFactory {
 
     @Override
     public DataSetIterator create() {
-        final DataSetIterator iter =  new CifarDataSetIterator(
+        final int numCh = CifarLoader.CHANNELS;
+        final int height = CifarLoader.HEIGHT;
+        final int width = CifarLoader.WIDTH;
+
+        final ImageTransform dataAug = useDataAugmentation
+                ? new PipelineImageTransform(
+                667,
+                Arrays.asList(
+                        new Pair<>(new BoxImageTransform(width + 4, height + 4), 1d),
+                        new Pair<>(new RandomCropTransform(666, height, width), 1d),
+                        new Pair<>(new FlipImageTransform(1), 0.5d) // 50% chance of flip
+                ))
+                : new MultiImageTransform();
+
+        return new CifarDataSetIterator(
                 trainBatchSize,
                 nrofTrainExamples,
+                new int[]{height, width, numCh},
+                CifarLoader.NUM_LABELS,
+                dataAug,
+                false,
+                true,
+                123,
                 true);
-
-        if (useDataAugmentation) {
-            iter.setPreProcessor(new CompositeDataSetPreProcessor(
-                    new ShiftDim(2, new Random(666), 4),
-                    new ShiftDim(3, new Random(667), 4)
-            ));
-        }
-
-        return iter;
     }
 }

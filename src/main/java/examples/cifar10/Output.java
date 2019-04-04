@@ -16,9 +16,11 @@ public class Output implements Block {
     @Override
     public String add(GraphBuilderWrapper builder, String ... prev) {
         builder
-                .addLayer("globPool", new GlobalPoolingLayer.Builder().poolingType(PoolingType.AVG).build(), prev)
+                .addLayer("globPool", new GlobalPoolingLayer.Builder().poolingType(PoolingType.AVG)
+                        .build(), prev)
                 .addLayer("output", new OutputLayer.Builder()
                         .nOut(10)
+                        .dropOut(0.8)
                         .lossFunction(new LossMCXENT())
                         .activation(new ActivationSoftmax()).build(), "globPool");
         return "output";
