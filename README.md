@@ -32,10 +32,11 @@ Implementations of the MNIST and spiral generation toy experiments from the pape
 
 ## Usage
 
-The class [OdeVertex](./src/main/java/ode/vertex/conf/OdeVertex.java) is used to add an arbitrary graph of Layers or GraphVertices as an ODE block in a ComputationGraph. 
+The class [OdeVertex](./src/main/java/ode/vertex/conf/OdeVertex.java) is used to add an arbitrary graph of Layers or 
+GraphVertices as an ODE block in a ComputationGraph.
 
-OdeVertex extends GraphVertex and can be added to a GraphBuilder just as any other vertex. It has a similar API as GraphBuilder for adding 
-layers and vertices. 
+OdeVertex extends GraphVertex and can be added to a GraphBuilder just as any other vertex. It has a similar API as 
+GraphBuilder for adding layers and vertices. 
 
 Example:
 ```
@@ -69,14 +70,14 @@ final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.B
         .build());
 ```
 
-An inherent constraint to the method itself is that the output of the last layer in the OdeVertex must have the exact same 
-shape as the input to the first layer in the OdeVertex. 
+An inherent constraint to the method itself is that the output of the last layer in the OdeVertex must have the exact 
+same shape as the input to the first layer in the OdeVertex. 
 
-Note that OdeVertex.Builder requires a NeuralNetConfiguration.Builder as constructor input. This is because DL4J does not set graph wise 
-default values for things like updaters and weight initialization for vertices so the only way to apply them to the
-Layers of the OdeVertex is to pass in the global configuration. Putting it as a required constructor argument will 
-hopefully make this harder to forget. It is of course possible to have a separate set of default values for the layers
-of the OdeVertex by just giving it another NeuralNetConfiguration.Builder. 
+Note that OdeVertex.Builder requires a NeuralNetConfiguration.Builder as constructor input. This is because DL4J does 
+not set graph-wise default values for things like updaters and weight initialization for non.layer vertices so the only
+way to apply them to the Layers of the OdeVertex is to pass in the global configuration. Putting it as a required 
+constructor argument will hopefully make this harder to forget. It is of course possible to have a separate set of 
+default values for the layers of the OdeVertex by just giving it another NeuralNetConfiguration.Builder. 
 
 Method for solving the ODE can be configured:
 
@@ -91,7 +92,7 @@ Currently, the only ODE solver implementation which is integrated with Nd4j is [
 It is however possible to use FirstOrderIntegrators from apache.commons:commons-math3 through [FirstOrderSolverAdapter](./src/main/java/ode/solve/commons/FirstOrderSolverAdapter.java)
 at the cost of slower training and inference speed.
 
-Time can also be input from another vertex in the graph:
+Time steps to solve the ODE for can also be input from another vertex in the graph:
 ```
 new OdeVertex.Builder(...)
     .odeConf(new InputStep(solverConf, 1)) // Number "1" refers to input "time" on the line below
@@ -128,6 +129,22 @@ The exact mapping to dimensions depends on the shape of the input. Currently the
 | `B x H x T(RNN)`          | `Not supported`               |
 | `B x D x H x W (conv 2D) `| `B x D x H x W x t  (conv 3D)`|
 
+The current time step of the ODE solver can be used as an input to layers in the OdeVertex:
+
+```
+new OdeVertex.Builder(...)
+    .addTimeLayer("someName", someLayer)
+```
+Since the current time is a scalar, a [DuplicateScalarToShape](src/main/java/util/preproc/DuplicateScalarToShape.java) 
+preprocessor is automatically added when doing this.
+
+For vertices the following method is used:
+```
+new OdeVertex.Builder(...)
+    .addTimeVertex(someName, someGraphVertex, inputs)
+```
+Time will be added as the last input to the vertex. A [ShapeMatchVertex](src/main/java/ode/vertex/conf/ShapeMatchVertex.java)
+can be used to adapt the shape of the time input for vertices which don't support broadcasting.
 
 ### Prerequisites
 
