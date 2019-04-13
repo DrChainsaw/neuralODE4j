@@ -63,10 +63,10 @@ class Main {
     private String saveDir = "savedmodels";
 
     @ParametersDelegate
-    public DataSetIteratorFactory trainFactory = new Cifar10TrainDataProvider();
+    DataSetIteratorFactory trainFactory = new Cifar10TrainDataProvider();
 
     @ParametersDelegate
-    public DataSetIteratorFactory evalFactory = new Cifar10TestDataProvider();
+    DataSetIteratorFactory evalFactory = new Cifar10TestDataProvider();
 
     private ComputationGraph model;
     private ModelFactory modelFactory;
@@ -139,19 +139,7 @@ class Main {
                 }));
 
         if (plotTime) {
-            final Plot<Integer, Double> timePlot = new RealTimePlot<>("Time steps to integrate over", savedir.getAbsolutePath());
-            model.addListeners(
-                    new PlotActivations(timePlot, "timeTrain", new String[]{"t0", "t1"}),
-                    new EpochHook(1, new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                timePlot.storePlotData();
-                            } catch (IOException e) {
-                                throw new UncheckedIOException(e);
-                            }
-                        }
-                    }));
+            setupTimePlot(savedir);
         }
 
         if (plotScore) {
@@ -170,6 +158,29 @@ class Main {
                     }));
         }
     }
+
+    private void setupTimePlot(File savedir) {
+        for(String vertexName: model.getConfiguration().getTopologicalOrderStr()) {
+
+            if(vertexName.startsWith("time")) {
+
+                final Plot<Integer, Double> timePlot = new RealTimePlot<>("Time steps to integrate over " + vertexName, savedir.getAbsolutePath());
+                model.addListeners(
+                        new PlotActivations(timePlot, vertexName, new String[]{"t0", "t1"}),
+                        new EpochHook(1, new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    timePlot.storePlotData();
+                                } catch (IOException e) {
+                                    throw new UncheckedIOException(e);
+                                }
+                            }
+                        }));
+            }
+        }
+    }
+
 
     void run() throws IOException {
         final MultiDataSetIterator trainIter = modelFactory.wrapIter(trainFactory.create());

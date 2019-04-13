@@ -11,7 +11,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.primitives.Pair;
 import util.preproc.DuplicateScalarToShape;
 
-import java.util.Set;
+import java.util.Map;
 
 /**
  * Duplicates the last input to match the shapes of the other inputs. Main use case is for performing merging or element
@@ -22,12 +22,12 @@ import java.util.Set;
 public class ShapeMatchVertex extends BaseGraphVertex {
 
     private final GraphVertex vertex;
-    private final Set<Integer> maskDims;
+    protected Map<Integer, Long> overrideSizeDims;
 
-    public ShapeMatchVertex(ComputationGraph graph, String name, int vertexIndex, GraphVertex vertex, Set<Integer> maskDims) {
+    public ShapeMatchVertex(ComputationGraph graph, String name, int vertexIndex, GraphVertex vertex, Map<Integer, Long> overrideSizeDims) {
         super(graph, name, vertexIndex, null, null);
         this.vertex = vertex;
-        this.maskDims = maskDims;
+        this.overrideSizeDims = overrideSizeDims;
     }
 
 
@@ -55,8 +55,8 @@ public class ShapeMatchVertex extends BaseGraphVertex {
 
         final long[] shape = inputs[0].shape().clone();
 
-        for(int maskDim: maskDims) {
-            shape[maskDim] = 1;
+        for(Map.Entry<Integer, Long> sizeDim: overrideSizeDims.entrySet()) {
+            shape[sizeDim.getKey()] = sizeDim.getValue();
         }
 
         final INDArray newLast = new DuplicateScalarToShape(shape)

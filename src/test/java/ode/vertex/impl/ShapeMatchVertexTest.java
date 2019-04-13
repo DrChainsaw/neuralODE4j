@@ -66,7 +66,7 @@ public class ShapeMatchVertexTest {
     public void doBackward() {
         final INDArray eps = Nd4j.arange(2*3*4).reshape(2,3,4);
         final GraphVertex vertex = new ShapeMatchVertex(null, "test", 1,
-                new ElementWiseVertex(null, "test-vertex", 1, ElementWiseVertex.Op.Average), Collections.emptySet());
+                new ElementWiseVertex(null, "test-vertex", 1, ElementWiseVertex.Op.Average), Collections.emptyMap());
 
         vertex.setEpsilon(eps);
         vertex.setInputs(eps, eps, Nd4j.scalar(1));

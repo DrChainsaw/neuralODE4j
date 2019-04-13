@@ -65,19 +65,12 @@ public class OdeNetModel implements ModelFactory {
         );
 
         String next = "input";
-        String nexttime = "time";
-        final GraphBuilder builder = LayerUtil.initGraphBuilder(Nd4j.getRandom().nextLong(), next, nexttime);
+        final String time = "time";
+        final GraphBuilder builder = LayerUtil.initGraphBuilder(Nd4j.getRandom().nextLong(), next, time);
 
         OdeHelper odeConf = new InputStep(solver, 1, false, false);
 
         if (trainTime) {
-            builder.addLayer("timeTrain", new DenseLayer.Builder()
-                    .nOut(2)
-                    .weightInit(WeightInit.IDENTITY)
-                    .biasInit(0)
-                    .activation(new ActivationIdentity())
-                    .build(), nexttime);
-            nexttime = "timeTrain";
             odeConf = new InputStep(solver, 1, false, true);
         }
 
@@ -89,8 +82,9 @@ public class OdeNetModel implements ModelFactory {
         next = "resize";
 
         if(useABlock) {
+            final String timeName = addTimeIfTimeTrain("A", builder, time);
             next = new OdeBlockTime(builder.getGlobalConfiguration(), odeConf, new InceptionResNetABlock("", 32), "odeVertexA")
-                    .add(new Wrap(builder), next, nexttime);
+                    .add(new Wrap(builder), next, timeName);
         }
 
         if(useBBlock || useCBlock) {
@@ -98,15 +92,16 @@ public class OdeNetModel implements ModelFactory {
         }
 
         if(useBBlock) {
+            final String timeName = addTimeIfTimeTrain("B", builder, time);
             next = new OdeBlockTime(builder.getGlobalConfiguration(), odeConf, new InceptionResNetBBlock("", 128), "odeVertexB")
-                    .add(new Wrap(builder), next, nexttime);
+                    .add(new Wrap(builder), next, timeName);
         }
 
         if(useCBlock) {
+            final String timeName = addTimeIfTimeTrain("C", builder, time);
             next = new InceptionReductionBBlock("reductionB").add(new Wrap(builder), next);
-
             next = new OdeBlockTime(builder.getGlobalConfiguration(), odeConf, new InceptionResNetCBlock("", 128), "odeVertexC")
-                    .add(new Wrap(builder), next, nexttime);
+                    .add(new Wrap(builder), next, timeName);
         }
 
         next = new Output().add(new Wrap(builder), next);
@@ -115,6 +110,19 @@ public class OdeNetModel implements ModelFactory {
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
         return graph;
+    }
+
+    private String addTimeIfTimeTrain(String blockSuffix, GraphBuilder builder, String timeName) {
+        if (trainTime) {
+            builder.addLayer(timeName + blockSuffix, new DenseLayer.Builder()
+                    .nOut(2)
+                    .weightInit(WeightInit.IDENTITY)
+                    .biasInit(0)
+                    .activation(new ActivationIdentity())
+                    .build(), timeName);
+            return timeName + blockSuffix;
+        }
+        return timeName;
     }
 
     @Override

@@ -8,6 +8,8 @@ import org.deeplearning4j.nn.conf.graph.MergeVertex;
 import org.deeplearning4j.nn.conf.layers.ActivationLayer;
 import org.nd4j.linalg.activations.impl.ActivationReLU;
 
+import java.util.Collections;
+
 /**
  * Generic ODE block which merges current time in ODE solver with input
  *
@@ -29,10 +31,11 @@ public class OdeBlockTime implements Block {
 
     @Override
     public String add(GraphBuilderWrapper builder, String... prev) {
+
         final OdeVertex.Builder odeBuilder = new OdeVertex.Builder(
                 globalConfig,
                 "timeConc",
-                new ShapeMatchVertex(new MergeVertex()),
+                new ShapeMatchVertex(new MergeVertex(), Collections.singletonMap(1,10L)),
                 true,
                 prev)
                 .odeConf(odeHelper);
