@@ -51,7 +51,6 @@ public class CalcMultiStepTimeGrad implements MultiStepTimeGrad {
     @Override
     public void updateStep(INDArrayIndex[] timeIndexer, INDArray[] gradients) {
         timeGradient.put(timeIndexer, gradients[timeIndex]);
-        lastTime.subi(timeGradient.get(timeIndexer).getScalar(0));
     }
 
     @Override
@@ -65,6 +64,6 @@ public class CalcMultiStepTimeGrad implements MultiStepTimeGrad {
 
     @Override
     public TimeGrad.Factory createSingleStepFactory(INDArray dL_dzt1_time) {
-        return new CalcTimeGrad.Factory(dL_dzt1_time, timeIndex);
+        return new CalcTimeGrad.Factory(dL_dzt1_time, lastTime, timeIndex);
     }
 }

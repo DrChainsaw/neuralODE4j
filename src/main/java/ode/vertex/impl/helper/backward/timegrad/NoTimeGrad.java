@@ -18,7 +18,7 @@ public class NoTimeGrad implements TimeGrad {
 
 
     @Override
-    public INDArray calcTimeGradT1(FirstOrderEquation equation, INDArray zt1, INDArray time) {
+    public INDArray calcTimeAdjointT1(FirstOrderEquation equation, INDArray zt1, INDArray time) {
         return Nd4j.empty();
     }
 

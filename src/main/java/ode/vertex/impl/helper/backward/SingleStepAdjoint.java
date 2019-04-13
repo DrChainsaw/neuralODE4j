@@ -53,9 +53,9 @@ public class SingleStepAdjoint implements OdeHelperBackward {
                 input.getGraphInputOutput());
 
         final TimeGrad timeGrad = timeGradFactory.create();
-        final INDArray dL_dt1 = timeGrad.calcTimeGradT1(forward, zt1, time);
+        final INDArray tAdjoint = timeGrad.calcTimeAdjointT1(forward, zt1, time);
 
-        final INDArray zAug = Nd4j.create(1, zt1.length() + dL_dzt1.length() + graph.numParams() + dL_dt1.length());
+        final INDArray zAug = Nd4j.create(1, zt1.length() + dL_dzt1.length() + graph.numParams() + tAdjoint.length());
         final INDArray paramAdj = Nd4j.zeros(realParamGrads.length());
         realParamGrads.assignTo(paramAdj);
 
@@ -63,13 +63,13 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         accumulator.increment(zt1.reshape(new long[]{1, zt1.length()}))
                 .increment(dL_dzt1.reshape(new long[]{1, dL_dzt1.length()}))
                 .increment(paramAdj.reshape(new long[]{1, paramAdj.length()}))
-                .increment(dL_dt1);
+                .increment(tAdjoint);
 
         final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(
                 zAug,
                 dL_dzt1.shape(),
                 new long[]{realParamGrads.length()},
-                dL_dt1.shape());
+                tAdjoint.shape());
 
         final FirstOrderEquation equation = new BackpropagateAdjoint(
                 augmentedDynamics,

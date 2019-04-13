@@ -82,7 +82,7 @@ abstract class AbstractHelperConfTest {
 
         assertNotEquals("Expected non-zero param gradient!", 0, graph.getGradientsViewArray().sumNumber().doubleValue() ,1e-10);
         for(INDArray inputGrad: output) {
-            assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.sumNumber().doubleValue() ,1e-10);
+            assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.maxNumber().doubleValue() ,1e-10);
         }
     }
 
