@@ -146,6 +146,16 @@ new OdeVertex.Builder(...)
 Time will be added as the last input to the vertex. A [ShapeMatchVertex](src/main/java/ode/vertex/conf/ShapeMatchVertex.java)
 can be used to adapt the shape of the time input for vertices which don't support broadcasting.
 
+### Limitations
+
+The implementation does not use Nd4js SameDiff and therefore automatic differentiation is not possible. As a consequence, 
+back propagation though the OdeVertex is only possible using the adjoint method. 
+
+For the same reason, continuous normalizing flows is not supported as this requires back-propagation through the 
+derivative of a forward pass though the OdeVertex (as far as I can understand).
+
+Reason for not using SameDiff is that it does not have GPU support in Nd4j 1.0.0-beta3. 
+
 ### Prerequisites
 
 Maven and GIT. Project uses ND4Js CUDA 10 backend as default which requires [CUDA 10](https://deeplearning4j.org/docs/latest/deeplearning4j-config-cudnn).
