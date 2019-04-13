@@ -52,6 +52,7 @@ abstract class AbstractHelperConfTest {
         final String json = NeuralNetConfiguration.mapper().writeValueAsString(conf);
         final OdeHelperBackward newConf = NeuralNetConfiguration.mapper().readValue(json, OdeHelperBackward.class);
         assertEquals("Did not deserialize into the same thing!", conf, newConf);
+        assertEquals("Not same hash code of deserialized object!", conf.hashCode(), newConf.hashCode());
     }
 
     /**

@@ -46,7 +46,7 @@ public class FirstOrderIntegratorConfTest extends AbstractConfTest {
     public void createDormandPrince853() {
         final SolverConfig config = new SolverConfig(1e-3, 1e-4, 1e-10, 10);
         final FirstOrderSolver solver = new FirstOrderIntegratorConf(DormandPrince853Integrator.class.getName(), config
-                ).instantiate();
+        ).instantiate();
         final FirstOrderSolver reference = new FirstOrderSolverAdapter(new DormandPrince853Integrator(
                 config.getMinStep(),
                 config.getMaxStep(),
@@ -67,8 +67,35 @@ public class FirstOrderIntegratorConfTest extends AbstractConfTest {
         final FirstOrderIntegratorConf newConf = NeuralNetConfiguration.mapper().readValue(json, FirstOrderIntegratorConf.class);
 
         assertEquals("Incorrect solver!", conf.getIntegratorName(), newConf.getIntegratorName());
-        assertEquals("Incorrec absTol!", conf.getConfig().getAbsTol(), newConf.getConfig().getAbsTol(), 1e-10);
+        assertEquals("Incorrect absTol!", conf.getConfig().getAbsTol(), newConf.getConfig().getAbsTol(), 1e-10);
+        assertEquals("Did not deserialize into the same thing!", conf, newConf);
+        assertEquals("Hash code not same!", conf.hashCode(), newConf.hashCode());
         verifySolvers(newConf.instantiate(), conf.instantiate());
+    }
+
+    /**
+     * Test cloning
+     */
+    @Test
+    public void cloneTest() {
+        final FirstOrderIntegratorConf conf = new FirstOrderIntegratorConf();
+        assertEquals("Clone not same!", conf, conf.clone());
+        assertEquals("Hash code of clone not same!", conf.hashCode(), conf.clone().hashCode());
+        verifySolvers(conf.instantiate(), conf.clone().instantiate());
+    }
+
+    /**
+     * Test toString
+     */
+    @Test
+    public void toStringTest() {
+        final FirstOrderIntegratorConf conf = new FirstOrderIntegratorConf(HighamHall54Integrator.class.getName(),
+                new SolverConfig(1, 2, 3, 4));
+        assertEquals("Incorrect toString",
+                "FirstOrderIntegratorConf(config=SolverConfig(absTol=1.0, relTol=2.0, minStep=3.0, maxStep=4.0), " +
+                        "integratorName=org.apache.commons.math3.ode.nonstiff.HighamHall54Integrator, " +
+                        "listener=ode.solve.impl.util.AggStepListener)",
+                conf.toString());
     }
 
     private void verifySolvers(FirstOrderSolver solver, FirstOrderSolver reference) {

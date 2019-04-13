@@ -12,6 +12,8 @@ import org.nd4j.shade.jackson.annotation.JsonProperty;
 import org.nd4j.shade.jackson.databind.annotation.JsonDeserialize;
 import org.nd4j.shade.jackson.databind.annotation.JsonSerialize;
 
+import java.util.Objects;
+
 /**
  * Serializable configuration for {@link ode.vertex.impl.helper.forward.FixedStep}
  *
@@ -62,5 +64,20 @@ public class FixedStep implements OdeHelperForward{
         System.arraycopy(vertexInputs, 0, withTime, 0, vertexInputs.length);
         withTime[vertexInputs.length] =  InputType.inferInputType(this.time);
         return new OutputTypeAddTimeAsDimension(vertexInputs.length, confHelper).getOutputType(conf, withTime);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FixedStep fixedStep = (FixedStep) o;
+        return interpolateIfMultiStep == fixedStep.interpolateIfMultiStep &&
+                solverConf.equals(fixedStep.solverConf) &&
+                time.equals(fixedStep.time);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(solverConf, time.toString(), interpolateIfMultiStep);
     }
 }

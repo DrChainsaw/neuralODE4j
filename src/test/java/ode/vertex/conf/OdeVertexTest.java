@@ -33,12 +33,28 @@ import static org.junit.Assert.fail;
 public class OdeVertexTest {
 
     /**
+     * Test than an {@link OdeVertex} can be clones
+     *
+     */
+    @Test
+    public void cloneTest() {
+        final GraphVertex vertex = new OdeVertex.Builder(
+                new NeuralNetConfiguration.Builder(), "1", new BatchNormalization.Builder().nOut(3).build())
+                .addLayer("2", new ConvolutionLayer.Builder(3, 3).nOut(3).build(), "1")
+                .build();
+
+        assertEquals("Clone not equal!", vertex, vertex.clone());
+        assertEquals("Hash code of clone not equal!", vertex.hashCode(), vertex.clone().hashCode());
+
+    }
+
+    /**
      * Test than an {@link OdeVertex} can be serialized and deserialized.
      *
      * @throws IOException
      */
     @Test
-    public void testSerializeDeserialize() throws IOException {
+    public void serializeDeserialize() throws IOException {
         final GraphVertex vertex = new OdeVertex.Builder(
                 new NeuralNetConfiguration.Builder(), "1", new BatchNormalization.Builder().nOut(3).build())
                 .addLayer("2", new ConvolutionLayer.Builder(3, 3).nOut(3).build(), "1")
@@ -47,6 +63,7 @@ public class OdeVertexTest {
         final String json = NeuralNetConfiguration.mapper().writeValueAsString(vertex);
         final OdeVertex newVertex = NeuralNetConfiguration.mapper().readValue(json, OdeVertex.class);
         assertEquals("Not same!", vertex, newVertex);
+        assertEquals("Not same!", vertex.hashCode(), newVertex.hashCode());
     }
 
     /**
@@ -55,7 +72,7 @@ public class OdeVertexTest {
      * @throws IOException
      */
     @Test
-    public void testSerializeDeserializeModel() throws IOException {
+    public void serializeDeserializeModel() throws IOException {
         final ComputationGraph graph = new ComputationGraph(new NeuralNetConfiguration.Builder()
                 .updater(new Sgd())
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)

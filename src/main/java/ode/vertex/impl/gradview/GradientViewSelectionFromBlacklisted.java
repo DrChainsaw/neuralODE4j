@@ -1,6 +1,7 @@
 package ode.vertex.impl.gradview;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import ode.vertex.impl.gradview.parname.Concat;
 import ode.vertex.impl.gradview.parname.ParamNameMapping;
 import org.deeplearning4j.nn.api.Layer;
@@ -15,7 +16,6 @@ import org.nd4j.shade.jackson.annotation.JsonProperty;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * {@link GradientViewFactory} which selects either a {@link Contiguous1DView} or a {@link NonContiguous1DView} based on
@@ -24,6 +24,7 @@ import java.util.Objects;
  * @author Christian Skarby
  */
 @Data
+@EqualsAndHashCode
 public class GradientViewSelectionFromBlacklisted implements GradientViewFactory {
 
     private final List<String> nonGradientParamNames;
@@ -134,18 +135,4 @@ public class GradientViewSelectionFromBlacklisted implements GradientViewFactory
     public GradientViewFactory clone() {
         return new GradientViewSelectionFromBlacklisted(nonGradientParamNames, paramNameMapping);
     }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof GradientViewSelectionFromBlacklisted)) return false;
-        GradientViewSelectionFromBlacklisted that = (GradientViewSelectionFromBlacklisted) o;
-        return nonGradientParamNames.equals(that.nonGradientParamNames) && paramNameMapping.equals(that.paramNameMapping);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(nonGradientParamNames);
-    }
-
 }
