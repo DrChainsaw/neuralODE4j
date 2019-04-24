@@ -76,6 +76,6 @@ public class ShapeMatchVertexTest {
         INDArray[] actualEps = output.getSecond();
         assertEquals("Incorrect epsilon!", eps.div(3), actualEps[0]);
         assertEquals("Incorrect epsilon!", eps.div(3), actualEps[1]);
-        assertEquals("Incorrect epsilon!", eps.div(3).mean(), actualEps[2]);
+        assertEquals("Incorrect epsilon!", eps.div(3).sum(), actualEps[2]);
     }
 }

@@ -51,7 +51,7 @@ public class DuplicateScalarToShape implements InputPreProcessor {
 
     @Override
     public INDArray backprop(INDArray output, int miniBatchSize, LayerWorkspaceMgr workspaceMgr) {
-        return workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, output.mean());
+        return workspaceMgr.leverageTo(ArrayType.ACTIVATION_GRAD, output.sum());
     }
 
     @Override

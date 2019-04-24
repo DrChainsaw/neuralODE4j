@@ -49,7 +49,7 @@ public class DuplicateScalarToShapeTest {
     public void backprop() {
         final INDArray input = Nd4j.arange(2 * 3 * 4).reshape(2, 3, 4);
         assertEquals("Incorrect output!",
-                input.mean(),
+                input.sum(),
                 new DuplicateScalarToShape().backprop(input, 2, LayerWorkspaceMgr.noWorkspacesImmutable()));
     }
 
