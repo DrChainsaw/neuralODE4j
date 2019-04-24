@@ -29,22 +29,19 @@ public class SingleStep implements OdeHelperForward {
     }
 
     @Override
-    public INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, INDArray[] inputs) {
-        if (inputs.length != 1) {
-            throw new IllegalArgumentException("Only single input supported!");
-        }
+    public INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, GraphInput input) {
 
         final FirstOrderEquation equation = new ForwardPass(
                 graph,
                 wsMgr,
                 true, // Always use training as batch norm running mean and var become messed up otherwise. Same effect seen in original pytorch repo.
-                inputs
+                input
         );
 
-        final INDArray z0 = inputs[0];
-        final INDArray zt = Nd4j.createUninitialized(z0.shape());
-        solver.integrate(equation, time, z0, zt);
+        final INDArray y0 = input.y0();
+        final INDArray yt = Nd4j.createUninitialized(y0.shape());
+        solver.integrate(equation, time, y0, yt);
 
-        return zt;
+        return yt;
     }
 }

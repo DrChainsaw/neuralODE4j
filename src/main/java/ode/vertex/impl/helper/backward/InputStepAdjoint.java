@@ -1,12 +1,11 @@
 package ode.vertex.impl.helper.backward;
 
 import ode.solve.api.FirstOrderSolver;
+import ode.vertex.impl.helper.GraphInputOutput;
 import ode.vertex.impl.helper.backward.timegrad.*;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.nd4j.linalg.primitives.Pair;
 
 /**
  * {@link OdeHelperBackward} which uses one of the input {@link INDArray}s as the time steps to evaluate the ODE for
@@ -28,20 +27,16 @@ public class InputStepAdjoint implements OdeHelperBackward {
 
     @Override
     public INDArray[] solve(ComputationGraph graph, InputArrays input, MiscPar miscPars) {
-        final INDArray time = input.getLastInputs()[timeIndex];
-        final List<INDArray> notTimeInputs = new ArrayList<>();
-        for (int i = 0; i < input.getLastInputs().length; i++) {
-            if (i != timeIndex) {
-                notTimeInputs.add(input.getLastInputs()[i]);
-            }
-        }
+        final Pair<GraphInputOutput, INDArray> result = input.getGraphInputOutput().removeInput(timeIndex);
+
         final InputArrays newInput = new InputArrays(
-                notTimeInputs.toArray(new INDArray[0]),
+                result.getFirst(),
                 input.getLastOutput(),
                 input.getLossGradient(),
                 input.getRealGradientView()
         );
 
+        final INDArray time = result.getSecond();
         if (time.length() > 2) {
             final MultiStepTimeGrad.Factory factory = needTimeGradient ?
                     new CalcMultiStepTimeGrad.Factory(time, timeIndex) :

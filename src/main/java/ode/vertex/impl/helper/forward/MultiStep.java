@@ -29,36 +29,33 @@ public class MultiStep implements OdeHelperForward {
     }
 
     @Override
-    public INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, INDArray[] inputs) {
-        if (inputs.length != 1) {
-            throw new IllegalArgumentException("Only single input supported!");
-        }
+    public INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, GraphInput input) {
 
         final FirstOrderEquation equation = new ForwardPass(
                 graph,
                 wsMgr,
                 true,
-                inputs
+                input
         );
 
-        final INDArray z0 = inputs[0].dup();
-        final INDArray zt = Nd4j.createUninitialized(Longs.concat(new long[]{time.length() - 1}, z0.shape()));
-        solver.integrate(equation, time, inputs[0].dup(), zt);
+        final INDArray y0 = input.y0().dup();
+        final INDArray yt = Nd4j.createUninitialized(Longs.concat(new long[]{time.length() - 1}, y0.shape()));
+        solver.integrate(equation, time, input.y0().dup(), yt);
 
-        return alignOutShape(zt, z0);
+        return alignOutShape(yt, y0);
     }
 
 
-    private INDArray alignOutShape(INDArray zt, INDArray z0) {
-        final long[] shape = zt.shape();
+    private INDArray alignOutShape(INDArray yt, INDArray y0) {
+        final long[] shape = yt.shape();
         switch (shape.length) {
             case 3: // Assume recurrent output
-                return Nd4j.concat(0, z0.reshape(1, shape[1], shape[2]), zt).permute(1, 2, 0);
+                return Nd4j.concat(0, y0.reshape(1, shape[1], shape[2]), yt).permute(1, 2, 0);
             case 5: // Assume conv 3D output
-                return Nd4j.concat(0, z0.reshape(1, shape[1], shape[2], shape[3], shape[4]), zt).permute(1, 0, 2, 3, 4);
+                return Nd4j.concat(0, y0.reshape(1, shape[1], shape[2], shape[3], shape[4]), yt).permute(1, 0, 2, 3, 4);
             // Should not happen as conf throws exception for other types
             default:
-                throw new UnsupportedOperationException("Rank not supported: " + zt.rank());
+                throw new UnsupportedOperationException("Rank not supported: " + yt.rank());
         }
     }
 }

@@ -23,13 +23,13 @@ public interface TimeGrad {
     }
 
     /**
-     * Calculate time gradient for the last time point (t1)
+     * Calculate adjoint time for the last time point (t1)
      * @param equation Calculates dz(t1) / d(t1)
      * @param zt1 Value of z(t1)
      * @param time
-     * @return dLoss / dt1 or empty if no time gradient needed
+     * @return adjoint time or empty if no time gradient needed
      */
-    INDArray calcTimeGradT1(FirstOrderEquation equation, INDArray zt1, INDArray time);
+    INDArray calcTimeAdjointT1(FirstOrderEquation equation, INDArray zt1, INDArray time);
 
     /**
      * Create loss gradient (a.k.a epsilons in dl4j) from adjoint state.

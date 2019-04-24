@@ -4,12 +4,12 @@ import ode.solve.api.FirstOrderSolver;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.nd4j.linalg.primitives.Pair;
 
 /**
- * {@link OdeHelperForward} which uses one of the input {@link INDArray}s as the time steps to evaluate the ODE for
+ * {@link OdeHelperForward} which uses one of the input {@link INDArray}s as the time steps to evaluate the ODE for. Note
+ * that this is not the same thing as having the ODE function itself depend on time (which is decided by {@link GraphInput}
+ * implementation).
  *
  * @author Christian Skarby
  */
@@ -26,17 +26,12 @@ public class InputStep implements OdeHelperForward {
     }
 
     @Override
-    public INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, INDArray[] inputs) {
-        final List<INDArray> notTimeInputs = new ArrayList<>();
-        for (int i = 0; i < inputs.length; i++) {
-            if (i != timeInputIndex) {
-                notTimeInputs.add(inputs[i]);
-            }
-        }
+    public INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, GraphInput input) {
+        Pair<? extends GraphInput, INDArray> result = input.removeInput(timeInputIndex);
         return new FixedStep(
                 solver,
-                inputs[timeInputIndex],
+                result.getSecond(),
                 interpolateIfMultiStep)
-                .solve(graph, wsMgr, notTimeInputs.toArray(new INDArray[0]));
+                .solve(graph, wsMgr, result.getFirst());
     }
 }

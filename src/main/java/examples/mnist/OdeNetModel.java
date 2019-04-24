@@ -71,7 +71,9 @@ public class OdeNetModel implements ModelFactory {
 
     private String addOdeBlock(String prev, FirstOrderSolverConf solver) {
         builder
-                .addVertex("odeBlock", new OdeVertex.Builder("normFirst",
+                .addVertex("odeBlock", new OdeVertex.Builder(
+                        builder.getGlobalConfiguration(),
+                        "normFirst",
                         norm(nrofKernels))
                         .addLayer("convFirst",
                                 conv3x3Same(nrofKernels), "normFirst")

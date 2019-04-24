@@ -1,5 +1,6 @@
 package ode.vertex.conf.helper.forward;
 
+import ode.vertex.impl.helper.NoTimeInput;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
@@ -41,12 +42,13 @@ abstract class AbstractHelperConfTest {
         final String json = NeuralNetConfiguration.mapper().writeValueAsString(conf);
         final OdeHelperForward newConf = NeuralNetConfiguration.mapper().readValue(json, OdeHelperForward.class);
         assertEquals("Did not deserialize into the same thing!", conf, newConf);
+        assertEquals("Not same hash code of deserialized object!", conf.hashCode(), newConf.hashCode());
     }
 
     @Test
     public void instantiateAndSolveConv() {
         final ode.vertex.impl.helper.forward.OdeHelperForward helper = create().instantiate();
-        final INDArray output = helper.solve(createGraph(), LayerWorkspaceMgr.noWorkspaces(), createInputs(Nd4j.randn(new long[] {5, 2, 3, 3})));
+        final INDArray output = helper.solve(createGraph(), LayerWorkspaceMgr.noWorkspaces(), new NoTimeInput(createInputs(Nd4j.randn(new long[] {5, 2, 3, 3}))));
         assertNotEquals("Expected non-zero output!", 0, output.sumNumber().doubleValue() ,1e-10);
     }
 

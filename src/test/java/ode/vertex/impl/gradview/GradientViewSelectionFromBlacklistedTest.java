@@ -18,9 +18,8 @@ import java.util.Arrays;
 import java.util.Map;
 
 import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 
 /**
  * Test cases for {@link GradientViewSelectionFromBlacklisted}
@@ -79,7 +78,8 @@ public class GradientViewSelectionFromBlacklistedTest {
     @Test
     public void clonetest() {
         final GradientViewFactory factory = new GradientViewSelectionFromBlacklisted(Arrays.asList("ff", "gg"));
-        assertTrue("Clones shall be equal!" , factory.equals(factory.clone()));
+        assertEquals("Clones shall be equal!", factory, factory.clone());
+        assertEquals("Clones shall have equal hashCode!", factory.hashCode(), factory.clone().hashCode());
     }
 
     /**
@@ -87,13 +87,9 @@ public class GradientViewSelectionFromBlacklistedTest {
      */
     @Test
     public void equals() {
-        assertTrue("Shall be equal!", new GradientViewSelectionFromBlacklisted().equals(new GradientViewSelectionFromBlacklisted()));
-        assertTrue("Shall be equal!",
-                new GradientViewSelectionFromBlacklisted(Arrays.asList("aa", "bb")).equals(
-                        new GradientViewSelectionFromBlacklisted(Arrays.asList("aa", "bb"))));
-        assertFalse("Shall not be equal!",
-                new GradientViewSelectionFromBlacklisted(Arrays.asList("aa", "bb")).equals(
-                        new GradientViewSelectionFromBlacklisted(Arrays.asList("aa", "bb", "cc"))));
+        assertEquals("Shall be equal!", new GradientViewSelectionFromBlacklisted(), new GradientViewSelectionFromBlacklisted());
+        assertEquals("Shall be equal!", new GradientViewSelectionFromBlacklisted(Arrays.asList("aa", "bb")), new GradientViewSelectionFromBlacklisted(Arrays.asList("aa", "bb")));
+        assertNotEquals("Shall not be equal!", new GradientViewSelectionFromBlacklisted(Arrays.asList("aa", "bb")), new GradientViewSelectionFromBlacklisted(Arrays.asList("aa", "bb", "cc")));
     }
 
     /**
@@ -104,7 +100,7 @@ public class GradientViewSelectionFromBlacklistedTest {
         final GradientViewFactory factory = new GradientViewSelectionFromBlacklisted(Arrays.asList("qq", "ww"));
         final String json = new ObjectMapper().writeValueAsString(factory);
         final GradientViewFactory deserialized = new ObjectMapper().readValue(json, GradientViewSelectionFromBlacklisted.class);
-        assertTrue("Did not deserialize to the same thing!", factory.equals(deserialized));
+        assertEquals("Did not deserialize to the same thing!", factory, deserialized);
     }
 
     @NotNull

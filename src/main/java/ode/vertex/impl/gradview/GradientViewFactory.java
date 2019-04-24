@@ -26,9 +26,9 @@ public interface GradientViewFactory extends Serializable {
     ParameterGradientView create(ComputationGraph graph);
 
     /**
-     * Return the mapping used to create non-colliding names
+     * Return the mapping used to newPlot non-colliding names
      *
-     * @return the mapping used to create non-colliding names
+     * @return the mapping used to newPlot non-colliding names
      */
     ParamNameMapping paramNameMapping();
 

@@ -9,7 +9,6 @@ import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.Nullable;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.workspace.WorkspacesCloseable;
 
 import java.util.ArrayList;
@@ -26,23 +25,23 @@ public class ForwardPass implements FirstOrderEquation {
     private final ComputationGraph graph;
     private final LayerWorkspaceMgr workspaceMgr;
     private final boolean training;
-    private final INDArray[] inputs;
+    private final GraphInput input;
 
     public ForwardPass(ComputationGraph graph,
                        LayerWorkspaceMgr workspaceMgr,
                        boolean training,
-                       INDArray[] startInputs) {
+                       GraphInput input) {
         this.graph = graph;
         this.workspaceMgr = workspaceMgr;
         this.training = training;
-        this.inputs = startInputs.clone();
+        this.input = input;
     }
 
     @Override
     public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
         graph.getConfiguration().setIterationCount(graph.getIterationCount() + 1);
         try (WorkspacesCloseable ws = enterIfNotOpen(ArrayType.ACTIVATIONS)) {
-            setInputsFromFlat(y);
+            final INDArray[] inputs = input.getInputsFrom(y ,t);
             evaluate(inputs, fy);
         }
         return fy;
@@ -59,18 +58,10 @@ public class ForwardPass implements FirstOrderEquation {
         return workspaceMgr.notifyScopeEntered(shallOpen.toArray(new ArrayType[0]));
     }
 
-    private void setInputsFromFlat(INDArray flatArray) {
-        int lastInd = 0;
-        for (int i = 0; i < inputs.length; i++) {
-            INDArray input = inputs[i];
-            final INDArray z = flatArray.get(NDArrayIndex.interval(lastInd, lastInd + input.length()));
-            lastInd += input.length();
-            inputs[i] = z.reshape(input.shape());
-        }
-    }
-
     @Nullable
     private void evaluate(INDArray[] inputs, INDArray output) {
+
+        graph.setInputs(inputs);
         //TODO: Might want to have internal workspace handling to conserve memory
         final int[] topologicalOrder = graph.topologicalSortOrder();
         final NDArrayIndexAccumulator outputAccum = new NDArrayIndexAccumulator(output);

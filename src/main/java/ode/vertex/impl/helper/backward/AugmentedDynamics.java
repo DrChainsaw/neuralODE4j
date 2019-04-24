@@ -53,7 +53,7 @@ public class AugmentedDynamics {
         zAug.assign(augStateFlat);
     }
 
-    void updateZAdjoint(final List<INDArray> epsilons) {
+    public void updateZAdjoint(final List<INDArray> epsilons) {
         long lastInd = 0;
         for (int i = 0; i < epsilons.size(); i++) {
             final INDArray eps = epsilons.get(i);

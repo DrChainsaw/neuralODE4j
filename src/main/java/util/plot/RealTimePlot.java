@@ -43,6 +43,23 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
 
     private final Map<String, DataXY<X, Y>> plotSeries = new HashMap<>();
 
+    /**
+     * Factory for this class
+     */
+    public static class Factory implements Plot.Factory {
+
+        private final String plotDir;
+
+        public Factory(String plotDir) {
+            this.plotDir = plotDir;
+        }
+
+        @Override
+        public <X extends Number, Y extends Number> Plot<X, Y> newPlot(String title) {
+            return new RealTimePlot<>(title, plotDir);
+        }
+    }
+
     @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, property = "@class")
     @Data
     private static class DataXY<X extends Number, Y extends Number> implements Serializable {

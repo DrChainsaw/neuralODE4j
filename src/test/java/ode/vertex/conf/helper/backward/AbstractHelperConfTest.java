@@ -1,6 +1,7 @@
 package ode.vertex.conf.helper.backward;
 
 import ode.vertex.impl.gradview.NonContiguous1DView;
+import ode.vertex.impl.helper.NoTimeInput;
 import ode.vertex.impl.helper.backward.OdeHelperBackward.InputArrays;
 import ode.vertex.impl.helper.backward.OdeHelperBackward.MiscPar;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
@@ -28,7 +29,7 @@ abstract class AbstractHelperConfTest {
     /**
      * Create a {@link OdeHelperBackward} which shall be tested
      *
-     * @param nrofTimeSteps Number of time steps to create helper for
+     * @param nrofTimeSteps Number of time steps to newPlot helper for
      * @return a new {@link OdeHelperBackward}
      */
     abstract OdeHelperBackward create(int nrofTimeSteps, boolean needTimeGradient);
@@ -37,7 +38,7 @@ abstract class AbstractHelperConfTest {
      * Create inputs from a given input array
      *
      * @param input input array
-     * @param nrofTimeSteps number of time steps to create input for
+     * @param nrofTimeSteps number of time steps to newPlot input for
      * @return all needed inputs
      */
     abstract INDArray[] createInputs(INDArray input, int nrofTimeSteps);
@@ -51,6 +52,7 @@ abstract class AbstractHelperConfTest {
         final String json = NeuralNetConfiguration.mapper().writeValueAsString(conf);
         final OdeHelperBackward newConf = NeuralNetConfiguration.mapper().readValue(json, OdeHelperBackward.class);
         assertEquals("Did not deserialize into the same thing!", conf, newConf);
+        assertEquals("Not same hash code of deserialized object!", conf.hashCode(), newConf.hashCode());
     }
 
     /**
@@ -80,7 +82,7 @@ abstract class AbstractHelperConfTest {
 
         assertNotEquals("Expected non-zero param gradient!", 0, graph.getGradientsViewArray().sumNumber().doubleValue() ,1e-10);
         for(INDArray inputGrad: output) {
-            assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.sumNumber().doubleValue() ,1e-10);
+            assertNotEquals("Expected non-zero param gradient!", 0, inputGrad.maxNumber().doubleValue() ,1e-10);
         }
     }
 
@@ -179,7 +181,7 @@ abstract class AbstractHelperConfTest {
         realGrads.addView(graph.getGradientsViewArray());
 
         return new InputArrays(
-                createInputs(input, nrofTimeSteps),
+                new NoTimeInput(createInputs(input, nrofTimeSteps)),
                 output,
                 epsilon,
                 realGrads

@@ -13,14 +13,14 @@ public interface Plot<X extends Number, Y extends Number> {
     /**
      * Factory interface
      */
-    interface Factory<X extends Number, Y extends Number> {
+    interface Factory {
 
         /**
          * Create a new plot with the given title
          * @param title title of the plot
          * @return a new Plot instance
          */
-        Plot<X, Y> create(String title);
+        <X extends Number, Y extends  Number> Plot<X, Y> newPlot(String title);
     }
 
     /**

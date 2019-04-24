@@ -39,9 +39,9 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         // Create augmented dynamics for adjoint method
         // Initialization: S0:
         // z(t1) = lastoutput
-        // a(t) = -dL/d(z(t1)) = -epsilon from next layer (i.e getEpsilon). Use last row if more than one timestep
+        // a(t) = -dL/d(z(t1)) = epsilon from next layer (i.e getEpsilon).
         // parameters = zeros
-        // dL/dt1 = -dL / dz(t1) dot dz(t1) / dt1
+        // dL/dt1 = -dL / dz(t1) dot dz(t1) / dt1 (if applicable depending on TimeGrad implementation)
 
         final INDArray dL_dzt1 = input.getLossGradient();
         final INDArray zt1 = input.getLastOutput();
@@ -50,12 +50,12 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         final FirstOrderEquation forward = new ForwardPass(graph,
                 miscPars.getWsMgr(),
                 true, // Always use training as batch norm running mean and var become messed up otherwise. Same effect seen in original pytorch repo.
-                input.getLastInputs());
+                input.getGraphInputOutput());
 
         final TimeGrad timeGrad = timeGradFactory.create();
-        final INDArray dL_dt1 = timeGrad.calcTimeGradT1(forward, zt1, time);
+        final INDArray tAdjoint = timeGrad.calcTimeAdjointT1(forward, zt1, time);
 
-        final INDArray zAug = Nd4j.create(1, zt1.length() + dL_dzt1.length() + graph.numParams() + dL_dt1.length());
+        final INDArray zAug = Nd4j.create(1, zt1.length() + dL_dzt1.length() + graph.numParams() + tAdjoint.length());
         final INDArray paramAdj = Nd4j.zeros(realParamGrads.length());
         realParamGrads.assignTo(paramAdj);
 
@@ -63,16 +63,17 @@ public class SingleStepAdjoint implements OdeHelperBackward {
         accumulator.increment(zt1.reshape(new long[]{1, zt1.length()}))
                 .increment(dL_dzt1.reshape(new long[]{1, dL_dzt1.length()}))
                 .increment(paramAdj.reshape(new long[]{1, paramAdj.length()}))
-                .increment(dL_dt1);
+                .increment(tAdjoint);
 
         final AugmentedDynamics augmentedDynamics = new AugmentedDynamics(
                 zAug,
                 dL_dzt1.shape(),
                 new long[]{realParamGrads.length()},
-                dL_dt1.shape());
+                tAdjoint.shape());
 
         final FirstOrderEquation equation = new BackpropagateAdjoint(
                 augmentedDynamics,
+                input.getGraphInputOutput(),
                 forward,
                 new BackpropagateAdjoint.GraphInfo(graph, realParamGrads, miscPars.getWsMgr(), miscPars.isUseTruncatedBackPropTroughTime())
         );

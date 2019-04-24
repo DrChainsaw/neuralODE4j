@@ -9,6 +9,8 @@ import org.nd4j.shade.jackson.annotation.JsonProperty;
 import org.nd4j.shade.jackson.databind.annotation.JsonDeserialize;
 import org.nd4j.shade.jackson.databind.annotation.JsonSerialize;
 
+import java.util.Objects;
+
 /**
  * Serializable configuration for {@link ode.vertex.impl.helper.backward.BackpropagateAdjoint}
  *
@@ -37,5 +39,19 @@ public class FixedStepAdjoint implements OdeHelperBackward {
     @Override
     public FixedStepAdjoint clone() {
         return new FixedStepAdjoint(solverConf.clone(), time.dup());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FixedStepAdjoint that = (FixedStepAdjoint) o;
+        return solverConf.equals(that.solverConf) &&
+                time.equals(that.time);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(solverConf, time.toString());
     }
 }

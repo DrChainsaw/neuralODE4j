@@ -71,7 +71,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
             timeGrad.prepareStep(gradients, dL_dztStep);
 
             final InputArrays stepInput = new InputArrays(
-                    input.getLastInputs(),
+                    input.getGraphInputOutput(),
                     ztStep,
                     dL_dztStep,
                     input.getRealGradientView()

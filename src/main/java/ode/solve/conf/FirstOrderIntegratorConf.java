@@ -83,7 +83,7 @@ public class FirstOrderIntegratorConf implements FirstOrderSolverConf {
             return (FirstOrderIntegrator) Class.forName(integratorName).getConstructor(double.class, double.class, double.class, double.class)
                     .newInstance(config.getMinStep(), config.getMaxStep(), config.getAbsTol(), config.getRelTol());
         } catch (Exception e) {
-            throw new UnsupportedOperationException("Could not create " + integratorName + " from default signature!", e);
+            throw new UnsupportedOperationException("Could not newPlot " + integratorName + " from default signature!", e);
         }
     }
 

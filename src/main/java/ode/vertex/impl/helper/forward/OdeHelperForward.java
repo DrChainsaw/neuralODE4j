@@ -16,8 +16,8 @@ public interface OdeHelperForward {
      * the derivative of the sought function.
      * @param graph Graph of layers to do forward pass through
      * @param wsMgr To handle workspaces for newly created arrays
-     * @param inputs Inputs to vertex, typically activations from previous layers
+     * @param input Handles inputs to vertex, typically activations from previous layers
      * @return an {@link INDArray} with the solution to the ODE
      */
-    INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, INDArray[] inputs);
+    INDArray solve(ComputationGraph graph, LayerWorkspaceMgr wsMgr, GraphInput input);
 }

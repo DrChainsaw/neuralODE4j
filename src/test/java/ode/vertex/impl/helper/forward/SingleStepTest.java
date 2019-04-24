@@ -3,6 +3,7 @@ package ode.vertex.impl.helper.forward;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.conf.SolverConfig;
 import ode.solve.impl.DormandPrince54Solver;
+import ode.vertex.impl.helper.NoTimeInput;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.ScaleVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
@@ -39,7 +40,7 @@ public class SingleStepTest {
                 solver,
                 Nd4j.linspace(0, 1, 2));
 
-        final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new INDArray[]{input});
+        final INDArray actual = helper.solve(graph, LayerWorkspaceMgr.noWorkspaces(), new NoTimeInput(new INDArray[]{input}));
 
         assertArrayEquals("Incorrect answer!", expected.toDoubleVector(),actual.toDoubleVector(), 1e-3);
     }
