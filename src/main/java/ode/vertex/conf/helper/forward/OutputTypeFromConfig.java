@@ -4,6 +4,7 @@ import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +29,12 @@ public class OutputTypeFromConfig implements OutputTypeHelper {
                     "not input to any other layer!");
         }
 
-        return inputTypeMap.values().iterator().next();
+        final InputType output = inputTypeMap.values().iterator().next();
+        if(!Arrays.equals(vertexInputs[0].getShape(), output.getShape())) {
+            throw new InvalidInputTypeException(this.getClass() + " input shape must match output shape! Got input " +
+                    vertexInputs[0] + " and output: " + output + "!");
+        }
+
+        return output;
     }
 }
