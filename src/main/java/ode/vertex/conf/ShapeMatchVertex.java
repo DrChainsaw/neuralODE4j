@@ -20,8 +20,8 @@ import java.util.Map;
 
 /**
  * Duplicates the last input to match the shapes of the other inputs. Main use case is for performing merging or element
- * wise operations with current time from an ODE solver. It is possible to "mask" dimensions so that they are not
- * duplicated (number of elements in those dimensions will be 1).
+ * wise operations with current time from an ODE solver. It is possible to override size of selected dimensions by
+ * providing a map between dimension to override and wanted size.
  *
  * @author Christian Skarby
  */
