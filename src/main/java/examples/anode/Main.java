@@ -13,9 +13,11 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.listen.training.NanScoreWatcher;
+import util.listen.training.PlotScore;
 import util.listen.training.ZeroGrad;
+import util.plot.Plot;
+import util.plot.RealTimePlot;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,13 +36,16 @@ class Main {
     @Parameter(names = "-nrofEpochs", description = "Number of epochs to train over")
     private int nrofEpochs = 50;
 
-    @ParametersDelegate
-    DataSetIteratorFactory dataSetIteratorFactory = new AnodeToyDataSetFactory();
+    @Parameter(names = "-plotScore", description = "Set to plot score for each training iteration")
+    private boolean plotScore = false;
 
-    private ComputationGraph model;
+    @ParametersDelegate
+    private DataSetIteratorFactory dataSetIteratorFactory = new AnodeToyDataSetFactory();
+
+    ComputationGraph model;
     private DataSetIterator dataSetIterator;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         root.setLevel(Level.INFO);
 
@@ -95,6 +100,12 @@ class Main {
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
                 }));
+
+        if (plotScore) {
+            final Plot<Integer, Double> scorePlot = new RealTimePlot<>("Training score", "");
+            model.addListeners(new PlotScore(scorePlot),
+                    new PlotScore(scorePlot, 0.05));
+        }
     }
 
     void run() {

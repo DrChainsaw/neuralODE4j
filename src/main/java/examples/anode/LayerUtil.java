@@ -4,6 +4,7 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.weights.WeightInit;
 import org.nd4j.linalg.learning.config.Adam;
 
 /**
@@ -21,6 +22,7 @@ class LayerUtil {
     public static ComputationGraphConfiguration.GraphBuilder initGraphBuilder(long nrofInputDims) {
         return new NeuralNetConfiguration.Builder()
                 .seed(666)
+                .weightInit(WeightInit.UNIFORM)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 // Updater alg not listed in paper?
                 .updater(new Adam(1e-3))

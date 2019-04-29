@@ -17,10 +17,12 @@ import org.knowm.xchart.style.Styler;
 import org.knowm.xchart.style.Styler.ChartTheme;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
+import java.util.List;
 import java.util.*;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -28,9 +30,9 @@ import java.util.stream.Stream;
 /**
  * Real time updatable plot with support for an arbitrary number of series. Can also serialize the plotted data and
  * recreate a plot from such data. Typically used for plot training/eval metrics for each iteration. Note: The amount
- * of data points per timeseries is limited to 1000 as a significant slowdown was observed for higher numbers. When 1000
+ * of data points per timeseries is limited to 5000 as a significant slowdown was observed for higher numbers. When 5000
  * points is reached, all even points will be removed. New points after this will be added as normal until the total hits
- * 1000 again.
+ * 5000 again.
  *
  * @author Christian Skärby
  */
@@ -86,7 +88,7 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
         private void addPoint(X x, Y y, XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
             xData.addLast(x);
             yData.addLast(y);
-            if (xData.size() > 1000) {
+            if (xData.size() > 5000) {
                 for (int i = 0; i < xData.size(); i += 2) {
                     xData.remove(i);
                     yData.remove(i);
@@ -159,6 +161,43 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
 
     }
 
+    private static class Series implements Plot.Series {
+
+        private final XYChart chart;
+        private final String label;
+
+        public Series(XYChart chart, String label) {
+            this.chart = chart;
+            this.label = label;
+        }
+
+        @Override
+        public Plot.Series line() {
+            javax.swing.SwingUtilities.invokeLater(() -> series().setXYSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Line));
+            return this;
+        }
+
+        @Override
+        public Plot.Series scatter() {
+            javax.swing.SwingUtilities.invokeLater(() -> series().setXYSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Scatter));
+            return this;
+        }
+
+        @Override
+        public Plot.Series set(Color color) {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                series().setLineColor(color);
+                series().setMarkerColor(color);
+                series().setFillColor(color);
+            });
+            return this;
+        }
+
+        private XYSeries series() {
+            return chart.getSeriesMap().get(label);
+        }
+    }
+
     /**
      * Constructor
      *
@@ -178,26 +217,30 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
     }
 
     @Override
-    public void plotData(String label, X x, Y y) {
+    public Series plotData(String label, X x, Y y) {
         final DataXY<X, Y> data = getOrCreateSeries(label);
         data.addPoint(x, y, xyChart, swingWrapper);
+        return new Series(xyChart, label);
     }
 
     @Override
-    public void plotData(String label, List<X> x, List<Y> y) {
+    public Series plotData(String label, List<X> x, List<Y> y) {
         final DataXY<X, Y> data = getOrCreateSeries(label);
         data.addData(x, y, xyChart, swingWrapper);
+        return new Series(xyChart, label);
     }
 
     @Override
-    public void clearData(String label) {
+    public Series clearData(String label) {
         final DataXY<X, Y> data = getOrCreateSeries(label);
         data.clear();
+        return new Series(xyChart, label);
     }
 
     @Override
-    public void createSeries(String label) {
+    public Series createSeries(String label) {
         getOrCreateSeries(label);
+        return new Series(xyChart, label);
     }
 
     @NotNull
