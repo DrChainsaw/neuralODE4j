@@ -63,6 +63,7 @@ class Main {
         final Main main = new Main();
         final Map<String, ModelFactory> modelCommands = new HashMap<>();
         modelCommands.put("odenet", new OdeNetModelFactory());
+        modelCommands.put("resnet", new ResNetModelFactory());
 
         JCommander.Builder parbuilder = JCommander.newBuilder()
                 .addObject(main);
@@ -118,7 +119,7 @@ class Main {
 
             log.info("Epoch " + epoch + " complete! Visualizing features");
             dataSetIterator.reset();
-            model.plotFlow(dataSetIterator.next(-1), featurePlot);
+            model.plotFeatures(dataSetIterator.next(-1), featurePlot);
             dataSetIterator.reset();
         }
     }

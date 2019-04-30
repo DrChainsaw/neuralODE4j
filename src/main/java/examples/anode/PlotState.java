@@ -29,7 +29,6 @@ class PlotState implements StepListener {
 
     @Override
     public void begin(INDArray t, INDArray y0) {
-        plot.clearData();
         plotXY(y0);
     }
 

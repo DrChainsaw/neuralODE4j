@@ -23,6 +23,6 @@ public interface Model {
      * @param dataSet DataSet to plot flow for
      * @param plot Flow will be drawn in this plot
      */
-    void plotFlow(DataSet dataSet, Plot<Double, Double> plot);
+    void plotFeatures(DataSet dataSet, Plot<Double, Double> plot);
 
 }

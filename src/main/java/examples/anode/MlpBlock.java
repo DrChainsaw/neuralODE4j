@@ -26,10 +26,16 @@ import org.nd4j.linalg.activations.impl.ActivationReLU;
  */
 public class MlpBlock implements Block {
 
+    private final String name;
     private final DenseLayer.Builder outputLayer;
     private final DenseLayer.Builder hiddenLayer;
 
     public MlpBlock(long nrofHidden, long nrofOutputs) {
+        this("", nrofHidden, nrofOutputs);
+    }
+
+    public MlpBlock(String name, long nrofHidden, long nrofOutputs) {
+        this.name = name;
         hiddenLayer = new DenseLayer.Builder()
                 .nOut(nrofHidden)
                 .activation(new ActivationReLU());
@@ -41,9 +47,9 @@ public class MlpBlock implements Block {
     @Override
     public String add(GraphBuilderWrapper builder, String... prev) {
         builder
-                .addLayer("h1", hiddenLayer.build(), prev)
-                .addLayer("h2", hiddenLayer.build(), "h1")
-                .addLayer("out", outputLayer.build(), "h2");
-        return "out";
+                .addLayer(name + "h1", hiddenLayer.build(), prev)
+                .addLayer(name + "h2", hiddenLayer.build(), name + "h1")
+                .addLayer(name + "out", outputLayer.build(), name + "h2");
+        return name + "out";
     }
 }

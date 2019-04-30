@@ -24,6 +24,7 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -69,11 +70,11 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
         private static final long serialVersionUID = 7526471155622776891L;
         private final String series;
 
-        private final LinkedList<X> xData;
-        private final LinkedList<Y> yData;
+        private final CopyOnWriteArrayList<X> xData;
+        private final CopyOnWriteArrayList<Y> yData;
 
         DataXY(String series) {
-            this(series, new LinkedList<>(), new LinkedList<>());
+            this(series, Collections.emptyList(), Collections.emptyList());
         }
 
         DataXY(
@@ -81,13 +82,13 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
                 @JsonProperty("xData") List<X> xData,
                 @JsonProperty("yData") List<Y> yData) {
             this.series = series;
-            this.xData = new LinkedList<>(xData);
-            this.yData = new LinkedList<>(yData);
+            this.xData = new CopyOnWriteArrayList<>(xData);
+            this.yData = new CopyOnWriteArrayList<>(yData);
         }
 
         private void addPoint(X x, Y y, XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
-            xData.addLast(x);
-            yData.addLast(y);
+            xData.add(x);
+            yData.add(y);
             if (xData.size() > 5000) {
                 for (int i = 0; i < xData.size(); i += 2) {
                     xData.remove(i);
