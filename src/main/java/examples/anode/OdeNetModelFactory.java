@@ -3,6 +3,7 @@ package examples.anode;
 import com.beust.jcommander.Parameter;
 import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.DormandPrince54Solver;
+import ode.vertex.conf.ConcatZerosVertex;
 import ode.vertex.conf.helper.FixedStep;
 import ode.vertex.conf.helper.OdeHelper;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
@@ -19,6 +20,9 @@ class OdeNetModelFactory implements ModelFactory {
     @Parameter(names = "-nrofHidden", description = "Number of hidden units")
     private long nrofHidden = 32;
 
+    @Parameter(names = "-nrofAugmentDims", description = "Number of extra dimensions for augmentation")
+    private long nrofAugmentDims = 0;
+
     @Override
     public Model create(long nrofInputDims) {
 
@@ -26,7 +30,12 @@ class OdeNetModelFactory implements ModelFactory {
         final ComputationGraphConfiguration.GraphBuilder builder = LayerUtil.initGraphBuilder(nrofInputDims)
                 .addInputs(next);
 
-        final Block odeFunc = new MlpBlock(nrofHidden, nrofInputDims);
+        if(nrofAugmentDims > 0) {
+            builder.addVertex("aug", new ConcatZerosVertex(nrofAugmentDims), next);
+            next = "aug";
+        }
+
+        final Block odeFunc = new MlpBlock(nrofHidden, nrofInputDims + nrofAugmentDims);
         final FirstOrderSolverConf odeSolverConf = new DormandPrince54Solver();
         final OdeHelper odeHelper = new FixedStep(odeSolverConf, Nd4j.arange(2), true);
 
