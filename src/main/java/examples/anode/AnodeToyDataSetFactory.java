@@ -1,6 +1,7 @@
 package examples.anode;
 
 import com.beust.jcommander.Parameter;
+import ode.solve.api.StepListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.dataset.DataSet;
@@ -9,17 +10,10 @@ import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIteratorFactory;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
-import org.nd4j.linalg.primitives.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
-
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Create {@link DataSetIterator}s for g(x) and separable function in section 4.1 of https://arxiv.org/pdf/1904.01681.pdf
@@ -70,7 +64,13 @@ public class AnodeToyDataSetFactory implements DataSetIteratorFactory {
 
     private DataSetIterator shuffleAndCreate(DataSet ds) {
         ds.shuffle(234);
-        return new ViewIterator(ds, batchSize);
+        return new ViewIterator(ds, batchSize) {
+
+            @Override
+            public DataSet next(int num) {
+                return (DataSet)ds.getRange(0, num == -1 ? nrofExamples : num);
+            }
+        };
     }
 
     private DataSet createNonSeparable1D(Random rng) {
@@ -143,31 +143,8 @@ public class AnodeToyDataSetFactory implements DataSetIteratorFactory {
 
     }
 
-    private static void plotXY(INDArray xyLoc, INDArray labels, Plot<Double, Double> plot) {
-        plot.createSeries("g(x) = 1").scatter().set(Color.blue);
-        plot.createSeries("g(x) = -1").scatter().set(Color.red);
-
-        final double[] x;
-        final double[] y;
-        if (xyLoc.size(1) == 1) {
-            y = xyLoc.toDoubleVector();
-            x = new double[y.length]; // Init to zeros
-        } else {
-            x = xyLoc.getColumn(0).toDoubleVector();
-            y = xyLoc.getColumn(1).toDoubleVector();
-        }
-        final int[] labs = labels.toIntVector();
-
-        final Map<Integer, Pair<List<Double>, List<Double>>> data = new HashMap<>();
-        data.put(1, new Pair<>(new ArrayList<>(), new ArrayList<>()));
-        data.put(-1, new Pair<>(new ArrayList<>(), new ArrayList<>()));
-
-        for (int i = 0; i < xyLoc.size(0); i++) {
-            data.get(labs[i]).getFirst().add(x[i]);
-            data.get(labs[i]).getSecond().add(y[i]);
-        }
-
-        plot.plotData("g(x) = 1", data.get(1).getFirst(), data.get(1).getSecond());
-        plot.plotData("g(x) = -1", data.get(-1).getFirst(), data.get(-1).getSecond());
+    static void plotXY(INDArray xyLoc, INDArray labels, Plot<Double, Double> plot) {
+        final StepListener listener = new PlotState(plot, labels);
+        listener.begin(null, xyLoc);
     }
 }

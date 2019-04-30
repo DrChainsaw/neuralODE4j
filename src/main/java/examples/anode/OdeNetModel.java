@@ -1,45 +1,33 @@
 package examples.anode;
 
-import com.beust.jcommander.Parameter;
-import ode.solve.conf.DormandPrince54Solver;
-import ode.vertex.conf.helper.FixedStep;
-import ode.vertex.conf.helper.OdeHelper;
-import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
+import ode.solve.api.FirstOrderSolverConf;
+import ode.solve.api.StepListener;
 import org.deeplearning4j.nn.graph.ComputationGraph;
-import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.dataset.DataSet;
+import util.plot.Plot;
 
-/**
- * Create the ODE model described in section E1.1 and E2.1 in https://arxiv.org/pdf/1904.01681.pdf
- *
- * @author Christian Skarby
- */
-class OdeNetModel implements ModelFactory {
+public class OdeNetModel implements Model {
 
-    @Parameter(names = "-nrofHidden", description = "Number of hidden units")
-    private long nrofHidden = 32;
+    private final ComputationGraph graph;
+    private final FirstOrderSolverConf solverConf;
+
+    public OdeNetModel(ComputationGraph graph, FirstOrderSolverConf solverConf) {
+        this.graph = graph;
+        this.solverConf = solverConf;
+    }
 
     @Override
-    public ComputationGraph create(long nrofInputDims) {
-
-        String next = "input";
-        final ComputationGraphConfiguration.GraphBuilder builder = LayerUtil.initGraphBuilder(nrofInputDims)
-                .addInputs(next);
-
-        final Block odeFunc = new MlpBlock(nrofHidden, nrofInputDims);
-        final OdeHelper odeHelper = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2), true);
-
-        next = new OdeBlockWithTime(
-                builder.getGlobalConfiguration(),
-                odeFunc,
-                odeHelper)
-                .add(new GraphBuilderWrapper.Wrap(builder), next);
-
-        final String output = new LossBlock().add(new GraphBuilderWrapper.Wrap(builder), next);
-        builder.setOutputs(output);
-
-        final ComputationGraph graph = new ComputationGraph(builder.build());
-        graph.init();
-
+    public ComputationGraph graph() {
         return graph;
+    }
+
+    @Override
+    public void plotFlow(DataSet dataSet, Plot<Double, Double> plot) {
+        final StepListener listener = new PlotState(plot, dataSet.getLabels());
+        solverConf.addListeners(listener);
+
+        graph.output(dataSet.getFeatures());
+
+        solverConf.clearListeners(listener);
     }
 }

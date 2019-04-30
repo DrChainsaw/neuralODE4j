@@ -238,6 +238,13 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
     }
 
     @Override
+    public void clearData() {
+        for(String label: plotSeries.keySet()) {
+            clearData(label);
+        }
+    }
+
+    @Override
     public Series createSeries(String label) {
         getOrCreateSeries(label);
         return new Series(xyChart, label);

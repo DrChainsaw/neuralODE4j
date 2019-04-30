@@ -1,7 +1,5 @@
 package examples.anode;
 
-import org.deeplearning4j.nn.graph.ComputationGraph;
-
 /**
  * Creates models for ANODE experiments
  *
@@ -12,7 +10,7 @@ interface ModelFactory {
     /**
      * Create the model to use
      * @param nrofInputDims number of dimensions in input
-     * @return a {@link ComputationGraph} for the model
+     * @return a {@link Model}
      */
-    ComputationGraph create(long nrofInputDims);
+    Model create(long nrofInputDims);
 }

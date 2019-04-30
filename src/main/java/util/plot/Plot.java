@@ -88,6 +88,11 @@ public interface Plot<X extends Number, Y extends Number> {
     Series clearData(String label);
 
     /**
+     * Clears all the data in the plot
+     */
+    void clearData();
+
+    /**
      * Serialize the data for all labels.
      * @throws IOException
      */

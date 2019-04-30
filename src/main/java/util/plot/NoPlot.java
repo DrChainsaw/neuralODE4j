@@ -60,6 +60,11 @@ public class NoPlot<X extends Number, Y extends Number> implements Plot<X, Y> {
     }
 
     @Override
+    public void clearData() {
+        // Ignore
+    }
+
+    @Override
     public void storePlotData() throws IOException {
         // Ignore
     }

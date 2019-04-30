@@ -4,7 +4,6 @@ import ch.qos.logback.classic.Level;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
-import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
@@ -42,7 +41,9 @@ class Main {
     @ParametersDelegate
     private DataSetIteratorFactory dataSetIteratorFactory = new AnodeToyDataSetFactory();
 
-    ComputationGraph model;
+    Plot.Factory plotFactory = new RealTimePlot.Factory("");
+
+    Model model;
     private DataSetIterator dataSetIterator;
 
     public static void main(String[] args) {
@@ -61,7 +62,7 @@ class Main {
 
         final Main main = new Main();
         final Map<String, ModelFactory> modelCommands = new HashMap<>();
-        modelCommands.put("odenet", new OdeNetModel());
+        modelCommands.put("odenet", new OdeNetModelFactory());
 
         JCommander.Builder parbuilder = JCommander.newBuilder()
                 .addObject(main);
@@ -86,7 +87,7 @@ class Main {
         this.dataSetIterator = dataSetIteratorFactory.create();
         this.model = factory.create(dataSetIterator.inputColumns());
         long cnt = 0;
-        for (GraphVertex vertex : model.getVertices()) {
+        for (GraphVertex vertex : model.graph().getVertices()) {
             log.trace("vertex: " + vertex.getVertexName() + " nrof params: " + vertex.numParams());
             cnt += vertex.numParams();
         }
@@ -94,7 +95,7 @@ class Main {
     }
 
     void addListeners() {
-        model.addListeners(
+        model.graph().addListeners(
                 new ZeroGrad(),
                 new PerformanceListener(1, true),
                 new NanScoreWatcher(() -> {
@@ -103,15 +104,22 @@ class Main {
 
         if (plotScore) {
             final Plot<Integer, Double> scorePlot = new RealTimePlot<>("Training score", "");
-            model.addListeners(new PlotScore(scorePlot),
+            model.graph().addListeners(new PlotScore(scorePlot),
                     new PlotScore(scorePlot, 0.05));
         }
     }
 
     void run() {
         Nd4j.getMemoryManager().setAutoGcWindow(5000);
-        for(int epoch = model.getEpochCount(); epoch < nrofEpochs; epoch++) {
-            model.fit(dataSetIterator);
+        final Plot<Double, Double> featurePlot = plotFactory.newPlot("Features evolution");
+
+        for(int epoch = model.graph().getEpochCount(); epoch < nrofEpochs; epoch++) {
+            model.graph().fit(dataSetIterator);
+
+            log.info("Epoch " + epoch + " complete! Visualizing features");
+            dataSetIterator.reset();
+            model.plotFlow(dataSetIterator.next(-1), featurePlot);
+            dataSetIterator.reset();
         }
     }
 
