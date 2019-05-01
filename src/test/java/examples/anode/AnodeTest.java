@@ -1,10 +1,10 @@
 package examples.anode;
 
-import ode.vertex.conf.ConcatZerosVertex;
 import ode.vertex.conf.OdeVertex;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
 import org.deeplearning4j.nn.conf.graph.SubsetVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
@@ -20,6 +20,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.impl.LossMSE;
+import util.preproc.ConcatZeros;
 
 import static junit.framework.TestCase.assertEquals;
 
@@ -69,7 +70,7 @@ public class AnodeTest {
         String odeInput = "input";
         long odeSize = 1;
         if (augment) {
-            graphBuilder.addVertex("augOde", new ConcatZerosVertex(1), "input");
+            graphBuilder.addVertex("augOde", new PreprocessorVertex(new ConcatZeros(1)), "input");
             odeInput = "augOde";
             odeSize = 2;
         }

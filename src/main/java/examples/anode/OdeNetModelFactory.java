@@ -3,12 +3,13 @@ package examples.anode;
 import com.beust.jcommander.Parameter;
 import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.conf.DormandPrince54Solver;
-import ode.vertex.conf.ConcatZerosVertex;
 import ode.vertex.conf.helper.FixedStep;
 import ode.vertex.conf.helper.OdeHelper;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
+import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.factory.Nd4j;
+import util.preproc.ConcatZeros;
 
 /**
  * Create the ODE model described in section E1.1 and E2.1 in https://arxiv.org/pdf/1904.01681.pdf
@@ -31,7 +32,7 @@ class OdeNetModelFactory implements ModelFactory {
                 .addInputs(next);
 
         if(nrofAugmentDims > 0) {
-            builder.addVertex("aug", new ConcatZerosVertex(nrofAugmentDims), next);
+            builder.addVertex("aug", new PreprocessorVertex(new ConcatZeros(nrofAugmentDims)), next);
             next = "aug";
         }
 
