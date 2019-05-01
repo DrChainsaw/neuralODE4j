@@ -27,7 +27,7 @@ public class ResNetModelFactory implements ModelFactory {
                 .addInputs(next);
 
         final List<String> resBlockNames = new ArrayList<>();
-        for(int i = 0; i < nrofResBlocks; i++) {
+        for (int i = 0; i < nrofResBlocks; i++) {
             final String name = "resblock_" + i;
             next = new ResBlock(name, new MlpBlock(name + ".", nrofHidden, nrofInputDims))
                     .add(new GraphBuilderWrapper.Wrap(builder), next);

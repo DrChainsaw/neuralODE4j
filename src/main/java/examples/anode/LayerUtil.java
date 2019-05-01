@@ -19,9 +19,9 @@ class LayerUtil {
      *
      * @return a GraphBuilder for 2D spiral generation
      */
-    public static ComputationGraphConfiguration.GraphBuilder initGraphBuilder(long nrofInputDims) {
+    static ComputationGraphConfiguration.GraphBuilder initGraphBuilder(long nrofInputDims) {
         return new NeuralNetConfiguration.Builder()
-                .seed(666)
+                .seed(0)
                 .weightInit(WeightInit.UNIFORM)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 // Updater alg not listed in paper?

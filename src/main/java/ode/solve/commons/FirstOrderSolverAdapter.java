@@ -28,6 +28,10 @@ public class FirstOrderSolverAdapter implements FirstOrderSolver {
 
     @Override
     public INDArray integrate(FirstOrderEquation equation, INDArray t, INDArray y0, INDArray yOut) {
+        for(StepListenerAdapter listenerAdapter: listeners.values()) {
+            listenerAdapter.setShape(yOut.shape());
+        }
+
         final FirstOrderDifferentialEquations wrappedEquations = new FirstOrderEquationAdapter(y0.dup(), equation);
         final double[] y = y0.reshape(1, y0.length()).toDoubleVector();
         wrappedSolver.integrate(wrappedEquations, t.getDouble(0), y, t.getDouble(1), y);

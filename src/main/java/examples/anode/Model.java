@@ -19,9 +19,9 @@ public interface Model {
     ComputationGraph graph();
 
     /**
-     * Plot the flow for the given data set
+     * Plot the feature evolution for the given data set
      * @param dataSet DataSet to plot flow for
-     * @param plot Flow will be drawn in this plot
+     * @param plot Feature will be drawn in this plot
      */
     void plotFeatures(DataSet dataSet, Plot<Double, Double> plot);
 

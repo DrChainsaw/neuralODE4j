@@ -17,6 +17,7 @@ import util.listen.training.PlotScore;
 import util.listen.training.ZeroGrad;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
+import util.random.SeededRandomFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +57,8 @@ class Main {
     public static void main(String[] args) {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         root.setLevel(Level.INFO);
+
+        SeededRandomFactory.setNd4jSeed(0);
 
         final Main main = parseArgs(args);
 
@@ -127,16 +130,13 @@ class Main {
                     dataSetIterators.getTest().reset();
                 }),
                 new EpochHook(saveEveryNEpochs, () -> {
-
-
                     try {
-                        scorePlot.savePicture("_epoch_" + model.graph().getEpochCount());
+                        scorePlot.savePicture("");
                         featurePlot.savePicture("_epoch_" + model.graph().getEpochCount());
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 })
-
         );
     }
 
