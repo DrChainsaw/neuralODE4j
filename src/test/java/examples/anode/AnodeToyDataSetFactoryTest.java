@@ -82,7 +82,7 @@ public class AnodeToyDataSetFactoryTest {
                 .addObject(factory)
                 .build().parse(allArgs.toArray(new String[0]));
 
-        final DataSet ds = factory.create().next();
+        final DataSet ds = factory.create().getTrain().next();
         assertEquals("Incorrect number of labels!", 1000, ds.getLabels().size(0));
         assertEquals("Incorrect number of features!", 1000, ds.getFeatures().size(0));
 

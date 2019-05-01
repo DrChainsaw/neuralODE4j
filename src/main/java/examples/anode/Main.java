@@ -4,10 +4,11 @@ import ch.qos.logback.classic.Level;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
+import examples.cifar10.EpochHook;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
-import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
-import org.nd4j.linalg.dataset.api.iterator.DataSetIteratorFactory;
+import org.jetbrains.annotations.NotNull;
+import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,10 @@ import util.listen.training.ZeroGrad;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,16 +40,18 @@ class Main {
     @Parameter(names = "-nrofEpochs", description = "Number of epochs to train over")
     private int nrofEpochs = 50;
 
-    @Parameter(names = "-plotScore", description = "Set to plot score for each training iteration")
-    private boolean plotScore = false;
+    @Parameter(names = "-saveEveryNEpochs", description = "Save figures every N epochs")
+    private int saveEveryNEpochs = 1;
+
+    @Parameter(names = "-saveDir", description = "Directory to save output in")
+    private String saveDir = "savedmodels";
 
     @ParametersDelegate
-    private DataSetIteratorFactory dataSetIteratorFactory = new AnodeToyDataSetFactory();
+    private AnodeToyDataSetFactory dataSetIteratorFactory = new AnodeToyDataSetFactory();
 
-    Plot.Factory plotFactory = new RealTimePlot.Factory("");
-
+    Plot.Factory plotFactory;
     Model model;
-    private DataSetIterator dataSetIterator;
+    private AnodeToyDataSetFactory.DataSetIters dataSetIterators;
 
     public static void main(String[] args) {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
@@ -85,43 +92,80 @@ class Main {
     }
 
     void init(ModelFactory factory) {
-        this.dataSetIterator = dataSetIteratorFactory.create();
-        this.model = factory.create(dataSetIterator.inputColumns());
+        this.dataSetIterators = dataSetIteratorFactory.create();
+        this.model = factory.create(dataSetIterators.getTrain().inputColumns());
         long cnt = 0;
         for (GraphVertex vertex : model.graph().getVertices()) {
             log.trace("vertex: " + vertex.getVertexName() + " nrof params: " + vertex.numParams());
             cnt += vertex.numParams();
         }
         log.info("Nrof parameters in model: " + cnt);
+
+        plotFactory = new RealTimePlot.Factory(saveDir());
     }
 
     void addListeners() {
+
+        final File savedir = new File(saveDir());
+        log.info("Plots will be saved in: " + savedir.getAbsolutePath());
+        savedir.mkdirs();
+
+        final Plot<Integer, Double> scorePlot = plotFactory.newPlot("Training score");
+        final Plot<Double, Double> featurePlot = setupFeaturePlot();
+
         model.graph().addListeners(
                 new ZeroGrad(),
                 new PerformanceListener(1, true),
                 new NanScoreWatcher(() -> {
                     throw new IllegalStateException("NaN score!");
-                }));
+                }),
+                new PlotScore(scorePlot),
+                new PlotScore(scorePlot, 0.05),
+                new EpochHook(1, () -> {
+                    log.info("Epoch " + model.graph().getEpochCount() + " complete! Visualizing features");
+                    this.model.plotFeatures(dataSetIterators.getTest().next(), featurePlot);
+                    dataSetIterators.getTest().reset();
+                }),
+                new EpochHook(saveEveryNEpochs, () -> {
 
-        if (plotScore) {
-            final Plot<Integer, Double> scorePlot = new RealTimePlot<>("Training score", "");
-            model.graph().addListeners(new PlotScore(scorePlot),
-                    new PlotScore(scorePlot, 0.05));
+
+                    try {
+                        scorePlot.savePicture("_epoch_" + model.graph().getEpochCount());
+                        featurePlot.savePicture("_epoch_" + model.graph().getEpochCount());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                })
+
+        );
+    }
+
+    @NotNull
+    private Plot<Double, Double> setupFeaturePlot() {
+        final Plot<Double, Double> featurePlot = plotFactory.newPlot("Feature space");
+        final DataSet ds = dataSetIterators.getTest().next();
+        dataSetIterators.getTest().reset();
+        PlotState.plotXY(ds.getFeatures(), ds.getLabels(), featurePlot);
+        try {
+            featurePlot.savePicture("_input");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
+        return featurePlot;
     }
 
     void run() {
         Nd4j.getMemoryManager().setAutoGcWindow(5000);
-        final Plot<Double, Double> featurePlot = plotFactory.newPlot("Features evolution");
-
-        for(int epoch = model.graph().getEpochCount(); epoch < nrofEpochs; epoch++) {
-            model.graph().fit(dataSetIterator);
-
-            log.info("Epoch " + epoch + " complete! Visualizing features");
-            dataSetIterator.reset();
-            model.plotFeatures(dataSetIterator.next(-1), featurePlot);
-            dataSetIterator.reset();
+        for (int epoch = model.graph().getEpochCount(); epoch < nrofEpochs; epoch++) {
+            model.graph().fit(dataSetIterators.getTrain());
         }
     }
 
+    String saveDir() {
+        return saveDir(model, dataSetIterators);
+    }
+
+    String saveDir(Model model, AnodeToyDataSetFactory.DataSetIters dataSetIters) {
+        return Paths.get(saveDir, "ANODE", dataSetIters.getName() + "_" + model.name()).toString();
+    }
 }

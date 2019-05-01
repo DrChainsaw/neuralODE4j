@@ -21,10 +21,12 @@ class PlotState implements StepListener {
 
     private final Plot<Double, Double> plot;
     private final INDArray labels;
+    private long lastDraw;
 
     PlotState(Plot<Double, Double> plot, INDArray labels) {
         this.plot = plot;
         this.labels = labels;
+        this.lastDraw = System.currentTimeMillis();
     }
 
     @Override
@@ -42,18 +44,32 @@ class PlotState implements StepListener {
 
     }
 
-    private void plotXY(INDArray xyLoc) {
-        plot.createSeries("g(x) = 1").scatter().set(Color.blue);
-        plot.createSeries("g(x) = -1").scatter().set(Color.red);
+    private void plotXY(INDArray xyPoints) {
+        final long procdelay = System.currentTimeMillis() - lastDraw;
+
+        if(procdelay < 100) {
+            try {
+                Thread.sleep(100 - procdelay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        final String posLab = "g(x) = 1";
+        final String negLab = "g(x) = -1";
+        plot.clearData(posLab);
+        plot.clearData(negLab);
+        plot.createSeries(posLab).scatter().set(Color.blue);
+        plot.createSeries(negLab).scatter().set(Color.red);
 
         final double[] x;
         final double[] y;
-        if (xyLoc.size(1) == 1) {
-            y = xyLoc.toDoubleVector();
+        if (xyPoints.size(1) == 1) {
+            y = xyPoints.toDoubleVector();
             x = new double[y.length]; // Init to zeros
         } else {
-            x = xyLoc.getColumn(0).toDoubleVector();
-            y = xyLoc.getColumn(1).toDoubleVector();
+            x = xyPoints.getColumn(0).toDoubleVector();
+            y = xyPoints.getColumn(1).toDoubleVector();
         }
         final int[] labs = labels.toIntVector();
 
@@ -61,12 +77,18 @@ class PlotState implements StepListener {
         data.put(1, new Pair<>(new ArrayList<>(), new ArrayList<>()));
         data.put(-1, new Pair<>(new ArrayList<>(), new ArrayList<>()));
 
-        for (int i = 0; i < xyLoc.size(0); i++) {
+        for (int i = 0; i < xyPoints.size(0); i++) {
             data.get(labs[i]).getFirst().add(x[i]);
             data.get(labs[i]).getSecond().add(y[i]);
         }
 
-        plot.plotData("g(x) = 1", data.get(1).getFirst(), data.get(1).getSecond());
-        plot.plotData("g(x) = -1", data.get(-1).getFirst(), data.get(-1).getSecond());
+        plot.plotData(posLab, data.get(1).getFirst(), data.get(1).getSecond());
+        plot.plotData(negLab, data.get(-1).getFirst(), data.get(-1).getSecond());
+
+        lastDraw = System.currentTimeMillis();
+    }
+
+    static void plotXY(INDArray xyPoints, INDArray labels, Plot<Double, Double> plot) {
+        new PlotState(plot, labels).plotXY(xyPoints);
     }
 }

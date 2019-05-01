@@ -31,7 +31,6 @@ public class ResNetModel implements Model {
 
     @Override
     public void plotFeatures(DataSet dataSet, Plot<Double, Double> plot) {
-        plot.clearData();
         final StepListener plotAct = new PlotState(plot, dataSet.getLabels());
 
         Map<String, INDArray> acts = graph.feedForward(dataSet.getFeatures(), false);
@@ -44,5 +43,10 @@ public class ResNetModel implements Model {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public String name() {
+        return "resnet";
     }
 }

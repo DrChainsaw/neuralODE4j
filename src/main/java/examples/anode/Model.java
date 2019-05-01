@@ -25,4 +25,10 @@ public interface Model {
      */
     void plotFeatures(DataSet dataSet, Plot<Double, Double> plot);
 
+    /**
+     * Return the name of the model built to use e.g. for saving models
+     * @return the name of the models
+     */
+    String name();
+
 }

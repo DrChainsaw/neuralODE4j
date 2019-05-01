@@ -15,10 +15,12 @@ public class OdeNetModel implements Model {
 
     private final ComputationGraph graph;
     private final FirstOrderSolverConf solverConf;
+    private final String name;
 
-    public OdeNetModel(ComputationGraph graph, FirstOrderSolverConf solverConf) {
+    public OdeNetModel(ComputationGraph graph, FirstOrderSolverConf solverConf, String name) {
         this.graph = graph;
         this.solverConf = solverConf;
+        this.name = name;
     }
 
     @Override
@@ -36,5 +38,10 @@ public class OdeNetModel implements Model {
         graph.output(dataSet.getFeatures());
 
         solverConf.clearListeners(listener);
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 }

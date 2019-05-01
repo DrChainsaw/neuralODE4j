@@ -24,7 +24,6 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -70,8 +69,8 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
         private static final long serialVersionUID = 7526471155622776891L;
         private final String series;
 
-        private final CopyOnWriteArrayList<X> xData;
-        private final CopyOnWriteArrayList<Y> yData;
+        private final List<X> xData;
+        private final List<Y> yData;
 
         DataXY(String series) {
             this(series, Collections.emptyList(), Collections.emptyList());
@@ -82,45 +81,47 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
                 @JsonProperty("xData") List<X> xData,
                 @JsonProperty("yData") List<Y> yData) {
             this.series = series;
-            this.xData = new CopyOnWriteArrayList<>(xData);
-            this.yData = new CopyOnWriteArrayList<>(yData);
+            this.xData = new ArrayList<>(xData);
+            this.yData = new ArrayList<>(yData);
         }
 
         private void addPoint(X x, Y y, XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
-            xData.add(x);
-            yData.add(y);
-            if (xData.size() > 5000) {
-                for (int i = 0; i < xData.size(); i += 2) {
-                    xData.remove(i);
-                    yData.remove(i);
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                xData.add(x);
+                yData.add(y);
+                if (xData.size() > 5000) {
+                    for (int i = 0; i < xData.size(); i += 2) {
+                        xData.remove(i);
+                        yData.remove(i);
+                    }
                 }
-            }
-            plotData(xyChart, swingWrapper);
+                plotData(xyChart, swingWrapper);
+            });
         }
 
         private void addData(List<X> x, List<Y> y, XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
-            xData.addAll(x);
-            yData.addAll(y);
-            plotData(xyChart, swingWrapper);
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                xData.addAll(x);
+                yData.addAll(y);
+                plotData(xyChart, swingWrapper);
+            });
         }
 
         private void plotData(XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
-            javax.swing.SwingUtilities.invokeLater(() -> {
-                if (!xyChart.getSeriesMap().containsKey(series)) {
-                    xyChart.addSeries(series, xData, yData, null);
-                } else {
-                    xyChart.updateXYSeries(series, xData, yData, null);
-                }
-                swingWrapper.repaintChart();
-            });
+            if (!xyChart.getSeriesMap().containsKey(series)) {
+                xyChart.addSeries(series, new ArrayList<>(xData), new ArrayList<>(yData), null);
+            } else {
+                xyChart.updateXYSeries(series, new ArrayList<>(xData), new ArrayList<>(yData), null);
+            }
+            swingWrapper.repaintChart();
         }
 
         private void createSeries(final XYChart xyChart, SwingWrapper<XYChart> swingWrapper) {
             javax.swing.SwingUtilities.invokeLater(() -> {
                 if (xData.size() == 0) {
-                    xyChart.addSeries(series, Arrays.asList(0), Arrays.asList(1));
+                    xyChart.addSeries(series, Collections.singletonList(0), Collections.singletonList(1));
                 } else {
-                    xyChart.addSeries(series, xData, yData);
+                    xyChart.addSeries(series, new ArrayList<>(xData), new ArrayList<>(yData));
                 }
                 swingWrapper.repaintChart();
             });
@@ -128,8 +129,10 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
 
 
         private void clear() {
-            xData.clear();
-            yData.clear();
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                xData.clear();
+                yData.clear();
+            });
         }
     }
 
@@ -157,7 +160,7 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
             for (JsonNode xNode : node.get("ydata")) {
                 yData.add((Y) xNode.numberValue());
             }
-            return new DataXY<>(node.get("series").toString(), xData, yData);
+            return new DataXY<>(node.get("series").asText(), xData, yData);
         }
 
     }
@@ -240,7 +243,7 @@ public class RealTimePlot<X extends Number, Y extends Number> implements Plot<X,
 
     @Override
     public void clearData() {
-        for(String label: plotSeries.keySet()) {
+        for (String label : plotSeries.keySet()) {
             clearData(label);
         }
     }

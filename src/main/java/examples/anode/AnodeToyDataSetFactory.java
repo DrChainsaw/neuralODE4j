@@ -1,13 +1,14 @@
 package examples.anode;
 
 import com.beust.jcommander.Parameter;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import ode.solve.api.StepListener;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.ViewIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
-import org.nd4j.linalg.dataset.api.iterator.DataSetIteratorFactory;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.slf4j.Logger;
@@ -20,7 +21,7 @@ import util.plot.RealTimePlot;
  *
  * @author Christian Skarby
  */
-public class AnodeToyDataSetFactory implements DataSetIteratorFactory {
+public class AnodeToyDataSetFactory {
 
     private static final Logger log = LoggerFactory.getLogger(AnodeToyDataSetFactory.class);
 
@@ -40,20 +41,31 @@ public class AnodeToyDataSetFactory implements DataSetIteratorFactory {
     private static final double r2 = 1.0;
     private static final double r3 = 1.5;
 
-    @Override
-    public DataSetIterator create() {
+    /**
+     * Hold {@link DataSetIterator}s for training and test
+     */
+    @AllArgsConstructor
+    @Getter
+    static class DataSetIters {
+        private final DataSetIterator train;
+        private final DataSetIterator test;
+        private final String name;
+    }
+
+
+    public DataSetIters create() {
         final Random rng = Nd4j.getRandomFactory().getNewRandomInstance(123);
-        if(use2D && separable) {
+        if (use2D && separable) {
             log.info("Create separable 1D data set");
             return shuffleAndCreate(createSeparable2D(rng));
         }
 
-        if(separable) {
+        if (separable) {
             log.info("Create separable 2D data set");
             return shuffleAndCreate(createSeparable1D(rng));
         }
 
-        if(use2D) {
+        if (use2D) {
             log.info("Create non-separable 2D data set");
             return shuffleAndCreate(createNonSeparable2D(rng));
         }
@@ -62,15 +74,12 @@ public class AnodeToyDataSetFactory implements DataSetIteratorFactory {
         return shuffleAndCreate(createNonSeparable1D(rng));
     }
 
-    private DataSetIterator shuffleAndCreate(DataSet ds) {
+    private DataSetIters shuffleAndCreate(DataSet ds) {
         ds.shuffle(234);
-        return new ViewIterator(ds, batchSize) {
-
-            @Override
-            public DataSet next(int num) {
-                return (DataSet)ds.getRange(0, num == -1 ? nrofExamples : num);
-            }
-        };
+        return new DataSetIters(
+                new ViewIterator(ds, batchSize),
+                new ViewIterator(ds, nrofExamples),
+                (separable ? "separable" : "non-separable") + (use2D ? "_2D" : "_1D"));
     }
 
     private DataSet createNonSeparable1D(Random rng) {
@@ -118,7 +127,7 @@ public class AnodeToyDataSetFactory implements DataSetIteratorFactory {
     private DataSet createSeparable2D(Random rng) {
         final DataSet noise = createSeparable1D(rng);
 
-        final INDArray theta = Nd4j.rand(noise.numExamples(), 1, -Math.PI,  Math.PI, rng);
+        final INDArray theta = Nd4j.rand(noise.numExamples(), 1, -Math.PI, Math.PI, rng);
 
         return new DataSet(
                 Nd4j.hstack(theta, Transforms.sin(theta).addi(noise.getFeatures())),

@@ -52,6 +52,6 @@ class OdeNetModelFactory implements ModelFactory {
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
 
-        return new OdeNetModel(graph, odeSolverConf);
+        return new OdeNetModel(graph, odeSolverConf, nrofAugmentDims > 0 ? "odenet_aug_" + nrofAugmentDims : "odenet");
     }
 }
