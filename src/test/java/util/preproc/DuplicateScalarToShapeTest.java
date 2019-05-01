@@ -1,11 +1,15 @@
 package util.preproc;
 
+import junit.framework.TestCase;
 import org.deeplearning4j.nn.conf.InputPreProcessor;
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+
+import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 
@@ -62,5 +66,19 @@ public class DuplicateScalarToShapeTest {
         final InputPreProcessor preProcessor = new DuplicateScalarToShape(expected.getShape(true));
         final InputType actual = preProcessor.getOutputType(InputType.feedForward(1));
         assertEquals("Incorrect output type!", expected, actual);
+    }
+
+    /**
+     * Test that {@link DuplicateScalarToShape} can be serialized and deserialized
+     * @throws IOException
+     */
+    @Test
+    public void serializeDeserialize() throws IOException {
+        final InputPreProcessor preProcessor = new DuplicateScalarToShape(new long[] {666, 13});
+
+        final String json = NeuralNetConfiguration.mapper().writeValueAsString(preProcessor);
+        final InputPreProcessor newPreProc = NeuralNetConfiguration.mapper().readValue(json, DuplicateScalarToShape.class);
+        TestCase.assertEquals("Not same!", preProcessor, newPreProc);
+        TestCase.assertEquals("Not same!", preProcessor.hashCode(), newPreProc.hashCode());
     }
 }

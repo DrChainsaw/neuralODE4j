@@ -1,5 +1,7 @@
 package util.preproc;
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.deeplearning4j.nn.api.MaskState;
 import org.deeplearning4j.nn.conf.InputPreProcessor;
 import org.deeplearning4j.nn.conf.inputs.InputType;
@@ -8,6 +10,7 @@ import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.primitives.Pair;
+import org.nd4j.shade.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 
@@ -16,6 +19,8 @@ import java.util.Arrays;
  *
  * @author Christian Skarby
  */
+@Data
+@EqualsAndHashCode
 public class DuplicateScalarToShape implements InputPreProcessor {
 
     private final long[] shape;
@@ -28,7 +33,7 @@ public class DuplicateScalarToShape implements InputPreProcessor {
      * Constructor.
      * @param shape Desired shape. Set element 0 to -1 in order to use given mini batch size.
      */
-    public DuplicateScalarToShape(long[] shape) {
+    public DuplicateScalarToShape(@JsonProperty("shape") long[] shape) {
         this.shape = shape;
     }
 
