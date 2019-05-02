@@ -37,7 +37,7 @@ class OdeNetModelFactory implements ModelFactory {
         final ComputationGraphConfiguration.GraphBuilder builder = LayerUtil.initGraphBuilder(nrofInputDims)
                 .addInputs(next);
 
-        if(nrofAugmentDims > 0) {
+        if (nrofAugmentDims > 0) {
             builder.addVertex("aug", new PreprocessorVertex(new ConcatZeros(nrofAugmentDims)), next);
             next = "aug";
         }
@@ -60,16 +60,17 @@ class OdeNetModelFactory implements ModelFactory {
         final ComputationGraph graph = new ComputationGraph(builder.build());
         graph.init();
 
-        return new OdeNetModel(graph, odeSolverConf, nrofAugmentDims > 0 ? "odenet_aug_" + nrofAugmentDims : "odenet");
+        return new OdeNetModel(graph, odeSolverConf,
+                (nrofAugmentDims > 0 ? "odenet_aug_" + nrofAugmentDims : "odenet") +
+                        (useRk4 ? "_rk4" : "_dopri54"));
     }
 
     private FirstOrderSolverConf createSolver() {
         // According to appendix E of paper Runge-Kutta 4 is used, but it also says an error tolerance of 1e-3 is used.
         // This does not make sense to me as rk4 is a non-adaptive solver so it does not use tolerances.
         // Rk4 would also not be able to produce the result in figure 7 due to fixed step size.
-        // Figures become more similar to paper with rk4 compared to dopri54 though
 
-        if(useRk4) {
+        if (useRk4) {
             FirstOrderIntegratorConf.addIntegrator(ClassicalRungeKuttaIntegrator.class.getName(), sc -> new ClassicalRungeKuttaIntegrator(0.2));
             return new FirstOrderIntegratorConf(ClassicalRungeKuttaIntegrator.class.getName(),
                     new SolverConfig(1e-3, 1e-3, 1e-10, 1e2));

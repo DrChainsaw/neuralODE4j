@@ -10,11 +10,14 @@ import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.ViewIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.plot.Plot;
 import util.plot.RealTimePlot;
+
+import java.util.stream.IntStream;
 
 /**
  * Create {@link DataSetIterator}s for g(x) and separable function in section 4.1 of https://arxiv.org/pdf/1904.01681.pdf
@@ -56,26 +59,25 @@ public class AnodeToyDataSetFactory {
     public DataSetIters create() {
         final Random rng = Nd4j.getRandomFactory().getNewRandomInstance(123);
         if (use2D && separable) {
-            log.info("Create separable 1D data set");
-            return shuffleAndCreate(createSeparable2D(rng));
+            log.info("Create separable 2D data set");
+            return create(createSeparable2D(rng));
         }
 
         if (separable) {
-            log.info("Create separable 2D data set");
-            return shuffleAndCreate(createSeparable1D(rng));
+            log.info("Create separable 1D data set");
+            return create(createSeparable1D(rng));
         }
 
         if (use2D) {
             log.info("Create non-separable 2D data set");
-            return shuffleAndCreate(createNonSeparable2D(rng));
+            return create(createNonSeparable2D(rng));
         }
 
         log.info("Create non-separable 1D data set");
-        return shuffleAndCreate(createNonSeparable1D(rng));
+        return create(createNonSeparable1D(rng));
     }
 
-    private DataSetIters shuffleAndCreate(DataSet ds) {
-        ds.shuffle(234);
+    private DataSetIters create(DataSet ds) {
         return new DataSetIters(
                 new ViewIterator(ds, batchSize),
                 new ViewIterator(ds, nrofExamples),
@@ -86,15 +88,23 @@ public class AnodeToyDataSetFactory {
         final int nrofFirst = nrofExamples / 3;
         final int nrofSecond = nrofExamples - nrofFirst;
 
+        // Mix up examples evenly
+        INDArray inds = Nd4j.create(IntStream.range(0, nrofFirst+1) // +1 to make sure length is >= nrofExamples
+                .flatMap(i -> IntStream.of(i, 2*i+nrofFirst, 2*i+nrofFirst+1))
+                .mapToDouble(i -> i)
+                .toArray()).get(NDArrayIndex.interval(0, nrofExamples));
+
         // vstack fails with CUDA backend! Therefore, use hstack and transpose
         return new DataSet(
                 Nd4j.hstack(
                         Nd4j.rand(1, nrofFirst, -r1, r1, rng),
                         Nd4j.rand(1, nrofSecond, r2, r3, rng)
-                                .muli(Transforms.sign(Nd4j.randn(1, nrofSecond, rng)))).transposei(),
+                                .muli(Transforms.sign(Nd4j.randn(1, nrofSecond, rng)))).transposei()
+                .get(inds).reshape(nrofExamples, 1),
                 Nd4j.hstack(
                         Nd4j.ones(1, nrofFirst),
                         Nd4j.ones(1, nrofSecond).negi()).transposei()
+                .get(inds).reshape(nrofExamples,1)
         );
     }
 
@@ -112,14 +122,22 @@ public class AnodeToyDataSetFactory {
         final int nrofFirst = nrofExamples / 2;
         final int nrofSecond = nrofExamples - nrofFirst;
 
+        // Mix up examples evenly
+        INDArray inds = Nd4j.create(IntStream.range(0, nrofFirst+1) // +1 to make sure length is >= nrofExamples
+                .flatMap(i -> IntStream.of(i, i+nrofFirst))
+                .mapToDouble(i -> i)
+                .toArray()).get(NDArrayIndex.interval(0, nrofExamples));
+
         // vstack fails with CUDA backend! Therefore, use hstack and transpose
         return new DataSet(
                 Nd4j.hstack(
                         Nd4j.rand(1, nrofFirst, 0, r1, rng),
-                        Nd4j.rand(1, nrofSecond, -r3, -r2, rng)).transposei(),
+                        Nd4j.rand(1, nrofSecond, -r3, -r2, rng)).transposei()
+                .get(inds).reshape(nrofExamples, 1),
                 Nd4j.hstack(
                         Nd4j.ones(1, nrofFirst),
                         Nd4j.ones(1, nrofSecond).negi()).transposei()
+                        .get(inds).reshape(nrofExamples, 1)
         );
     }
 
