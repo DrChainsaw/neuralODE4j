@@ -24,6 +24,7 @@
         <rl4j.version>1.0.0-beta3</rl4j.version>
         <junit.version>4.11</junit.version>
         <xchart.version>3.5.2</xchart.version>
+        <jzy3d.version>1.0.2</jzy3d.version>
         <jcommander.version>1.72</jcommander.version>
 
         <guava.version>19.0</guava.version>
@@ -208,7 +209,7 @@
         <dependency>
             <groupId>org.jzy3d</groupId>
             <artifactId>jzy3d-api</artifactId>
-            <version>1.0.0</version>
+            <version>${jzy3d.version}</version>
         </dependency>
         <dependency>
             <groupId>org.knowm.xchart</groupId>

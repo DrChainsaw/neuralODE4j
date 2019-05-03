@@ -30,7 +30,7 @@ public class AnodeToyDataSetFactoryTest {
     public void create1DSeparable() {
         final Pair<INDArray, INDArray> data = splitData(createDataSet("-separable"));
         assertTrue("Data is not separable!!",
-                data.getFirst().maxNumber().doubleValue() < data.getSecond().minNumber().doubleValue());
+                data.getFirst().maxNumber().doubleValue() > data.getSecond().minNumber().doubleValue());
     }
 
     /**
@@ -41,7 +41,7 @@ public class AnodeToyDataSetFactoryTest {
         final Pair<INDArray, INDArray> data = splitData(createDataSet("-separable", "-2D"));
         // Bad testcase: This only tests the average which basically says nothing about separability.
         assertTrue("Data is not separable!!",
-                data.getFirst().getColumn(1).norm2Number().doubleValue() > data.getSecond().getColumn(1).norm2Number().doubleValue());
+                data.getFirst().getColumn(1).norm2Number().doubleValue() < data.getSecond().getColumn(1).norm2Number().doubleValue());
     }
 
     /**
@@ -51,9 +51,9 @@ public class AnodeToyDataSetFactoryTest {
     public void create1DNonSeparable() {
         final Pair<INDArray, INDArray> data = splitData(createDataSet());
         assertFalse("Data is separable!!",
-                data.getFirst().maxNumber().doubleValue() < data.getSecond().maxNumber().doubleValue());
+                data.getFirst().maxNumber().doubleValue() > data.getSecond().maxNumber().doubleValue());
         assertFalse("Data is separable!!",
-                data.getFirst().minNumber().doubleValue() > data.getSecond().minNumber().doubleValue());
+                data.getFirst().minNumber().doubleValue() < data.getSecond().minNumber().doubleValue());
     }
 
     /**
@@ -64,9 +64,9 @@ public class AnodeToyDataSetFactoryTest {
         final Pair<INDArray, INDArray> data = splitData(createDataSet("-2D"));
         for(int i = 0; i < data.getFirst().size(1); i++) {
             assertFalse("Data is separable!!",
-                    data.getFirst().getColumn(i).maxNumber().doubleValue() < data.getSecond().getColumn(i).maxNumber().doubleValue());
+                    data.getFirst().getColumn(i).maxNumber().doubleValue() > data.getSecond().getColumn(i).maxNumber().doubleValue());
             assertFalse("Data is separable!!",
-                    data.getFirst().getColumn(i).minNumber().doubleValue() > data.getSecond().getColumn(i).minNumber().doubleValue());
+                    data.getFirst().getColumn(i).minNumber().doubleValue() < data.getSecond().getColumn(i).minNumber().doubleValue());
         }
     }
 

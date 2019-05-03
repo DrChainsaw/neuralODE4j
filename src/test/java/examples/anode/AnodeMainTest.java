@@ -2,7 +2,6 @@ package examples.anode;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
-import util.plot.NoPlot;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,11 +50,11 @@ public class AnodeMainTest {
 
     private Main runNewMain(int nrofEpochs, Path baseDir, String preArg) {
         final Main main = Main.parseArgs(preArg,
+                "-plotsOff",
                 "-nrofEpochs", String.valueOf(nrofEpochs),
                 "-saveDir", baseDir.toString(),
                 "-nrofExamples", "64", "-trainBatchSize", "64", "odenet");
 
-        main.plotFactory = new NoPlot.Factory();
         main.addListeners();
         main.run();
 

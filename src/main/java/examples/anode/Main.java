@@ -16,12 +16,10 @@ import util.listen.training.NanScoreWatcher;
 import util.listen.training.PlotScore;
 import util.listen.training.ZeroGrad;
 import util.plot.Plot;
-import util.plot.RealTimePlot;
 import util.random.SeededRandomFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,8 +47,10 @@ class Main {
 
     @ParametersDelegate
     private AnodeToyDataSetFactory dataSetIteratorFactory = new AnodeToyDataSetFactory();
+    @ParametersDelegate
+    private PlotFactory plotFactory = new PlotFactory();
 
-    Plot.Factory plotFactory;
+
     Model model;
     private AnodeToyDataSetFactory.DataSetIters dataSetIterators;
 
@@ -103,8 +103,6 @@ class Main {
             cnt += vertex.numParams();
         }
         log.info("Nrof parameters in model: " + cnt);
-
-        plotFactory = new RealTimePlot.Factory(saveDir());
     }
 
     void addListeners() {
@@ -113,8 +111,8 @@ class Main {
         log.info("Plots will be saved in: " + savedir.getAbsolutePath());
         savedir.mkdirs();
 
-        final Plot<Integer, Double> scorePlot = plotFactory.newPlot("Training score");
-        final Plot<Double, Double> featurePlot = setupFeaturePlot();
+        final Plot<Integer, Double> scorePlot = plotFactory.plot2D("Training score", saveDir());
+        final Plot3D featurePlot = setupFeaturePlot();
 
         model.graph().addListeners(
                 new ZeroGrad(),
@@ -141,16 +139,12 @@ class Main {
     }
 
     @NotNull
-    private Plot<Double, Double> setupFeaturePlot() {
-        final Plot<Double, Double> featurePlot = plotFactory.newPlot("Feature space");
+    private Plot3D setupFeaturePlot() {
+        final Plot3D featurePlot = plotFactory.plot3D("Feature space", saveDir());
         final DataSet ds = dataSetIterators.getTest().next();
         dataSetIterators.getTest().reset();
-        PlotState.plotXY(ds.getFeatures(), ds.getLabels(), featurePlot);
-        try {
-            featurePlot.savePicture("_input");
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        PlotSteps3D.plotXYZ(ds.getFeatures(), ds.getLabels(), featurePlot);
+        featurePlot.savePicture("_input");
         return featurePlot;
     }
 

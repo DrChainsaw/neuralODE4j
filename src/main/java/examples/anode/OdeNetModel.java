@@ -4,7 +4,6 @@ import ode.solve.api.FirstOrderSolverConf;
 import ode.solve.api.StepListener;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.dataset.DataSet;
-import util.plot.Plot;
 
 /**
  * ODE model for ANODE experiments
@@ -29,10 +28,8 @@ public class OdeNetModel implements Model {
     }
 
     @Override
-    public void plotFeatures(DataSet dataSet, Plot<Double, Double> plot) {
-        plot.clearData();
-
-        final StepListener listener = new PlotState(plot, dataSet.getLabels());
+    public void plotFeatures(DataSet dataSet, Plot3D plot) {
+        final StepListener listener = new PlotSteps3D(plot, dataSet.getLabels());
         solverConf.addListeners(listener);
 
         graph.output(dataSet.getFeatures());

@@ -4,7 +4,6 @@ import ode.solve.api.StepListener;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
-import util.plot.Plot;
 
 import java.util.List;
 import java.util.Map;
@@ -30,8 +29,8 @@ public class ResNetModel implements Model {
     }
 
     @Override
-    public void plotFeatures(DataSet dataSet, Plot<Double, Double> plot) {
-        final StepListener plotAct = new PlotState(plot, dataSet.getLabels());
+    public void plotFeatures(DataSet dataSet, Plot3D plot) {
+        final StepListener plotAct = new PlotSteps3D(plot, dataSet.getLabels());
 
         Map<String, INDArray> acts = graph.feedForward(dataSet.getFeatures(), false);
         for(String resblock: resblocks) {
