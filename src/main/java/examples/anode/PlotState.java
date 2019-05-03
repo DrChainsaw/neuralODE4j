@@ -55,12 +55,12 @@ class PlotState implements StepListener {
             }
         }
 
-        final String posLab = "g(x) = 1";
         final String negLab = "g(x) = -1";
-        plot.clearData(posLab);
+        final String posLab = "g(x) = 1";
         plot.clearData(negLab);
-        plot.createSeries(posLab).scatter().set(Color.blue);
-        plot.createSeries(negLab).scatter().set(Color.red);
+        plot.clearData(posLab);
+        plot.createSeries(negLab).scatter().set(Color.blue);
+        plot.createSeries(posLab).scatter().set(Color.red);
 
         final double[] x;
         final double[] y;

@@ -102,8 +102,8 @@ public class AnodeToyDataSetFactory {
                                 .muli(Transforms.sign(Nd4j.randn(1, nrofSecond, rng)))).transposei()
                 .get(inds).reshape(nrofExamples, 1),
                 Nd4j.hstack(
-                        Nd4j.ones(1, nrofFirst),
-                        Nd4j.ones(1, nrofSecond).negi()).transposei()
+                        Nd4j.ones(1, nrofFirst).negi(),
+                        Nd4j.ones(1, nrofSecond)).transposei()
                 .get(inds).reshape(nrofExamples,1)
         );
     }
@@ -135,8 +135,8 @@ public class AnodeToyDataSetFactory {
                         Nd4j.rand(1, nrofSecond, -r3, -r2, rng)).transposei()
                 .get(inds).reshape(nrofExamples, 1),
                 Nd4j.hstack(
-                        Nd4j.ones(1, nrofFirst),
-                        Nd4j.ones(1, nrofSecond).negi()).transposei()
+                        Nd4j.ones(1, nrofFirst).negi(),
+                        Nd4j.ones(1, nrofSecond)).transposei()
                         .get(inds).reshape(nrofExamples, 1)
         );
     }

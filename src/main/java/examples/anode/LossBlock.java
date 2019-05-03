@@ -16,6 +16,11 @@ public class LossBlock implements Block {
         builder.addLayer("output", new OutputLayer.Builder()
                 .nOut(1)
                 .activation(new ActivationIdentity())
+                // Loss function not stated in paper.
+                // MSE works, but can not achieve better loss than 2/3 for 1D non-separable ODE vs 1/3 presented in paper
+                // Inner set and upper outer set is mapped to 0 while lower outer is mapped to -1.
+                // Avg MSE is mean[(1-0)^2 + (-1-0)^2 + (-1 -(-1))^2] = 2/3. L1 loss gives same result due to 1^2 = 1
+                // Huber loss?
                 .lossFunction(new LossMSE())
                 .build(), prev);
 
