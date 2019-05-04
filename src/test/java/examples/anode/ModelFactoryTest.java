@@ -2,8 +2,11 @@ package examples.anode;
 
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.junit.Test;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
+
+import static org.junit.Assert.assertNotEquals;
 
 /**
  * Generic test cases for implementations of {@link ModelFactory}
@@ -26,8 +29,12 @@ public abstract class ModelFactoryTest {
         final ModelFactory factory = factory();
 
         final ComputationGraph model = factory.create(1).graph();
+        final INDArray parameters = model.params().dup();
+
         model.fit(new DataSet(Nd4j.ones(1,1), Nd4j.ones(1,1).negi()));
         model.fit(new DataSet(Nd4j.ones(1,1).negi(), Nd4j.ones(1,1)));
+
+        assertNotEquals("Parameters not updated!", parameters, model.params());
     }
 
     /**
@@ -38,7 +45,11 @@ public abstract class ModelFactoryTest {
         final ModelFactory factory = factory();
 
         final ComputationGraph model = factory.create(2).graph();
+        final INDArray parameters = model.params().dup();
+
         model.fit(new DataSet(Nd4j.ones(1,2), Nd4j.ones(1,1).negi()));
         model.fit(new DataSet(Nd4j.ones(1,2).negi(), Nd4j.ones(1,1)));
+
+        assertNotEquals("Parameters not updated!", parameters, model.params());
     }
 }

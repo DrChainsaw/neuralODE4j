@@ -1,6 +1,5 @@
 package util.preproc;
 
-import junit.framework.TestCase;
 import org.deeplearning4j.nn.conf.InputPreProcessor;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
@@ -78,7 +77,7 @@ public class DuplicateScalarToShapeTest {
 
         final String json = NeuralNetConfiguration.mapper().writeValueAsString(preProcessor);
         final InputPreProcessor newPreProc = NeuralNetConfiguration.mapper().readValue(json, DuplicateScalarToShape.class);
-        TestCase.assertEquals("Not same!", preProcessor, newPreProc);
-        TestCase.assertEquals("Not same!", preProcessor.hashCode(), newPreProc.hashCode());
+        assertEquals("Not same!", preProcessor, newPreProc);
+        assertEquals("Not same!", preProcessor.hashCode(), newPreProc.hashCode());
     }
 }
