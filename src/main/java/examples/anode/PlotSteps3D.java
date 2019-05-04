@@ -29,6 +29,7 @@ public class PlotSteps3D implements StepListener {
 
     @Override
     public void begin(INDArray t, INDArray y0) {
+        plot.freeze();
         plotXYZ(y0);
     }
 
@@ -39,7 +40,7 @@ public class PlotSteps3D implements StepListener {
 
     @Override
     public void done() {
-
+        plot.fit();
     }
 
     private void plotXYZ(INDArray xyzPoints) {
@@ -89,7 +90,6 @@ public class PlotSteps3D implements StepListener {
         posLab.plot(data.get(1).getFirst(), data.get(1).getSecond(), data.get(1).getThird());
         negLab.plot(data.get(-1).getFirst(), data.get(-1).getSecond(), data.get(-1).getThird());
 
-        plot.fit();
         lastDraw = System.currentTimeMillis();
     }
 

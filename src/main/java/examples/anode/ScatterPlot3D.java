@@ -112,4 +112,9 @@ class ScatterPlot3D implements Plot3D {
     public void fit() {
         javax.swing.SwingUtilities.invokeLater(() -> chart.getView().setBoundMode(ViewBoundMode.AUTO_FIT));
     }
+
+    @Override
+    public void freeze() {
+        javax.swing.SwingUtilities.invokeLater(() ->chart.getView().setBoundMode(ViewBoundMode.MANUAL));
+    }
 }

@@ -36,12 +36,7 @@ public class ResNetModel implements Model {
         for(String resblock: resblocks) {
             plotAct.begin(null, acts.get(resblock));
         }
-        // Give plotting a chance to keep up
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        plotAct.done();
     }
 
     @Override

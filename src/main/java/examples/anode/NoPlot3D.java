@@ -43,4 +43,9 @@ public class NoPlot3D implements Plot3D {
     public void fit() {
         // Ignore
     }
+
+    @Override
+    public void freeze() {
+        // Ignore
+    }
 }

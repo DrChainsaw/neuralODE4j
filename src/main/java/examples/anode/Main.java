@@ -144,6 +144,7 @@ class Main {
         final DataSet ds = dataSetIterators.getTest().next();
         dataSetIterators.getTest().reset();
         PlotSteps3D.plotXYZ(ds.getFeatures(), ds.getLabels(), featurePlot);
+        featurePlot.fit();
         featurePlot.savePicture("_input");
         return featurePlot;
     }

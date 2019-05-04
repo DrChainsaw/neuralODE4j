@@ -17,6 +17,8 @@ interface Plot3D {
 
     void fit();
 
+    void freeze();
+
     interface Series3D {
 
         Series3D plot(List<Double> x, List<Double> y, List<Double> z);
