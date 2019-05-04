@@ -58,6 +58,35 @@ mvn -P backend-CPU exec:java -Dexec.mainClass="examples.spiral.Main" -Dexec.args
 
 Furthermore, original implementation does not use the adjoint method for back propagation in this example and instead does backpropagation through the operations of the ODE solver. Backpropagation through the ODE solver is not supported in this project as of yet. 
 
+## Augmented neural ODEs
+
+Implementation of toy experiments from the [Augmented Neural ODEs](https://arxiv.org/abs/1904.01681) paper. 
+
+To run the ResNet reference model, use the following command:
+```
+mvn exec:java -Dexec.mainClass="examples.anode.Main" -Dexec.args="-2D resnet"
+```
+To run the ODE net model, use the following command:
+
+```
+mvn exec:java -Dexec.mainClass="examples.anode.Main" -Dexec.args="-2D odenet"
+```
+
+To run the augmented ODE net model, use the following command:
+
+```
+mvn exec:java -Dexec.mainClass="examples.anode.Main" -Dexec.args="-2D odenet -nrofAugmentDims 5"
+```
+
+Running from the IDE is also possible in which case resnet/odenet must be set as program arguments.
+
+Use -help for full list of command line arguments:
+
+```
+mvn exec:java -Dexec.mainClass="examples.anode.Main" -Dexec.args="-help"
+```
+
+
 ## CIFAR 10
 
 Image classification experiment comparing the [Inception ResNet V1](https://arxiv.org/pdf/1602.07261.pdf) architecture 
