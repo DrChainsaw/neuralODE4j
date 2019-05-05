@@ -21,6 +21,7 @@ import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -179,7 +180,7 @@ public class MultiStepAdjointTest {
         final GraphVertex odevert = createOdeVertex(nrofTimeSteps, nrofDims);
 
         final INDArray time = Nd4j.linspace(1, 8, nrofTimeSteps);
-        final INDArray y0 = Nd4j.linspace(-1.23, 2.34, 2 * nrofDims).reshape(2, nrofDims);
+        final INDArray y0 = Nd4j.linspace(-1.23, 2.34, 2 * nrofDims, DataType.FLOAT).reshape(2, nrofDims);
 
         odevert.setInputs(y0, time);
         final INDArray ys = odevert.doForward(true, LayerWorkspaceMgr.noWorkspacesImmutable());
@@ -243,7 +244,7 @@ public class MultiStepAdjointTest {
         final GraphVertex odevert = createOdeVertex(nrofTimeSteps, nrofDims);
 
         final INDArray time = Nd4j.linspace(-1, -8, nrofTimeSteps);
-        final INDArray y0 = Nd4j.linspace(-1.23, 2.34, 2 * nrofDims).reshape(2, nrofDims);
+        final INDArray y0 = Nd4j.linspace(-1.23, 2.34, 2 * nrofDims, DataType.FLOAT).reshape(2, nrofDims);
 
         odevert.setInputs(y0, time);
         final INDArray ys = odevert.doForward(true, LayerWorkspaceMgr.noWorkspacesImmutable());

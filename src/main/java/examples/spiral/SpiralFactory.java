@@ -1,6 +1,7 @@
 package examples.spiral;
 
 import examples.spiral.listener.SpiralPlot;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -68,7 +69,7 @@ class SpiralFactory {
 
 
     SpiralFactory(double a, double b, double startTheta, double stopTheta, long nrofSamples) {
-        final INDArray thetaCc = Nd4j.linspace(startTheta, stopTheta, nrofSamples);
+        final INDArray thetaCc = Nd4j.linspace(startTheta, stopTheta, nrofSamples, DataType.FLOAT);
         final INDArray rCc = thetaCc.mul(b).addi(a);
         final INDArray trajectoryCc = Nd4j.vstack(rCc.mul(Transforms.cos(thetaCc)).add(5), rCc.mul(Transforms.sin(thetaCc)));
         this.baseCc = new Spiral(trajectoryCc, thetaCc);

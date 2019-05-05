@@ -12,6 +12,7 @@ import org.deeplearning4j.nn.conf.layers.LayerValidation;
 import org.deeplearning4j.nn.conf.memory.LayerMemoryReport;
 import org.deeplearning4j.nn.params.DefaultParamInitializer;
 import org.deeplearning4j.optimize.api.TrainingListener;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.util.Collection;
@@ -40,11 +41,11 @@ public class ConcatRnn extends BaseRecurrentLayer {
 
     @Override
     public Layer instantiate(NeuralNetConfiguration conf, Collection<TrainingListener> trainingListeners,
-                             int layerIndex, INDArray layerParamsView, boolean initializeParams) {
+                             int layerIndex, INDArray layerParamsView, boolean initializeParams, DataType networkDataType) {
         LayerValidation.assertNInNOutSet("ConcatRnn", getLayerName(), layerIndex, getNIn(), getNOut());
 
         examples.spiral.vertex.impl.ConcatRnn ret =
-                new examples.spiral.vertex.impl.ConcatRnn(conf);
+                new examples.spiral.vertex.impl.ConcatRnn(conf, networkDataType);
         ret.setListeners(trainingListeners);
         ret.setIndex(layerIndex);
         ret.setParamsViewArray(layerParamsView);
@@ -67,30 +68,6 @@ public class ConcatRnn extends BaseRecurrentLayer {
                 return (nIn * nOut + (hasBias(l) ? nOut : 0)); //weights + bias
             }
         };
-    }
-
-    @Override
-    public double getL1ByParam(String paramName) {
-        switch (paramName) {
-            case DefaultParamInitializer.WEIGHT_KEY:
-                return l1;
-            case DefaultParamInitializer.BIAS_KEY:
-                return l1Bias;
-            default:
-                throw new IllegalStateException("Unknown parameter: \"" + paramName + "\"");
-        }
-    }
-
-    @Override
-    public double getL2ByParam(String paramName) {
-        switch (paramName) {
-            case DefaultParamInitializer.WEIGHT_KEY:
-                return l2;
-            case DefaultParamInitializer.BIAS_KEY:
-                return l2Bias;
-            default:
-                throw new IllegalStateException("Unknown parameter: \"" + paramName + "\"");
-        }
     }
 
     @Override

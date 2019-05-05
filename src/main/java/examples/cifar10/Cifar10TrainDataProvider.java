@@ -3,7 +3,8 @@ package examples.cifar10;
 import com.beust.jcommander.Parameter;
 import org.datavec.image.loader.CifarLoader;
 import org.datavec.image.transform.*;
-import org.deeplearning4j.datasets.iterator.impl.CifarDataSetIterator;
+import org.deeplearning4j.datasets.fetchers.DataSetType;
+import org.deeplearning4j.datasets.iterator.impl.Cifar10DataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIteratorFactory;
 import org.nd4j.linalg.primitives.Pair;
@@ -19,9 +20,6 @@ public class Cifar10TrainDataProvider implements DataSetIteratorFactory {
 
     @Parameter(names = "-trainBatchSize", description = "Batch size to use for training")
     private int trainBatchSize = 24;
-
-    @Parameter(names = "-nrofTrainExamples", description = "Number of examples to use for training")
-    private int nrofTrainExamples = CifarLoader.NUM_TRAIN_IMAGES;
 
     @Parameter(names = "-dataAug", description = "Use data augmentation for training if set to true", arity = 1)
     private boolean useDataAugmentation = true;
@@ -42,15 +40,11 @@ public class Cifar10TrainDataProvider implements DataSetIteratorFactory {
                 ))
                 : new MultiImageTransform();
 
-        return new CifarDataSetIterator(
+        return new Cifar10DataSetIterator(
                 trainBatchSize,
-                nrofTrainExamples,
                 new int[]{height, width, numCh},
-                CifarLoader.NUM_LABELS,
+                DataSetType.TRAIN,
                 dataAug,
-                false,
-                true,
-                123,
-                true);
+                123);
     }
 }

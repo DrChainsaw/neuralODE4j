@@ -1,6 +1,6 @@
 package ode.solve.impl.util;
 
-import org.nd4j.linalg.api.buffer.DataBuffer;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -42,7 +42,7 @@ public class ButcherTableu {
      * for the correct data type is available.
      */
     public static class Builder {
-        final Map<DataBuffer.Type, ButcherTableu> cache = new HashMap<>();
+        final Map<DataType, ButcherTableu> cache = new HashMap<>();
         
         private double[][] a;
         private double[] b;
@@ -75,20 +75,20 @@ public class ButcherTableu {
             this.cMid = cMid; return this;
         }
 
-        public ButcherTableu build() {
-            ButcherTableu tableu = cache.get(Nd4j.dataType());
+        public ButcherTableu build(DataType dataType) {
+            ButcherTableu tableu = cache.get(dataType);
             if(tableu == null) {
                 final INDArray[] aArr = new INDArray[a.length];
                 for(int i = 0; i < a.length; i++) {
-                    aArr[i] = Nd4j.create(a[i]);
+                    aArr[i] = Nd4j.create(a[i]).castTo(dataType);
                 }
                 tableu = new ButcherTableu(
                         aArr,
-                        Nd4j.create(b),
-                        Nd4j.create(bStar),
-                        Nd4j.create(c),
+                        Nd4j.create(b).castTo(dataType),
+                        Nd4j.create(bStar).castTo(dataType),
+                        Nd4j.create(c).castTo(dataType),
                         cMid);
-                cache.put(Nd4j.dataType(), tableu);
+                cache.put(dataType, tableu);
             }
             return  tableu;
         }

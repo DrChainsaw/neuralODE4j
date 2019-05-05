@@ -7,6 +7,7 @@ import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
 import org.deeplearning4j.nn.conf.memory.LayerMemoryReport;
 import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
@@ -63,9 +64,12 @@ public class SampleGaussianVertex extends GraphVertex {
     }
 
     @Override
-    public org.deeplearning4j.nn.graph.vertex.GraphVertex instantiate(ComputationGraph graph, String name, int idx, INDArray paramsView, boolean initializeParams) {
+    public org.deeplearning4j.nn.graph.vertex.GraphVertex instantiate(ComputationGraph graph, String name, int idx,
+                                                                      INDArray paramsView, boolean initializeParams,
+                                                                      DataType networkDataType) {
         final Random rng = Nd4j.getRandomFactory().getNewRandomInstance(seed);
-        return new examples.spiral.vertex.impl.SampleGaussianVertex(graph, name, idx,  shape -> Nd4j.randn(shape, rng));
+        return new examples.spiral.vertex.impl.SampleGaussianVertex(graph, name, idx,  shape -> Nd4j.randn(shape, rng),
+                networkDataType);
     }
 
     @Override

@@ -43,7 +43,7 @@ public class DuplicateScalarToShape implements InputPreProcessor {
             throw new IllegalArgumentException("Can only process scalar input. Got: " + Arrays.toString(input.shape()));
         }
         long[] tmpShape = getShapeFor(miniBatchSize);
-        return workspaceMgr.createUninitialized(ArrayType.ACTIVATIONS, tmpShape).assign(input.sumNumber());
+        return workspaceMgr.createUninitialized(ArrayType.ACTIVATIONS, input.dataType(), tmpShape).assign(input.sumNumber());
     }
 
     long[] getShapeFor(int miniBatchSize) {

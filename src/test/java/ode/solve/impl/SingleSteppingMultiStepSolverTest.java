@@ -5,6 +5,7 @@ import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.conf.SolverConfig;
 import org.junit.Test;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -27,7 +28,7 @@ public class SingleSteppingMultiStepSolverTest {
         final FirstOrderEquation circle = new CircleODE(new double[] {1.23, 4.56}, 1);
         final FirstOrderSolver actualSolver = new DormandPrince54Solver(new SolverConfig(1e-10, 1e-10, 1e-10, 10));
 
-        final INDArray t = Nd4j.linspace(0, Math.PI, nrofSteps);
+        final INDArray t = Nd4j.linspace(0, Math.PI, nrofSteps, DataType.FLOAT);
         final INDArray y0 = Nd4j.create(new double[] {0, 0});
         final INDArray ySingle = y0.dup();
         final INDArray yMulti = Nd4j.repeat(ySingle,nrofSteps-1).reshape(nrofSteps-1, y0.length());

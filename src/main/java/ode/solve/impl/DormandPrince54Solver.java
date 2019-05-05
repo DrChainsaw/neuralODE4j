@@ -7,6 +7,7 @@ import ode.solve.conf.SolverConfig;
 import ode.solve.impl.util.AdaptiveRungeKuttaStepPolicy;
 import ode.solve.impl.util.ButcherTableu;
 import ode.solve.impl.util.SolverConfigINDArray;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.memory.MemoryWorkspace;
 import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
 import org.nd4j.linalg.api.memory.enums.SpillPolicy;
@@ -65,7 +66,7 @@ public class DormandPrince54Solver implements FirstOrderSolver {
                 .build();
 
         public DormandPrince54Mse(SolverConfigINDArray config) {
-            this(config, butcherTableuBuilder.build().bStar);
+            this(config, butcherTableuBuilder.build(DataType.FLOAT).bStar);
         }
 
         public DormandPrince54Mse(SolverConfigINDArray config, INDArray errorCoeffs) {
@@ -96,7 +97,7 @@ public class DormandPrince54Solver implements FirstOrderSolver {
     public DormandPrince54Solver(SolverConfig config) {
         final SolverConfigINDArray configINDArray = new SolverConfigINDArray(config);
         solver = new AdaptiveRungeKuttaSolver(
-                butcherTableuBuilder.build(),
+                butcherTableuBuilder.build(DataType.FLOAT),
                 new AdaptiveRungeKuttaStepPolicy(configINDArray, 5),
                 new DormandPrince54Mse(configINDArray));
     }

@@ -12,6 +12,7 @@ import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -121,11 +122,11 @@ public class SampleGaussianVertexTest {
         }
 
         @Override
-        public GraphVertex instantiate(ComputationGraph graph, String name, int idx, INDArray paramsView, boolean initializeParams) {
+        public GraphVertex instantiate(ComputationGraph graph, String name, int idx, INDArray paramsView, boolean initializeParams, DataType networkDataType) {
             return new examples.spiral.vertex.impl.SampleGaussianVertex(graph, name, idx, shape -> {
                 final long sum = LongStream.of(shape).reduce(1, (l1,l2) -> l1*l2);
-                return Nd4j.linspace(1.5, 4.3, sum).reshape(shape);
-            });
+                return Nd4j.linspace(1.5, 4.3, sum, networkDataType).reshape(shape);
+            }, networkDataType);
         }
 
         @Override

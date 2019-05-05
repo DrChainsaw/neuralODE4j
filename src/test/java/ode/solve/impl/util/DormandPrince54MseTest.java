@@ -3,6 +3,7 @@ package ode.solve.impl.util;
 import ode.solve.impl.DormandPrince54Solver;
 import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.junit.Test;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -36,8 +37,8 @@ public class DormandPrince54MseTest {
     private void testEstimateError(INDArray h) {
         final long dim = 100;
         final INDArray yDotK = Nd4j.linspace(-10, 10, 7 * dim).reshape(new long[]{7, dim});
-        final INDArray y0 = Nd4j.linspace(-2.34, 3.45, dim);
-        final INDArray y1 = Nd4j.reverse(Nd4j.linspace(-3.45, 4.56, dim));
+        final INDArray y0 = Nd4j.linspace(-2.34, 3.45, dim, DataType.FLOAT);
+        final INDArray y1 = Nd4j.reverse(Nd4j.linspace(-3.45, 4.56, dim, DataType.FLOAT));
 
         final double minStep = 1e-10;
         final double maxStep = 1e20;

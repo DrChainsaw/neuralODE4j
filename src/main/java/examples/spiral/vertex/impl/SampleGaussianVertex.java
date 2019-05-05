@@ -7,6 +7,7 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.BaseGraphVertex;
 import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -28,8 +29,8 @@ public class SampleGaussianVertex extends BaseGraphVertex {
         INDArray get(long[] shape);
     }
 
-    public SampleGaussianVertex(ComputationGraph graph, String name, int vertexIndex, EpsSupplier rng) {
-        super(graph, name, vertexIndex, null, null);
+    public SampleGaussianVertex(ComputationGraph graph, String name, int vertexIndex, EpsSupplier rng, DataType networkDataType) {
+        super(graph, name, vertexIndex, null, null, networkDataType);
         this.rng = rng;
     }
 

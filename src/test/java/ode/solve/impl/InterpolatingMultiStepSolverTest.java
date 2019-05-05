@@ -5,6 +5,7 @@ import ode.solve.api.FirstOrderEquation;
 import ode.solve.api.FirstOrderSolver;
 import ode.solve.conf.SolverConfig;
 import org.junit.Test;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.primitives.Pair;
@@ -47,7 +48,7 @@ public class InterpolatingMultiStepSolverTest {
         final INDArray y0 = Nd4j.create(new double[] {-5.6, 7.3});
         final INDArray ySingle = y0.dup();
         final INDArray yMulti = Nd4j.repeat(ySingle,nrofSteps-1).reshape(nrofSteps-1, y0.length()).assign(0);
-        final INDArray t = Nd4j.linspace(-Math.PI/omega,Math.PI/omega , nrofSteps);
+        final INDArray t = Nd4j.linspace(-Math.PI/omega,Math.PI/omega , nrofSteps, DataType.FLOAT);
 
         final INDArray expected = new SingleSteppingMultiStepSolver(singleStepSolver).integrate(equation, t, y0, yMulti.dup()).transposei();
         final INDArray actual = new InterpolatingMultiStepSolver(singleStepSolver).integrate(equation, t, y0, yMulti.dup()).transposei();

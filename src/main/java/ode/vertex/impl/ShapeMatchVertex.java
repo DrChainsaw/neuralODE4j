@@ -7,6 +7,7 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.BaseGraphVertex;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.primitives.Pair;
 import util.preproc.DuplicateScalarToShape;
@@ -24,8 +25,10 @@ public class ShapeMatchVertex extends BaseGraphVertex {
     private final GraphVertex vertex;
     protected Map<Integer, Long> overrideSizeDims;
 
-    public ShapeMatchVertex(ComputationGraph graph, String name, int vertexIndex, GraphVertex vertex, Map<Integer, Long> overrideSizeDims) {
-        super(graph, name, vertexIndex, null, null);
+    public ShapeMatchVertex(
+            ComputationGraph graph, String name, int vertexIndex, DataType networkDataType,
+            GraphVertex vertex, Map<Integer, Long> overrideSizeDims) {
+        super(graph, name, vertexIndex, null, null, networkDataType);
         this.vertex = vertex;
         this.overrideSizeDims = overrideSizeDims;
     }

@@ -2,6 +2,7 @@ package examples.spiral.loss;
 
 import org.junit.Test;
 import org.nd4j.linalg.activations.impl.ActivationIdentity;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -31,7 +32,7 @@ public class NormLogLikelihoodLossTest {
      */
     @Test
     public void computeGradientAndScorePerfectMatch() {
-        final INDArray traj = Nd4j.linspace(-3.45, 2.34, 2 * 3 * 5).reshape(3, 2, 5);
+        final INDArray traj = Nd4j.linspace(-3.45, 2.34, 2 * 3 * 5, DataType.FLOAT).reshape(3, 2, 5);
 
         final Pair<Double, INDArray> out = new NormLogLikelihoodLoss(0.3)
                 .computeGradientAndScore(traj, traj, new ActivationIdentity(), null, false);
@@ -46,8 +47,8 @@ public class NormLogLikelihoodLossTest {
      */
     @Test
     public void computeGradientAndScoreWithEps() {
-        final INDArray traj = Nd4j.linspace(-3.45, 2.34, 2 * 3 * 5).reshape(3, 2, 5);
-        final INDArray eps = Nd4j.linspace(-7.89, 7.89, traj.length()).reshape(traj.shape());
+        final INDArray traj = Nd4j.linspace(-3.45, 2.34, 2 * 3 * 5, DataType.FLOAT).reshape(3, 2, 5);
+        final INDArray eps = Nd4j.linspace(-7.89, 7.89, traj.length(), DataType.FLOAT).reshape(traj.shape());
 
         final Pair<Double, INDArray> out = new NormLogLikelihoodLoss(0.3)
                 .computeGradientAndScore(traj, traj.add(eps), new ActivationIdentity(), null, true);

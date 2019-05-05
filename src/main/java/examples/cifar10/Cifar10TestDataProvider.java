@@ -1,8 +1,8 @@
 package examples.cifar10;
 
 import com.beust.jcommander.Parameter;
-import org.datavec.image.loader.CifarLoader;
-import org.deeplearning4j.datasets.iterator.impl.CifarDataSetIterator;
+import org.deeplearning4j.datasets.fetchers.DataSetType;
+import org.deeplearning4j.datasets.iterator.impl.Cifar10DataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIteratorFactory;
 
@@ -16,14 +16,10 @@ public class Cifar10TestDataProvider implements DataSetIteratorFactory {
     @Parameter(names = "-evalBatchSize", description = "Batch size to use for validation")
     private int evalBatchSize = 24;
 
-    @Parameter(names = "-nrofTestExamples", description = "Number of examples to use for validation")
-    private int nrofTestExamples = CifarLoader.NUM_TEST_IMAGES;
-
     @Override
     public DataSetIterator create() {
-        return new CifarDataSetIterator(
+        return new Cifar10DataSetIterator(
                 evalBatchSize,
-                nrofTestExamples,
-                false);
+                DataSetType.TEST);
     }
 }

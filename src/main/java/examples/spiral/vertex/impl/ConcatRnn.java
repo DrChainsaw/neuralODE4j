@@ -10,6 +10,7 @@ import org.deeplearning4j.nn.workspace.ArrayType;
 import org.deeplearning4j.nn.workspace.LayerWorkspaceMgr;
 import org.nd4j.base.Preconditions;
 import org.nd4j.linalg.activations.IActivation;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.memory.MemoryWorkspace;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.broadcast.BroadcastCopyOp;
@@ -31,8 +32,8 @@ import static org.nd4j.linalg.indexing.NDArrayIndex.*;
 public class ConcatRnn extends BaseRecurrentLayer<examples.spiral.vertex.conf.ConcatRnn> {
     public static final String STATE_KEY_PREV_ACTIVATION = "prevAct";
 
-    public ConcatRnn(NeuralNetConfiguration conf) {
-        super(conf);
+    public ConcatRnn(NeuralNetConfiguration conf, DataType networkDataType) {
+        super(conf, networkDataType);
     }
 
     @Override
@@ -85,7 +86,7 @@ public class ConcatRnn extends BaseRecurrentLayer<examples.spiral.vertex.conf.Co
 
         val tsLength = input.size(2);
 
-        INDArray epsOut = workspaceMgr.createUninitialized(ArrayType.ACTIVATION_GRAD, input.shape(), 'f');
+        INDArray epsOut = workspaceMgr.createUninitialized(ArrayType.ACTIVATION_GRAD, input.dataType(), input.shape(), 'f');
 
         INDArray eps = Nd4j.zeros(new long[] {epsilon.size(0), layerConf().getNOut() + layerConf().getNIn()}, 'f');
         long end;
@@ -167,8 +168,8 @@ public class ConcatRnn extends BaseRecurrentLayer<examples.spiral.vertex.conf.Co
         //TODO implement 'mmul across time' optimization
 
         //Minor performance optimization: do the "add bias" first:
-        INDArray out = workspaceMgr.createUninitialized(ArrayType.ACTIVATIONS, new long[]{m, nOut, tsLength}, 'f');
-        INDArray outZ = (forBackprop ? workspaceMgr.createUninitialized(ArrayType.BP_WORKING_MEM, out.shape()) : null);
+        INDArray out = workspaceMgr.createUninitialized(ArrayType.ACTIVATIONS, input.dataType(), new long[]{m, nOut, tsLength}, 'f');
+        INDArray outZ = (forBackprop ? workspaceMgr.createUninitialized(ArrayType.BP_WORKING_MEM, out.dataType(), out.shape()) : null);
 
         Nd4j.getExecutioner().exec(new BroadcastCopyOp(out, b, out, 1));
 

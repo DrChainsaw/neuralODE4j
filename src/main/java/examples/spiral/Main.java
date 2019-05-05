@@ -10,6 +10,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.jetbrains.annotations.NotNull;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
@@ -237,8 +238,8 @@ class Main {
 
         final INDArray z0 = model.encode(sample);
 
-        final INDArray tsPos = Nd4j.linspace(0, 2 * Math.PI, 2000);
-        final INDArray tsNeg = Nd4j.linspace(0, -Math.PI, 2000);
+        final INDArray tsPos = Nd4j.linspace(0, 2 * Math.PI, 2000, DataType.FLOAT);
+        final INDArray tsNeg = Nd4j.linspace(0, -Math.PI, 2000, DataType.FLOAT);
 
         final INDArray zsPos = model.timeDependency(z0, tsPos);
         final INDArray zsNeg = model.timeDependency(z0, tsNeg);

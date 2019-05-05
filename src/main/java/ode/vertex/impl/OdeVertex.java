@@ -43,7 +43,12 @@ public class OdeVertex extends BaseGraphVertex {
     public OdeVertex(BaseGraphVertexInputs baseGraphVertexInputs,
                      OdeGraphHelper odeHelper,
                      TrainingConfig trainingConfig) {
-        super(baseGraphVertexInputs.getGraph(), baseGraphVertexInputs.getName(), baseGraphVertexInputs.getVertexIndex(), null, null);
+        super(baseGraphVertexInputs.getGraph(),
+                baseGraphVertexInputs.getName(),
+                baseGraphVertexInputs.getVertexIndex(),
+                null,
+                null,
+                baseGraphVertexInputs.getGraph().getConfiguration().getDataType());
         this.trainingConfig = trainingConfig;
         this.odeHelper = odeHelper;
     }

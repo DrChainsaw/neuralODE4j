@@ -6,7 +6,10 @@ import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.graph.vertex.GraphVertex;
 import org.nd4j.linalg.learning.config.IUpdater;
+import org.nd4j.linalg.learning.regularization.Regularization;
 import org.nd4j.linalg.primitives.Pair;
+
+import java.util.List;
 
 /**
  * Basic {@link TrainingConfig} for vertices which do not have a {@link org.deeplearning4j.nn.conf.layers.Layer}
@@ -31,22 +34,10 @@ public class DefaultTrainingConfig implements TrainingConfig {
     }
 
     @Override
-    public boolean isPretrain() {
-        return false;
-    }
-
-    @Override
-    public double getL1ByParam(String paramName) {
+    public List<Regularization> getRegularizationByParam(String paramName) {
         final Pair<String, String> vertexAndParam = paramNameMapping.reverseMap(paramName);
         final GraphVertex vertex = graph.getVertex(vertexAndParam.getFirst());
-        return vertex.getConfig().getL1ByParam(vertexAndParam.getSecond());
-    }
-
-    @Override
-    public double getL2ByParam(String paramName) {
-        final Pair<String, String> vertexAndParam = paramNameMapping.reverseMap(paramName);
-        final GraphVertex vertex = graph.getVertex(vertexAndParam.getFirst());
-        return vertex.getConfig().getL2ByParam(vertexAndParam.getSecond());
+        return vertex.getConfig().getRegularizationByParam(vertexAndParam.getSecond());
     }
 
     @Override
@@ -71,10 +62,5 @@ public class DefaultTrainingConfig implements TrainingConfig {
     @Override
     public double getGradientNormalizationThreshold() {
         return 0;
-    }
-
-    @Override
-    public void setPretrain(boolean pretrain) {
-
     }
 }

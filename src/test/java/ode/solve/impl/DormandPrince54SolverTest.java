@@ -10,7 +10,7 @@ import org.apache.commons.math3.ode.nonstiff.DormandPrince54Integrator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.nd4j.linalg.api.buffer.DataBuffer;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -26,7 +26,8 @@ import static org.junit.Assert.assertEquals;
  */
 public class DormandPrince54SolverTest {
 
-    private static DataBuffer.Type prevType;
+    private static DataType prevType;
+    private static DataType prevFloatType;
 
     /**
      * Set datatype to double to get more similar results since reference implementation uses double
@@ -34,7 +35,8 @@ public class DormandPrince54SolverTest {
     @BeforeClass
     public static void setDataType() {
         prevType = Nd4j.dataType();
-        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
+        prevFloatType = Nd4j.defaultFloatingPointType();
+        Nd4j.setDefaultDataTypes(prevType, prevFloatType);
     }
 
     /**
@@ -42,7 +44,7 @@ public class DormandPrince54SolverTest {
      */
     @AfterClass
     public static void resetDataType() {
-        Nd4j.setDataType(prevType);
+        Nd4j.setDefaultDataTypes(prevType, prevFloatType);
     }
 
     /**

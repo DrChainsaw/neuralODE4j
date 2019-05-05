@@ -9,6 +9,7 @@ import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
 import org.deeplearning4j.nn.conf.memory.MemoryReport;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.jetbrains.annotations.NotNull;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.shade.jackson.annotation.JsonProperty;
@@ -33,18 +34,18 @@ public class ShapeMatchVertex extends GraphVertex {
     protected Map<Integer, Long> overrideSizeDims;
 
     public ShapeMatchVertex(MergeVertex graphVertex) {
-        this(graphVertex,  Collections.singletonMap(1,1L)); // Might not hold for conv3D layers...
+        this(graphVertex, Collections.singletonMap(1, 1L)); // Might not hold for conv3D layers...
     }
 
     public ShapeMatchVertex(GraphVertex graphVertex) {
-        this(graphVertex,  Collections.emptyMap());
+        this(graphVertex, Collections.emptyMap());
     }
 
     public ShapeMatchVertex(
             @JsonProperty("graphVertex") GraphVertex graphVertex,
             @JsonProperty("overrideSizeDims") Map<Integer, Long> overrideSizeDims) {
         this.graphVertex = graphVertex;
-        if(graphVertex.maxVertexInputs() < 2) {
+        if (graphVertex.maxVertexInputs() < 2) {
             throw new IllegalArgumentException("Must be able to take more than one input! Got: " + graphVertex);
         }
         this.overrideSizeDims = overrideSizeDims;
@@ -71,9 +72,12 @@ public class ShapeMatchVertex extends GraphVertex {
     }
 
     @Override
-    public org.deeplearning4j.nn.graph.vertex.GraphVertex instantiate(ComputationGraph graph, String name, int idx, INDArray paramsView, boolean initializeParams) {
-        return new ode.vertex.impl.ShapeMatchVertex(graph, name, idx,
-                graphVertex.instantiate(graph, name+"-vertex", idx, paramsView, initializeParams), overrideSizeDims);
+    public org.deeplearning4j.nn.graph.vertex.GraphVertex instantiate(
+            ComputationGraph graph, String name, int idx,
+            INDArray paramsView, boolean initializeParams, DataType networkDataType) {
+        return new ode.vertex.impl.ShapeMatchVertex(graph, name, idx, networkDataType,
+                graphVertex.instantiate(graph, name + "-vertex", idx, paramsView, initializeParams, networkDataType),
+                overrideSizeDims);
     }
 
     @Override
@@ -84,14 +88,14 @@ public class ShapeMatchVertex extends GraphVertex {
 
     @NotNull
     private InputType[] getInputTypesAfterDuplication(InputType[] vertexInputs) {
-        if(vertexInputs.length < 2) {
+        if (vertexInputs.length < 2) {
             throw new IllegalArgumentException("Must have more than one inputs!! Got: " + Arrays.toString(vertexInputs));
         }
 
         final InputType[] afterDuplicate = vertexInputs.clone();
         final long[] shape = afterDuplicate[0].getShape(true);
         shape[0] = 1;
-        for(Map.Entry<Integer, Long> sizeDim: overrideSizeDims.entrySet()) {
+        for (Map.Entry<Integer, Long> sizeDim : overrideSizeDims.entrySet()) {
             shape[sizeDim.getKey()] = sizeDim.getValue();
         }
         final InputType newType = InputType.inferInputType(Nd4j.createUninitialized(shape));

@@ -17,10 +17,7 @@ public class NDArrayIndexAccumulator {
 
     public NDArrayIndexAccumulator(INDArray array) {
         this.array = array;
-        state = new INDArrayIndex[array.shape().length];
-        for(int i = 0; i < array.shape().length; i++) {
-            state[i] = new NDArrayIndexAll(true);
-        }
+        state = NDArrayIndex.allFor(array);
     }
 
     public NDArrayIndexAccumulator increment(INDArray toAdd) {
