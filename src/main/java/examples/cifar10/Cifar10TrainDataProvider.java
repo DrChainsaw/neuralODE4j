@@ -26,7 +26,6 @@ public class Cifar10TrainDataProvider implements DataSetIteratorFactory {
 
     @Override
     public DataSetIterator create() {
-        final int numCh = CifarLoader.CHANNELS;
         final int height = CifarLoader.HEIGHT;
         final int width = CifarLoader.WIDTH;
 
@@ -42,7 +41,7 @@ public class Cifar10TrainDataProvider implements DataSetIteratorFactory {
 
         return new Cifar10DataSetIterator(
                 trainBatchSize,
-                new int[]{height, width, numCh},
+                new int[]{height, width},
                 DataSetType.TRAIN,
                 dataAug,
                 123);
