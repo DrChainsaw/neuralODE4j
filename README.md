@@ -28,7 +28,8 @@ mvn install
 
 I will try to create a maven artifact whenever I find the time for it. Please file an issue for this if you are interested.
 
-Implementations of the MNIST and spiral generation toy experiments from the paper can be found under examples [[link]](./src/main/java/examples)
+Implementations of the MNIST and spiral generation toy experiments from the paper and a few other examples can be found 
+in the [examples](./src/main/java/examples) package.
 
 ## Usage
 

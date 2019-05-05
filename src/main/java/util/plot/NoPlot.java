@@ -1,5 +1,6 @@
 package util.plot;
 
+import java.awt.*;
 import java.io.IOException;
 import java.util.List;
 
@@ -20,23 +21,46 @@ public class NoPlot<X extends Number, Y extends Number> implements Plot<X, Y> {
         }
     }
 
-    @Override
-    public void createSeries(String label) {
-        // Ignore
+    private static class Series implements Plot.Series {
+
+        @Override
+        public Plot.Series line() {
+            return this;
+        }
+
+        @Override
+        public Plot.Series scatter() {
+            return this;
+        }
+
+        @Override
+        public Plot.Series set(Color color) {
+            return this;
+        }
     }
 
     @Override
-    public void plotData(String label, X x, Y y) {
-        // Ignore
+    public Series createSeries(String label) {
+        return new Series();
     }
 
     @Override
-    public void plotData(String label, List<X> x, List<Y> y) {
-        // Ignore
+    public Series plotData(String label, X x, Y y) {
+        return new Series();
     }
 
     @Override
-    public void clearData(String label) {
+    public Series plotData(String label, List<X> x, List<Y> y) {
+        return new Series();
+    }
+
+    @Override
+    public Series clearData(String label) {
+        return new Series();
+    }
+
+    @Override
+    public void clearData() {
         // Ignore
     }
 

@@ -8,6 +8,7 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.graph.MergeVertex;
 import org.deeplearning4j.nn.conf.graph.ScaleVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
 import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.junit.Test;
@@ -55,6 +56,27 @@ public class OdeVertexTest {
         graph.init();
         INDArray output = graph.outputSingle(Nd4j.randn(new long[]{1, 1, 9, 9}));
         assertNotEquals("Expected non-zero output!", 0, output.sumNumber());
+    }
+
+    /**
+     * Test that an exception is thrown when input and output to ODE vertex does not match
+     */
+    @Test(expected = InvalidInputTypeException.class)
+    public void inputSizeNotEqualToOutputSize() {
+        final long nrofInputs = 3;
+        final long nrofOdeOutputs = nrofInputs + 1; // Not allowed!!
+        new NeuralNetConfiguration.Builder()
+                .graphBuilder()
+                .addInputs("input")
+                .setInputTypes(InputType.feedForward(nrofInputs))
+                .addVertex("ode", new ode.vertex.conf.OdeVertex.Builder
+                        (new NeuralNetConfiguration.Builder(), "func", new DenseLayer.Builder()
+                                .nOut(nrofOdeOutputs)
+                                .build())
+                        .build(), "input")
+                .setOutputs("output")
+                .addLayer("output", new LossLayer(), "ode")
+                .build(); // Shall fail
     }
 
     /**
