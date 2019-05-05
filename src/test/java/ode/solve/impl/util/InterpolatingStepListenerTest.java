@@ -69,11 +69,11 @@ public class InterpolatingStepListenerTest {
         final FirstOrderEquation equation = new CircleODE(new double[]{1.23, 4.56}, omega);
 
         final int nrofSteps = 25;
-        final INDArray y0 = Nd4j.create(new double[]{-5.6, 7.3});
+        final INDArray y0 = Nd4j.create(new float[]{-5.6f, 7.3f});
         final INDArray ySingle = y0.dup();
         final INDArray yMulti = Nd4j.repeat(ySingle, nrofSteps - 1).reshape(nrofSteps - 1, y0.length()).assign(0);
 
-        final INDArray tStartEnd = Nd4j.create(new double[]{-Math.PI / omega, Math.PI / omega});
+        final INDArray tStartEnd = Nd4j.create(new double[]{-Math.PI / omega, Math.PI / omega}).castTo(DataType.FLOAT);
         if (backwards) tStartEnd.negi();
         final INDArray t = Nd4j.linspace(tStartEnd.getDouble(0), tStartEnd.getDouble(1), nrofSteps, DataType.FLOAT);
 

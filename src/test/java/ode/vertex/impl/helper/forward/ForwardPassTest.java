@@ -13,6 +13,7 @@ import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -45,7 +46,7 @@ public class ForwardPassTest {
         double mul = 1.23;
         graph.params().muli(mul);
 
-        final INDArray input = Nd4j.arange(nrofInputs);
+        final INDArray input = Nd4j.arange(nrofInputs).reshape(1, nrofInputs);
         final INDArray expected = input.mul(mul);
         final INDArray actual = new ForwardPass(graph, LayerWorkspaceMgr.noWorkspaces(), false, new NoTimeInput(new INDArray[]{input}))
                 .calculateDerivative(input, Nd4j.scalar(0), input.dup());
@@ -80,13 +81,13 @@ public class ForwardPassTest {
                 .build());
         graph.init();
 
-        final INDArray input = Nd4j.arange(nrofInputs);
+        final INDArray input = Nd4j.arange(nrofInputs).reshape(1, nrofInputs);
         final INDArray time = Nd4j.scalar(7.89);
         final INDArray expected = Nd4j.create(input.shape()).assign(input.sumNumber()).addi(time.getDouble(0));
         final INDArray actual = new ForwardPass(graph, LayerWorkspaceMgr.noWorkspaces(), false,
                 new TimeInput(new INDArray[]{input}))
                 .calculateDerivative(input, time, input.dup());
 
-        assertEquals("Incorrect output!", expected, actual);
+        assertArrayEquals("Incorrect output!", expected.toDoubleVector(), actual.toDoubleVector(), 1e-10);
     }
 }

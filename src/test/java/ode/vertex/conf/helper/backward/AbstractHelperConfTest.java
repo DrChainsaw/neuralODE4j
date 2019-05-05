@@ -173,9 +173,12 @@ abstract class AbstractHelperConfTest {
         final long[] outputShape = nrofTimeSteps == 2 ? shape : new long[]{ batchSize, nrofTimeStepsToUse, shape[1], shape[2], shape[3]};
 
 
-        final INDArray input = Nd4j.arange(batchSize * convInput.arrayElementsPerExample()).reshape(shape);
+        final INDArray input = Nd4j.arange(batchSize * convInput.arrayElementsPerExample())
+                .reshape(shape)
+                .castTo(Nd4j.defaultFloatingPointType());
         final INDArray output = Nd4j.arange(batchSize * nrofTimeStepsToUse * convInput.arrayElementsPerExample())
-                .reshape(outputShape);
+                .reshape(outputShape)
+                .castTo(Nd4j.defaultFloatingPointType());
         final INDArray epsilon = Nd4j.ones(outputShape).assign(0.01);
         final NonContiguous1DView realGrads = new NonContiguous1DView();
         realGrads.addView(graph.getGradientsViewArray());

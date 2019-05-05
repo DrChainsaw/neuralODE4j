@@ -140,7 +140,7 @@ public class OdeNetModel implements ModelFactory {
         return
                 new AddTimeMultiDataSetIter(
                         iter
-                        , Nd4j.arange(2)); // Start with time steps 0 to 1
+                        , Nd4j.arange(2).castTo(Nd4j.defaultFloatingPointType())); // Start with time steps 0 to 1
     }
 }
 

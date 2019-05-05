@@ -34,9 +34,9 @@ public class SolverConfigINDArray {
         if (minStep >= maxStep) {
             throw new IllegalArgumentException("Max step smaller than min step! Swapped arguments? max: " + maxStep + " min " + minStep);
         }
-        this.absTol = Nd4j.scalar(absoluteTolerance);
-        this.relTol = Nd4j.scalar(relativeTolerance);
-        this.minStep = Nd4j.scalar(minStep);
-        this.maxStep = Nd4j.scalar(maxStep);
+        this.absTol = Nd4j.scalar(Nd4j.defaultFloatingPointType(), absoluteTolerance);
+        this.relTol = Nd4j.scalar(Nd4j.defaultFloatingPointType(), relativeTolerance);
+        this.minStep = Nd4j.scalar(Nd4j.defaultFloatingPointType(), minStep);
+        this.maxStep = Nd4j.scalar(Nd4j.defaultFloatingPointType(), maxStep);
     }
 }

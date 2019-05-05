@@ -14,6 +14,7 @@ import org.nd4j.linalg.primitives.Pair;
 import java.util.Collections;
 
 import static junit.framework.TestCase.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 
 /**
  * Test cases for {@link ShapeMatchVertex}
@@ -56,9 +57,10 @@ public class ShapeMatchVertexTest {
                 null, "dummy", 1, null, false, DataType.FLOAT);
         vertex.setInputs(input, Nd4j.scalar(scalar));
 
-        assertEquals("Incorrect output!",
-                input.add(scalar),
-                vertex.doForward(false, LayerWorkspaceMgr.noWorkspacesImmutable()));
+        assertArrayEquals("Incorrect output!",
+                input.add(scalar).reshape(input.length()).toDoubleVector(),
+                vertex.doForward(false, LayerWorkspaceMgr.noWorkspacesImmutable()).reshape(input.length()).toDoubleVector()
+        , 1e-10);
     }
 
     /**

@@ -23,7 +23,7 @@ public class NDArrayIndexAccumulator {
     public NDArrayIndexAccumulator increment(INDArray toAdd) {
         if(toAdd.isEmpty()) return this;
 
-        for(int dim = 0; dim < toAdd.shape().length; dim++) {
+        for(int dim = 0; dim < array.rank(); dim++) {
             if(toAdd.size(dim) != array.size(dim)) {
                 final long curr = state[dim] instanceof NDArrayIndexAll ? 0 : state[dim].end();
                 state[dim] = NDArrayIndex.interval(curr, curr + toAdd.size(dim));

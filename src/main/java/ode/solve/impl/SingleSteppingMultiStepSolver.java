@@ -27,17 +27,16 @@ public class SingleSteppingMultiStepSolver implements FirstOrderMultiStepSolver 
         if(yOut.size(0) + 1 != t.length()) {
             throw new IllegalArgumentException("yOut must have one element less in first dimension compared to t!");
         }
-        final INDArrayIndex[] yOutAccess = new INDArrayIndex[yOut.rank()];
-        for(int dim = 0; dim < yOutAccess.length; dim++) {
-            yOutAccess[dim] = NDArrayIndex.all();
-        }
+        final INDArrayIndex[] yOutAccess = NDArrayIndex.allFor(yOut);
+        final INDArrayIndex[] tAccess = NDArrayIndex.allFor(t);
 
         for (int step = 1; step < t.length(); step++) {
             yOutAccess[0] = NDArrayIndex.point(step -2);
             final INDArray yPrev = step == 1 ? y0 : yOut.get(yOutAccess);
             yOutAccess[0] = NDArrayIndex.point(step-1);
             final INDArray yCurr = yOut.get(yOutAccess);
-            solver.integrate(equation, t.get(NDArrayIndex.interval(step - 1, step+1)), yPrev, yCurr);
+            tAccess[tAccess.length-1] = NDArrayIndex.interval(step - 1, step+1);
+            solver.integrate(equation, t.get(tAccess), yPrev, yCurr);
         }
 
         return yOut;

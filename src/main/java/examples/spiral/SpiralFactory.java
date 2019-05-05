@@ -107,7 +107,7 @@ class SpiralFactory {
             output.add(new SpiralFragment(
                     base,
                     base.trajectory.get(NDArrayIndex.all(), NDArrayIndex.interval(start, start + nrofSamples)),
-                    base.theta.get(NDArrayIndex.all(), NDArrayIndex.interval(start, start + nrofSamples)))
+                    base.theta.get(NDArrayIndex.interval(start, start + nrofSamples)))
             );
         }
 

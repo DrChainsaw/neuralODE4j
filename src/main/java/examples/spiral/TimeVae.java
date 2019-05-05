@@ -47,7 +47,7 @@ public class TimeVae {
         }
 
         final ComputationGraph encoder = new ComputationGraph(builder.build());
-        encoder.init(model.params().get(NDArrayIndex.interval(0, nrofParams)), false);
+        encoder.init(model.params().get(NDArrayIndex.all(), NDArrayIndex.interval(0, nrofParams)), false);
 
         return encoder;
     }
@@ -63,7 +63,7 @@ public class TimeVae {
         final long nrofParams = model.getVertex(zt).numParams();
 
         final ComputationGraph latentTime = new ComputationGraph(builder.build());
-        latentTime.init(model.params().get(NDArrayIndex.interval(paramStart, paramStart + nrofParams)), false);
+        latentTime.init(model.params().get(NDArrayIndex.all(), NDArrayIndex.interval(paramStart, paramStart + nrofParams)), false);
 
         return latentTime.getVertex(zt);
     }
@@ -89,7 +89,7 @@ public class TimeVae {
         builder.addInputs(zt);
 
         final ComputationGraph decoder = new ComputationGraph(builder.build());
-        decoder.init(model.params().get(NDArrayIndex.interval(paramStart, paramStart + nrofParams)), false);
+        decoder.init(model.params().get(NDArrayIndex.all(), NDArrayIndex.interval(paramStart, paramStart + nrofParams)), false);
 
         return decoder;
     }

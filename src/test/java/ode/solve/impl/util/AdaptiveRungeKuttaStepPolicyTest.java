@@ -24,8 +24,8 @@ public class AdaptiveRungeKuttaStepPolicyTest {
      */
     @Test
     public void initializeStep() {
-        final INDArray t = Nd4j.create(new double[]{-1.2, 7.4});
-        final INDArray y0 = Nd4j.create(new double[]{3, 5});
+        final INDArray t = Nd4j.create(new float[]{-1.2f, 7.4f});
+        final INDArray y0 = Nd4j.create(new float[]{3, 5});
         final CircleODE equation = new CircleODE(new double[]{1.23, 4.56}, 0.666);
 
         final double absTol = 1.23e-3;
@@ -52,7 +52,7 @@ public class AdaptiveRungeKuttaStepPolicyTest {
                 true, 5, scale, t.getDouble(0), y0.toDoubleVector(), yDot,
                 y1, yDot1);
 
-        final FirstOrderEquationWithState eqState = new FirstOrderEquationWithState(equation, t.getColumn(0), y0, new double [5]);
+        final FirstOrderEquationWithState eqState = new FirstOrderEquationWithState(equation, t.getScalar(0), y0, new double [5]);
         final INDArray stepAct = new AdaptiveRungeKuttaStepPolicy(
                 new SolverConfigINDArray(absTol, relTol, 1e-20, 1e20), 5)
                 .initializeStep(eqState, t);

@@ -34,9 +34,9 @@ public class DormandPrince54SolverTest extends AbstractConfTest {
         final FirstOrderSolver reference = new ode.solve.impl.DormandPrince54Solver(conf.getConfig());
         final FirstOrderSolver test = conf.instantiate();
 
-        final INDArray y0 = Nd4j.create(new double[]{3, -5});
+        final INDArray y0 = Nd4j.create(new float[]{3, -5});
         final INDArray y = Nd4j.create(1, 2);
-        final INDArray t = Nd4j.create(new double[] {-0.2, 0.4});
+        final INDArray t = Nd4j.create(new float[] {-0.2f, 0.4f});
 
         assertEquals("Incorrect solution!", reference.integrate(equation, t, y0, y.dup()), test.integrate(equation, t, y0, y.dup()));
     }

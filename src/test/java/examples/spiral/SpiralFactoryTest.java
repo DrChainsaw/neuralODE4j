@@ -24,7 +24,7 @@ public class SpiralFactoryTest {
         assertEquals("Incorrect number of samples!", 4, sample.size());
         for(SpiralFactory.Spiral spiral: sample) {
             assertArrayEquals("Incorrect trajectory!", new long[] {2, 100}, spiral.trajectory().shape());
-            assertArrayEquals("Incorrect theta!", new long[] {1, 100}, spiral.theta().shape());
+            assertArrayEquals("Incorrect theta!", new long[] {100}, spiral.theta().shape());
         }
     }
 }

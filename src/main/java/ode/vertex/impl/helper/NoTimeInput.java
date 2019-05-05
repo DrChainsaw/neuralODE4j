@@ -2,7 +2,6 @@ package ode.vertex.impl.helper;
 
 import ode.vertex.impl.helper.backward.AugmentedDynamics;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.primitives.Pair;
 
 import java.util.ArrayList;
@@ -16,7 +15,7 @@ import java.util.List;
  */
 public class NoTimeInput implements GraphInputOutput {
 
-    private final INDArray[] inputs;
+    private INDArray[] inputs;
 
     public NoTimeInput(INDArray[] inputs) {
         this.inputs = inputs;
@@ -25,18 +24,14 @@ public class NoTimeInput implements GraphInputOutput {
     @Override
     public void update(List<INDArray> gradients, AugmentedDynamics augmentedDynamics) {
         augmentedDynamics.updateZAdjoint(gradients);
-        augmentedDynamics.tAdjoint().assign(0);
     }
 
     @Override
     public INDArray[] getInputsFrom(INDArray y, INDArray t) {
-        int lastInd = 0;
-        for (int i = 0; i < inputs.length; i++) {
-            INDArray input = inputs[i];
-            final INDArray tmp = y.get(NDArrayIndex.interval(lastInd, lastInd + input.length()));
-            lastInd += input.length();
-            inputs[i] = tmp.reshape(input.shape());
+        if(inputs.length != 1) {
+            throw new IllegalArgumentException("Only single input supported!");
         }
+        inputs[0] = y.reshape(inputs[0].shape());
         return inputs;
     }
 

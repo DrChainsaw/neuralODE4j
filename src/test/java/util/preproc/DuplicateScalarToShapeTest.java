@@ -24,11 +24,11 @@ public class DuplicateScalarToShapeTest {
      */
     @Test
     public void preProcess() {
-        final INDArray input = Nd4j.scalar(666);
+        final INDArray input = Nd4j.scalar(666f);
         final InputPreProcessor preProcessor = new DuplicateScalarToShape();
 
         assertEquals("Incorrect output!",
-                Nd4j.createUninitialized(13).assign(input.sumNumber()),
+                Nd4j.createUninitialized(1,13).assign(input.sumNumber()),
                 preProcessor.preProcess(input, 13, LayerWorkspaceMgr.noWorkspacesImmutable()));
     }
 
@@ -37,7 +37,7 @@ public class DuplicateScalarToShapeTest {
      */
     @Test
     public void preProcess2x3x4() {
-        final INDArray input = Nd4j.scalar(666);
+        final INDArray input = Nd4j.scalar(666f);
         final InputPreProcessor preProcessor = new DuplicateScalarToShape(new long[]{-1, 2, 3, 4});
 
         assertEquals("Incorrect output!",

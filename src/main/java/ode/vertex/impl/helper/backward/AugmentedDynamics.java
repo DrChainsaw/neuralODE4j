@@ -1,10 +1,14 @@
 package ode.vertex.impl.helper.backward;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
-import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.nd4j.linalg.util.ArrayUtil;
 
 import java.util.List;
+
+import static org.nd4j.linalg.indexing.NDArrayIndex.all;
+import static org.nd4j.linalg.indexing.NDArrayIndex.interval;
 
 /**
  * Augmented Dynamics used for adjoint back propagation method from https://arxiv.org/pdf/1806.07366.pdf
@@ -23,10 +27,16 @@ public class AugmentedDynamics {
     public AugmentedDynamics(INDArray zAug, long[] zShape, long[] paramShape, long[] tShape) {
         this(
                 zAug,
-                zAug.get(NDArrayIndex.interval(0, length(zShape))).reshape(zShape),
-                zAug.get(NDArrayIndex.interval(length(zShape), 2 * length(zShape))).reshape(zShape),
-                zAug.get(NDArrayIndex.interval(2 * length(zShape), 2 * length(zShape) + length(paramShape))).reshape(paramShape),
-                zAug.get(NDArrayIndex.interval(2 * length(zShape) + length(paramShape), 2 * length(zShape) + length(paramShape) + length(tShape))).reshape(tShape));
+                zAug.get(all(), interval(0, numel(zShape))).reshape(zShape),
+                zAug.get(all(), interval(numel(zShape), 2 * numel(zShape))).reshape(zShape),
+                zAug.get(all(), interval(2 * numel(zShape), 2 * numel(zShape) + numel(paramShape))).reshape(paramShape),
+                numel(tShape) == 0
+                        ? Nd4j.empty()
+                        : zAug.get(
+                                all(),
+                        interval(2 * numel(zShape) + numel(paramShape),
+                                2 * numel(zShape) + numel(paramShape) + numel(tShape)))
+                        .reshape(tShape));
     }
 
     AugmentedDynamics(INDArray augStateFlat, INDArray z, INDArray zAdjoint, INDArray paramAdjoint, INDArray tAdjoint) {
@@ -37,12 +47,8 @@ public class AugmentedDynamics {
         this.tAdjoint = tAdjoint;
     }
 
-    private static long length(long[] shape) {
-        long length = 1;
-        for (long dimElems : shape) {
-            length *= dimElems;
-        }
-        return length;
+    private static long numel(long[] shape) {
+        return ArrayUtil.prodLong(shape);
     }
 
     public void updateFrom(INDArray zAug) {
@@ -58,7 +64,7 @@ public class AugmentedDynamics {
         for (int i = 0; i < epsilons.size(); i++) {
             final INDArray eps = epsilons.get(i);
             zAdjoint.reshape(1, zAdjoint.length())
-                    .put(new INDArrayIndex[]{NDArrayIndex.all(), NDArrayIndex.interval(lastInd, eps.length())},
+                    .put(new INDArrayIndex[]{all(), interval(lastInd, eps.length())},
                             eps.reshape(new long[]{1, eps.length()}));
             lastInd += eps.length();
         }

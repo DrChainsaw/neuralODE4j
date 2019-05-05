@@ -32,9 +32,9 @@ public class DummyIteration implements FirstOrderSolver {
         listener.begin(t, y0);
 
         for (int i = 0; i < nrofIters; i++) {
-            next = equation.calculateDerivative(next, t.getColumn(0), yOut);
+            next = equation.calculateDerivative(next, t.getScalar(0), yOut);
             listener.step(
-                    new StateContainer(t.getColumn(0),
+                    new StateContainer(t.getScalar(0),
                             next,
                             Nd4j.zeros(next.shape())),
                     Nd4j.zeros(1), Nd4j.zeros(1));

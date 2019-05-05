@@ -45,7 +45,7 @@ public class InterpolatingMultiStepSolverTest {
         final FirstOrderEquation equation = new CircleODE(new double[] {1.23, 4.56}, omega);
 
         final int nrofSteps = 25;
-        final INDArray y0 = Nd4j.create(new double[] {-5.6, 7.3});
+        final INDArray y0 = Nd4j.create(new float[] {-5.6f, 7.3f});
         final INDArray ySingle = y0.dup();
         final INDArray yMulti = Nd4j.repeat(ySingle,nrofSteps-1).reshape(nrofSteps-1, y0.length()).assign(0);
         final INDArray t = Nd4j.linspace(-Math.PI/omega,Math.PI/omega , nrofSteps, DataType.FLOAT);

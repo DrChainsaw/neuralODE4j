@@ -46,7 +46,7 @@ class OdeNetModelFactory implements ModelFactory {
 
         final FirstOrderSolverConf odeSolverConf = createSolver();
 
-        final OdeHelper odeHelper = new FixedStep(odeSolverConf, Nd4j.arange(2), true);
+        final OdeHelper odeHelper = new FixedStep(odeSolverConf, Nd4j.arange(2).castTo(Nd4j.defaultFloatingPointType()), true);
 
         next = new OdeBlockWithTime(
                 builder.getGlobalConfiguration(),

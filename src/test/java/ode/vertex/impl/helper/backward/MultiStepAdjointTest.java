@@ -24,12 +24,13 @@ import org.nd4j.linalg.activations.impl.ActivationIdentity;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.primitives.Pair;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.nd4j.linalg.indexing.NDArrayIndex.all;
+import static org.nd4j.linalg.indexing.NDArrayIndex.point;
 
 /**
  * Test cases for {@link MultiStepAdjoint}
@@ -48,7 +49,7 @@ public class MultiStepAdjointTest {
         final ComputationGraph graph = SingleStepAdjointTest.getTestGraph(nrofInputs);
         final OdeHelperBackward.InputArrays inputArrays = getTestInputArrays(nrofInputs, nrofTimeSteps, graph);
 
-        final INDArray time = Nd4j.arange(nrofTimeSteps);
+        final INDArray time = Nd4j.arange(nrofTimeSteps).castTo(Nd4j.defaultFloatingPointType());
         final OdeHelperBackward helper = new MultiStepAdjoint(
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
                 time, NoMultiStepTimeGrad.factory);
@@ -71,13 +72,13 @@ public class MultiStepAdjointTest {
      * Smoke test for backwards solve without time gradients
      */
     @Test
-    public void solveWithTime() throws InterruptedException {
+    public void solveWithTime() {
         final int nrofInputs = 5;
         final int nrofTimeSteps = 7;
         final ComputationGraph graph = SingleStepAdjointTest.getTestGraph(nrofInputs);
         final OdeHelperBackward.InputArrays inputArrays = getTestInputArrays(nrofInputs, nrofTimeSteps, graph);
 
-        final INDArray time = Nd4j.arange(nrofTimeSteps);
+        final INDArray time = Nd4j.arange(nrofTimeSteps).castTo(Nd4j.defaultFloatingPointType());
         final OdeHelperBackward helper = new MultiStepAdjoint(
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
                 time, new CalcMultiStepTimeGrad.Factory(time, 1));
@@ -103,9 +104,14 @@ public class MultiStepAdjointTest {
     @NotNull
     private static OdeHelperBackward.InputArrays getTestInputArrays(int nrofInputs, int nrofTimeSteps, ComputationGraph graph) {
         final int batchSize = 3;
-        final INDArray input = Nd4j.arange(batchSize * nrofInputs).reshape(batchSize, nrofInputs);
-        final INDArray output = Nd4j.arange(batchSize * nrofInputs * nrofTimeSteps).reshape(batchSize, nrofInputs, nrofTimeSteps);
-        final INDArray epsilon = Nd4j.ones(batchSize, nrofInputs, nrofTimeSteps).assign(0.01);
+        final INDArray input = Nd4j.arange(batchSize * nrofInputs)
+                .reshape(batchSize, nrofInputs)
+                .castTo(Nd4j.defaultFloatingPointType());
+        final INDArray output = Nd4j.arange(batchSize * nrofInputs * nrofTimeSteps)
+                .reshape(batchSize, nrofInputs, nrofTimeSteps)
+                .castTo(Nd4j.defaultFloatingPointType());
+        final INDArray epsilon = Nd4j.ones(batchSize, nrofInputs, nrofTimeSteps)
+                .assign(0.01);
         final NonContiguous1DView realGrads = new NonContiguous1DView();
         realGrads.addView(graph.getGradientsViewArray());
 
@@ -195,13 +201,14 @@ public class MultiStepAdjointTest {
             for (int j = 0; j < expectedYs.length; j++) {
                 assertArrayEquals("Incorrect ys: ",
                         expectedYs[i][j],
-                        ys.reshape(ys.size(0), nrofDims, nrofTimeSteps).getRow(i).getRow(j).toDoubleVector(), 1e-3);
+                        ys.reshape(ys.size(0), nrofDims, nrofTimeSteps)
+                                .get(point(i), point(j), all()).toDoubleVector(), 1e-3);
             }
         }
 
         final INDArray lossgrad = Nd4j.linspace(3, 13, ys.length()).reshape(ys.shape());
         for (int i = 0; i < lossgrad.size(0) / 2; i++) {
-            lossgrad.get(NDArrayIndex.point(i * 2), NDArrayIndex.all(), NDArrayIndex.point(i * 2 + 1)).negi();
+            lossgrad.get(point(i * 2), all(), point(i * 2 + 1)).negi();
         }
 
         odevert.setEpsilon(lossgrad.reshape(ys.shape()));
@@ -243,8 +250,8 @@ public class MultiStepAdjointTest {
 
         final GraphVertex odevert = createOdeVertex(nrofTimeSteps, nrofDims);
 
-        final INDArray time = Nd4j.linspace(-1, -8, nrofTimeSteps);
-        final INDArray y0 = Nd4j.linspace(-1.23, 2.34, 2 * nrofDims, DataType.FLOAT).reshape(2, nrofDims);
+        final INDArray time = Nd4j.linspace(-1, -8, nrofTimeSteps, Nd4j.defaultFloatingPointType());
+        final INDArray y0 = Nd4j.linspace(-1.23, 2.34, 2 * nrofDims, Nd4j.defaultFloatingPointType()).reshape(2, nrofDims);
 
         odevert.setInputs(y0, time);
         final INDArray ys = odevert.doForward(true, LayerWorkspaceMgr.noWorkspacesImmutable());
@@ -259,13 +266,14 @@ public class MultiStepAdjointTest {
             for (int j = 0; j < expectedYs.length; j++) {
                 assertArrayEquals("Incorrect ys: ",
                         expectedYs[i][j],
-                        ys.reshape(ys.size(0), nrofDims, nrofTimeSteps).getRow(i).getRow(j).toDoubleVector(), 1e-3);
+                        ys.reshape(ys.size(0), nrofDims, nrofTimeSteps)
+                                .get(point(i), point(j), all()).toDoubleVector(), 1e-3);
             }
         }
 
         final INDArray lossgrad = Nd4j.linspace(3, 13, ys.length()).reshape(ys.shape());
         for (int i = 0; i < lossgrad.size(0) / 2; i++) {
-            lossgrad.get(NDArrayIndex.point(i * 2), NDArrayIndex.all(), NDArrayIndex.point(i * 2 + 1)).negi();
+            lossgrad.get(point(i * 2), all(), point(i * 2 + 1)).negi();
         }
 
         odevert.setEpsilon(lossgrad.reshape(ys.shape()));

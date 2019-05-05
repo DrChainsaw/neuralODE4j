@@ -48,13 +48,13 @@ public class InputStepTest {
      */
     @Test
     public void solveMultiStep() {
-        final INDArray t = Nd4j.arange(5);
+        final INDArray t = Nd4j.arange(5).castTo(Nd4j.defaultFloatingPointType());
         final double exponent = 0.12;
         final int nrofInputs = 4;
         final ComputationGraph graph = SingleStepTest.getSimpleExpGraph(exponent, nrofInputs);
 
-        final INDArray input = Nd4j.arange(nrofInputs);
-        final INDArray expected = input.transpose().mmul(Transforms.exp(t.mul(exponent)));
+        final INDArray input = Nd4j.arange(nrofInputs).reshape(1, nrofInputs).castTo(Nd4j.defaultFloatingPointType());
+        final INDArray expected = input.transpose().mmul(Transforms.exp(t.mul(exponent)).reshape(1, 5));
 
         final FirstOrderSolver solver = new DormandPrince54Solver(new SolverConfig(1e-10, 1e-10, 1e-10, 100));
         final OdeHelperForward helper = new InputStep(

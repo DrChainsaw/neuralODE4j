@@ -37,11 +37,11 @@ public class SampleGaussianVertexTest {
     @Test
     public void doForward() {
         final long nrofLatentDims = 4;
-        final ComputationGraph graph = getGraph(nrofLatentDims, new SampleGaussianVertex(666));
+        final ComputationGraph graph = getGraph(nrofLatentDims, new SampleGaussianVertex(6666));
 
         final int batchSize = 100000;
-        final INDArray means = Nd4j.arange(nrofLatentDims);
-        final INDArray logVars = Nd4j.arange(nrofLatentDims, 2*nrofLatentDims);
+        final INDArray means = Nd4j.arange(nrofLatentDims).reshape(1, nrofLatentDims);
+        final INDArray logVars = Nd4j.arange(nrofLatentDims, 2 * nrofLatentDims).reshape(1, nrofLatentDims);
         INDArray output = graph.outputSingle(Nd4j.repeat(means, batchSize), Nd4j.repeat(logVars, batchSize));
 
         assertArrayEquals("Incorrect mean!", means.toDoubleVector(), output.mean(0).toDoubleVector(), 1e-1);
@@ -59,18 +59,24 @@ public class SampleGaussianVertexTest {
         final GraphVertex vertex = graph.getVertex("z");
 
         // Need to do a forward pass to set inputs and calculate epsilon
-        vertex.setInput(0, Nd4j.arange(2*nrofLatentDims), LayerWorkspaceMgr.noWorkspaces());
+        vertex.setInput(0,
+                Nd4j.arange(2 * nrofLatentDims)
+                        .reshape(1, 2 * nrofLatentDims)
+                        .castTo(Nd4j.defaultFloatingPointType())
+                , LayerWorkspaceMgr.noWorkspaces());
         vertex.doForward(true, LayerWorkspaceMgr.noWorkspaces());
 
-        vertex.setEpsilon(Nd4j.create(new double[] {1.3, 2.4}));
+        vertex.setEpsilon(Nd4j.create(new float[][]{{1.3f, 2.4f}}));
         final Pair<Gradient, INDArray[]> result = graph.getVertex("z").doBackward(false, LayerWorkspaceMgr.noWorkspaces());
 
         assertEquals("Incorrect gradient for mean!",
                 vertex.getEpsilon(),
                 result.getSecond()[0].get(NDArrayIndex.all(), NDArrayIndex.interval(0, nrofLatentDims)));
-        assertEquals("Incorrect gradient for log var!",
-                Nd4j.create(new double[] {2.6503,   23.1255}),
-                result.getSecond()[0].get(NDArrayIndex.all(), NDArrayIndex.interval(nrofLatentDims, 2*nrofLatentDims)));
+        assertArrayEquals("Incorrect gradient for log var!",
+                new double[]{2.6503, 23.1255},
+                result.getSecond()[0]
+                        .get(NDArrayIndex.point(0), NDArrayIndex.interval(nrofLatentDims, 2 * nrofLatentDims))
+        .toDoubleVector(), 1e-4);
     }
 
     @NotNull
@@ -124,7 +130,7 @@ public class SampleGaussianVertexTest {
         @Override
         public GraphVertex instantiate(ComputationGraph graph, String name, int idx, INDArray paramsView, boolean initializeParams, DataType networkDataType) {
             return new examples.spiral.vertex.impl.SampleGaussianVertex(graph, name, idx, shape -> {
-                final long sum = LongStream.of(shape).reduce(1, (l1,l2) -> l1*l2);
+                final long sum = LongStream.of(shape).reduce(1, (l1, l2) -> l1 * l2);
                 return Nd4j.linspace(1.5, 4.3, sum, networkDataType).reshape(shape);
             }, networkDataType);
         }

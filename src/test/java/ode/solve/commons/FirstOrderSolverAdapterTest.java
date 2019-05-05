@@ -7,7 +7,7 @@ import org.junit.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 
 /**
  * Test cases for {@link FirstOrderSolverAdapter}
@@ -26,12 +26,12 @@ public class FirstOrderSolverAdapterTest {
 
         final double[] y0 = {3, 5};
         final double[] ts = {7, 11};
-        final double[] y = new double[2];
-        solver.integrate(equation, ts[0], y0, ts[1], y);
+        final double[][] y = new double[1][2];
+        solver.integrate(equation, ts[0], y0, ts[1], y[0]);
 
         final INDArray actual = new FirstOrderSolverAdapter(solver).integrate(equation, Nd4j.create(ts), Nd4j.create(y0), Nd4j.create(1, 2));
 
-        assertEquals("Incorrect answer!", Nd4j.create(y), actual);
+        assertArrayEquals("Incorrect answer!", y[0], actual.toDoubleVector(), 1e-5);
     }
 
 }

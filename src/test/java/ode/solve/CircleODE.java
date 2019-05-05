@@ -3,6 +3,7 @@ package ode.solve;
 import ode.solve.api.FirstOrderEquation;
 import org.apache.commons.math3.ode.FirstOrderDifferentialEquations;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
 /**
  * Test class for ODEs. Copied from http://commons.apache.org/proper/commons-math/userguide/ode.html
@@ -35,6 +36,7 @@ public class CircleODE implements FirstOrderEquation, FirstOrderDifferentialEqua
     public INDArray calculateDerivative(INDArray y, INDArray t, INDArray fy) {
         fy.putScalar(0, omega * (c[1] - y.getDouble(1)));
         fy.putScalar(1, omega * (y.getDouble(0) - c[0]));
+        fy.castTo(Nd4j.defaultFloatingPointType());
         return fy;
     }
 }

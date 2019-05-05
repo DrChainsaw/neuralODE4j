@@ -36,10 +36,10 @@ public class LossHuber implements ILossFunction {
         final INDArray output = activationFn.getActivation(preOutput.dup(), true);
         final INDArray absDiff = Transforms.abs(labels.sub(output));
 
-        final INDArray indsL2 = absDiff.cond(new LessThan(1));
+        final INDArray indsL2 = absDiff.cond(new LessThan(1)).castTo(absDiff.dataType());
         final INDArray sqr = indsL2.muli(absDiff).muli(absDiff).muli(0.5);
 
-        final INDArray indsL1 = absDiff.cond(new GreaterThanOrEqual(1));
+        final INDArray indsL1 = absDiff.cond(new GreaterThanOrEqual(1)).castTo(absDiff.dataType());
 
         final INDArray scoreArr = sqr.addi(absDiff.subi(0.5).muli(indsL1));
 
@@ -58,10 +58,10 @@ public class LossHuber implements ILossFunction {
         final INDArray diff = output.subi(labels);
         final INDArray absDiff = Transforms.abs(diff);
 
-        final INDArray indsL2 = absDiff.cond(new LessThan(1));
+        final INDArray indsL2 = absDiff.cond(new LessThan(1)).castTo(absDiff.dataType());
         final INDArray sqr = indsL2.muli(diff); // 0.5 and 2 cancel out
 
-        final INDArray indsL1 = absDiff.cond(new GreaterThanOrEqual(1));
+        final INDArray indsL1 = absDiff.cond(new GreaterThanOrEqual(1)).castTo(absDiff.dataType());
 
         final INDArray dLda = Transforms.sign(diff).muli(indsL1).addi(sqr);
 

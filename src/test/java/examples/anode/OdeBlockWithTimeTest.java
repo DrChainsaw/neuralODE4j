@@ -45,7 +45,9 @@ public class OdeBlockWithTimeTest {
 
         assertEquals("Incorrect order!", Arrays.asList("input", "ode", "output"), graph.getConfiguration().getTopologicalOrderStr());
 
-        assertEquals("Incorrect number of outputs!", nrofOutputs, graph.outputSingle(Nd4j.arange(nrofOutputs)).length());
+        assertEquals("Incorrect number of outputs!",
+                nrofOutputs,
+                graph.outputSingle(Nd4j.arange(nrofOutputs).reshape(1,nrofOutputs)).length());
     }
 
     private static class DummyBlock implements Block {

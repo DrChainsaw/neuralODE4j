@@ -1,5 +1,6 @@
 package ode.solve.impl.util;
 
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -12,7 +13,7 @@ import static org.nd4j.linalg.ops.transforms.Transforms.*;
  */
 public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
 
-    private final static INDArray MIN_H = Nd4j.create(1).putScalar(0, 1e-6);
+    private final static INDArray MIN_H = Nd4j.scalar(DataType.FLOAT, 1e-6);
 
     private final SolverConfigINDArray config;
     private final StepConfig stepConfig;
@@ -20,58 +21,72 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
 
     public static class StepConfig {
         private final INDArray maxGrowth;
-        private final INDArray  minReduction;
-        private final INDArray  safety;
+        private final INDArray minReduction;
+        private final INDArray safety;
         private final int order;
 
         public static Builder builder(int order) {
             return new Builder(order);
         }
 
-        public StepConfig(final double maxGrowth,
-                          final double minReduction,
-                          final double safety,
+        public StepConfig(final INDArray maxGrowth,
+                          final INDArray minReduction,
+                          final INDArray safety,
                           final int order) {
-            this.maxGrowth = Nd4j.scalar(maxGrowth);
-            this.minReduction = Nd4j.scalar(minReduction);
-            this.safety = Nd4j.scalar(safety);
+            this.maxGrowth = maxGrowth;
+            this.minReduction = minReduction;
+            this.safety = safety;
             this.order = order;
         }
-        
+
         public static class Builder {
 
             private double maxGrowth = 10;
             private double minReduction = 0.2;
             private double safety = 0.9;
+            private DataType dataType = Nd4j.defaultFloatingPointType();
             private final int order;
 
             private Builder(int order) {
                 this.order = order;
             }
 
-            /** Set the maximal growth factor for stepsize control.
+            /**
+             * Set the maximal growth factor for stepsize control.
+             *
              * @param maxGrowth maximal growth factor
              */
             public Builder setMaxGrowth(double maxGrowth) {
-                this.maxGrowth = maxGrowth; return this;
+                this.maxGrowth = maxGrowth;
+                return this;
             }
 
-            /** Set the minimal reduction factor for stepsize control.
+            /**
+             * Set the minimal reduction factor for stepsize control.
+             *
              * @param minReduction minimal reduction factor
              */
             public Builder setMinReduction(double minReduction) {
-                this.minReduction = minReduction; return this;
+                this.minReduction = minReduction;
+                return this;
             }
 
-            /** Set the safety factor for stepsize control.
+            /**
+             * Set the safety factor for stepsize control.
+             *
              * @param safety safety factor
              */
             public Builder setSafety(double safety) {
-                this.safety = safety; return this;
+                this.safety = safety;
+                return this;
             }
 
             public StepConfig build() {
-                return new StepConfig(maxGrowth, minReduction, safety, order);
+                return new StepConfig(
+                        Nd4j.scalar(dataType, maxGrowth),
+                        Nd4j.scalar(dataType, minReduction),
+                        Nd4j.scalar(dataType, safety),
+                        order);
             }
         }
     }
@@ -108,7 +123,7 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
             step.negi();
         }
 
-        equation.step(Nd4j.ones(1), step);
+        equation.step(Nd4j.ones(1,1), step);
         equation.calculateDerivative(1);
 
         // Reuse ratio variable
@@ -126,10 +141,10 @@ public class AdaptiveRungeKuttaStepPolicy implements StepPolicy {
                 pow(maxInv2.rdivi(0.01), 1d / stepConfig.order);
 
         step.assign(min(abs(step).muli(100), step1));
-        step.assign(max(step, abs(t.getColumn(0)).muli(1e-12)));
+        step.assign(max(step, abs(t.getScalar(0)).muli(1e-12)));
 
-        step.assign(max(config.getMinStep(), step.getDouble(0)));
-        step.assign(min(config.getMaxStep(), step.getDouble(0)));
+        step.assign(max(config.getMinStep(), step));
+        step.assign(min(config.getMaxStep(), step));
 
         if (backward) {
             step.negi();

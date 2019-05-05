@@ -75,18 +75,19 @@ public class ButcherTableu {
             this.cMid = cMid; return this;
         }
 
-        public ButcherTableu build(DataType dataType) {
+        public ButcherTableu build() {
+            final DataType dataType = Nd4j.defaultFloatingPointType();
             ButcherTableu tableu = cache.get(dataType);
             if(tableu == null) {
                 final INDArray[] aArr = new INDArray[a.length];
                 for(int i = 0; i < a.length; i++) {
-                    aArr[i] = Nd4j.create(a[i]).castTo(dataType);
+                    aArr[i] = Nd4j.create(a[i]).castTo(dataType).reshape(1, a[i].length);
                 }
                 tableu = new ButcherTableu(
                         aArr,
-                        Nd4j.create(b).castTo(dataType),
-                        Nd4j.create(bStar).castTo(dataType),
-                        Nd4j.create(c).castTo(dataType),
+                        Nd4j.create(b).castTo(dataType).reshape(1, b.length),
+                        Nd4j.create(bStar).castTo(dataType).reshape(1, bStar.length),
+                        Nd4j.create(c).castTo(dataType).reshape(1, c.length),
                         cMid);
                 cache.put(dataType, tableu);
             }

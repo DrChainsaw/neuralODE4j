@@ -12,6 +12,8 @@ import org.nd4j.linalg.api.memory.conf.WorkspaceConfiguration;
 import org.nd4j.linalg.api.memory.enums.SpillPolicy;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.conditions.GreaterThanOrEqual;
+import org.nd4j.linalg.indexing.conditions.LessThanOrEqual;
 
 /**
  * Generic adaptive step size Runge-Kutta solver. Implementation based on
@@ -65,18 +67,18 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
     private static class TimeLimitForwards implements TimeLimit {
 
-        private final double tLast;
+        private final INDArray tLast;
         private final INDArray t;
 
-        private TimeLimitForwards(double tLast, INDArray t) {
+        private TimeLimitForwards(INDArray tLast, INDArray t) {
             this.tLast = tLast;
             this.t = t;
         }
 
         @Override
         public boolean isLastStep(INDArray step) {
-            if (t.add(step).getDouble(0) >= tLast) {
-                step.assign(tLast - t.getDouble(0));
+            if (t.add(step).subi(tLast).cond(new GreaterThanOrEqual(0)).any()) {
+                step.assign(tLast.sub(t));
                 return true;
             }
             return false;
@@ -85,18 +87,18 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
     private static class TimeLimitBackwards implements TimeLimit {
 
-        private final double tLast;
+        private final INDArray tLast;
         private final INDArray t;
 
-        private TimeLimitBackwards(double tLast, INDArray t) {
+        private TimeLimitBackwards(INDArray tLast, INDArray t) {
             this.tLast = tLast;
             this.t = t;
         }
 
         @Override
         public boolean isLastStep(INDArray step) {
-            if (t.add(step).getDouble(0) <= tLast) {
-                step.assign(tLast - t.getDouble(0));
+            if (t.add(step).subi(tLast).cond(new LessThanOrEqual(0)).any()) {
+                step.assign(tLast.sub(t));
                 return true;
             }
             return false;
@@ -137,8 +139,8 @@ public class AdaptiveRungeKuttaSolver implements FirstOrderSolver {
 
         // Alg variable for where next step starts
         final TimeLimit timeLimit = t.argMax().getInt(0) == 1 ?
-                new TimeLimitForwards(t.getDouble(1), equation.time()) :
-                new TimeLimitBackwards(t.getDouble(1), equation.time());
+                new TimeLimitForwards(t.getScalar(1), equation.time()) :
+                new TimeLimitBackwards(t.getScalar(1), equation.time());
 
         final long stages = tableu.c.length() + 1;
 

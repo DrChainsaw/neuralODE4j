@@ -32,6 +32,7 @@ public class GradientViewSelectionFromBlacklisted implements GradientViewFactory
 
     public GradientViewSelectionFromBlacklisted() {
         this(Arrays.asList(
+                BatchNormalizationParamInitializer.GLOBAL_LOG_STD,
                 BatchNormalizationParamInitializer.GLOBAL_VAR,
                 BatchNormalizationParamInitializer.GLOBAL_MEAN));
     }

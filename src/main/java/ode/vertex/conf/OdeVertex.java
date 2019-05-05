@@ -167,8 +167,8 @@ public class OdeVertex extends GraphVertex {
 
         private final ComputationGraphConfiguration.GraphBuilder graphBuilder;
         private final String first;
-        private OdeHelperForward odeForwardConf = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2), true);
-        private OdeHelperBackward odeBackwardConf = new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.arange(2));
+        private OdeHelperForward odeForwardConf = new FixedStep(new DormandPrince54Solver(), Nd4j.arange(2).castTo(Nd4j.defaultFloatingPointType()), true);
+        private OdeHelperBackward odeBackwardConf = new FixedStepAdjoint(new DormandPrince54Solver(), Nd4j.arange(2).castTo(Nd4j.defaultFloatingPointType()));
         private GraphInputOutputFactory graphInputOutputFactory = new NoTimeInputFactory();
         private GradientViewFactory gradientViewFactory = new GradientViewSelectionFromBlacklisted();
 

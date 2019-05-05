@@ -107,7 +107,7 @@ public class OdeVertexTest {
 
             assertEquals("Config was not restored properly!", graph.getConfiguration(), newGraph.getConfiguration());
 
-            final INDArray input = Nd4j.randn(new long[]{1, 3, 9, 9});
+            final INDArray input = Nd4j.randn(Nd4j.defaultFloatingPointType(),1, 3, 9, 9);
             assertEquals("Output not the same!", graph.outputSingle(input), newGraph.outputSingle(input));
 
         } catch (IOException e) {

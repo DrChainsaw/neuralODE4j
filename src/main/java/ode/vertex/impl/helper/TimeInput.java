@@ -46,6 +46,9 @@ public class TimeInput implements GraphInputOutput {
     @Override
     public void update(List<INDArray> gradients, AugmentedDynamics augmentedDynamics) {
         augmentedDynamics.updateZAdjoint(gradients.subList(0, gradients.size()-1));
-        augmentedDynamics.tAdjoint().assign(gradients.get(gradients.size()-1));
+
+        if(!augmentedDynamics.tAdjoint().isEmpty()) {
+            augmentedDynamics.tAdjoint().assign(gradients.get(gradients.size() - 1));
+        }
     }
 }

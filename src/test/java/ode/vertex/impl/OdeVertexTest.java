@@ -54,7 +54,7 @@ public class OdeVertexTest {
                 .build());
 
         graph.init();
-        INDArray output = graph.outputSingle(Nd4j.randn(new long[]{1, 1, 9, 9}));
+        INDArray output = graph.outputSingle(Nd4j.randn(Nd4j.defaultFloatingPointType(),1, 1, 9, 9));
         assertNotEquals("Expected non-zero output!", 0, output.sumNumber());
     }
 
@@ -118,7 +118,7 @@ public class OdeVertexTest {
 
         graph.init();
         final INDArray before = graph.getVertex("1").params().dup();
-        graph.fit(new DataSet(Nd4j.randn(new long[]{1, 1, 9, 9}), Nd4j.create(new double[]{0, 1, 0})));
+        graph.fit(new DataSet(Nd4j.randn(Nd4j.defaultFloatingPointType(), 1, 1, 9, 9), Nd4j.create(new float[][]{{0, 1, 0}})));
         assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("1").params().dup());
     }
 
@@ -148,7 +148,7 @@ public class OdeVertexTest {
         final int batchSize = 3;
         graph.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 5}), Nd4j.linspace(0, 2, nrofTimeSteps)},
-                new INDArray[]{Nd4j.repeat(Nd4j.create(new double[]{0, 1, 0}).transposei(), batchSize * (int) nrofTimeSteps)}));
+                new INDArray[]{Nd4j.repeat(Nd4j.create(new float[][]{{0, 1, 0}}).transposei(), batchSize * (int) nrofTimeSteps)}));
         assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
     }
 
@@ -184,7 +184,7 @@ public class OdeVertexTest {
         final int batchSize = 5;
         graph.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 5}), Nd4j.linspace(0, 2, nrofTimeSteps)},
-                new INDArray[]{Nd4j.repeat(Nd4j.create(new double[]{0, 1, 0}).transposei(), batchSize * (int) nrofTimeSteps)}));
+                new INDArray[]{Nd4j.repeat(Nd4j.create(new float[][]{{0, 1, 0}}).transposei(), batchSize * (int) nrofTimeSteps)}));
         assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
     }
 
@@ -217,7 +217,7 @@ public class OdeVertexTest {
         final int batchSize = 5;
         graph.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 5})},
-                new INDArray[]{Nd4j.repeat(Nd4j.create(new double[]{0, 1, 0}).transposei(), batchSize)}));
+                new INDArray[]{Nd4j.repeat(Nd4j.create(new float[][]{{0, 1, 0}}).transposei(), batchSize)}));
         assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
     }
 
@@ -250,7 +250,7 @@ public class OdeVertexTest {
         final int batchSize = 5;
         graph.fit(new MultiDataSet(
                 new INDArray[]{Nd4j.randn(new long[]{batchSize, 5})},
-                new INDArray[]{Nd4j.repeat(Nd4j.create(new double[]{0, 1, 0}).transposei(), batchSize)}));
+                new INDArray[]{Nd4j.repeat(Nd4j.create(new float[][]{{0, 1, 0}}).transposei(), batchSize)}));
         assertNotEquals("Expected parameters to be updated!", before, graph.getVertex("odeVertex").params().dup());
     }
 }

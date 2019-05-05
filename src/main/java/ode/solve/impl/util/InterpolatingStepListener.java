@@ -1,11 +1,11 @@
 package ode.solve.impl.util;
 
 import ode.solve.api.StepListener;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
-import org.nd4j.linalg.indexing.conditions.And;
 import org.nd4j.linalg.indexing.conditions.GreaterThan;
 import org.nd4j.linalg.indexing.conditions.LessThan;
 
@@ -80,13 +80,12 @@ public class InterpolatingStepListener implements StepListener {
             lessThanTime = state.t0;
         }
 
-        final INDArray timeInds = wantedTimeInds.cond(
-                new And(
-                        new GreaterThan(greaterThanTime.getDouble(0)),
-                        new LessThan(lessThanTime.getDouble(0)))
-        );
+        // Work around for dl4j issue #7543: And and Or conditions fail
+        // Instead of And, cast to int (false -> 0 and true -> 1) and multiply
+        final INDArray timeInds = wantedTimeInds.cond(new GreaterThan(greaterThanTime.getFloat(0))).castTo(DataType.INT)
+                .muli(wantedTimeInds.cond(new LessThan(lessThanTime.getFloat(0))).castTo(DataType.INT));
 
-        if (timeInds.sumNumber().doubleValue() > 0) {
+        if (timeInds.sumNumber().intValue() > 0) {
             fitInterpolationCoeffs(solverState, step);
             doInterpolation(timeInds, solverState.time());
         }

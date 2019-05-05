@@ -83,7 +83,7 @@ public class OdeNetModel implements ModelFactory {
                                 conv3x3Same(nrofKernels), "normSecond")
                         .addLayer("normThird",
                                 norm(nrofKernels), "convSecond")
-                        .odeConf(new FixedStep(solver, Nd4j.arange(2)))
+                        .odeConf(new FixedStep(solver, Nd4j.arange(2).castTo(Nd4j.defaultFloatingPointType())))
                         .build(), prev);
         return "odeBlock";
     }

@@ -40,7 +40,7 @@ public class SingleStepAdjointTest {
         final ComputationGraph graph = getTestGraph(nrofInputs);
         final OdeHelperBackward.InputArrays inputArrays = getTestInputArrays(nrofInputs, graph, new NoTimeInputFactory());
 
-        final INDArray time = Nd4j.arange(2);
+        final INDArray time = Nd4j.arange(2).castTo(Nd4j.defaultFloatingPointType());
         final OdeHelperBackward helper = new SingleStepAdjoint(
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
                 time, NoTimeGrad.factory);
@@ -68,7 +68,7 @@ public class SingleStepAdjointTest {
         final ComputationGraph graph = getTestGraph(nrofInputs);
         final OdeHelperBackward.InputArrays inputArrays = getTestInputArrays(nrofInputs, graph, new NoTimeInputFactory());
 
-        final INDArray time = Nd4j.arange(2);
+        final INDArray time = Nd4j.arange(2).castTo(Nd4j.defaultFloatingPointType()).reshape(1, 2);
         final OdeHelperBackward helper = new SingleStepAdjoint(
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
                 time, new CalcTimeGrad.Factory(inputArrays.getLossGradient(), 1));
@@ -99,7 +99,7 @@ public class SingleStepAdjointTest {
         final ComputationGraph graph = getTestGraphTime(nrofInputs);
         final OdeHelperBackward.InputArrays inputArrays = getTestInputArrays(nrofInputs, graph, new TimeInputFactory());
 
-        final INDArray time = Nd4j.arange(2);
+        final INDArray time = Nd4j.arange(2).castTo(Nd4j.defaultFloatingPointType()).reshape(1,2);
         final OdeHelperBackward helper = new SingleStepAdjoint(
                 new DormandPrince54Solver(new SolverConfig(1e-3, 1e-3, 0.1, 10)),
                 time, new CalcTimeGrad.Factory(inputArrays.getLossGradient(), 1));
@@ -123,9 +123,9 @@ public class SingleStepAdjointTest {
 
     @NotNull
     private static OdeHelperBackward.InputArrays getTestInputArrays(int nrofInputs, ComputationGraph graph, GraphInputOutputFactory inputOutputFactory) {
-        final INDArray input = Nd4j.arange(nrofInputs);
+        final INDArray input = Nd4j.arange(nrofInputs).reshape(1, nrofInputs).castTo(Nd4j.defaultFloatingPointType());
         final INDArray output = input.add(1);
-        final INDArray epsilon = Nd4j.ones(nrofInputs).assign(0.01);
+        final INDArray epsilon = Nd4j.ones(1, nrofInputs).assign(0.01);
         final NonContiguous1DView realGrads = new NonContiguous1DView();
         realGrads.addView(graph.getGradientsViewArray());
 

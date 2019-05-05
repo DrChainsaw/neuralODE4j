@@ -5,6 +5,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -28,7 +29,7 @@ public class NonContiguous1DViewTest {
         view.assignFrom(Nd4j.ones(new long[] {6}));
 
         final INDArray expected = Nd4j.create(new double[] {1,1,1,0,0,0,1,1,1});
-        assertEquals("Viewed array was not changed!", expected, toView);
+        assertArrayEquals("Viewed array was not changed!", expected.toDoubleVector(), toView.toDoubleVector(), 1e-10);
     }
 
     /**
@@ -46,7 +47,7 @@ public class NonContiguous1DViewTest {
         view.assignTo(actual);
 
         final INDArray expected = Nd4j.create(new double[] {0,1,2,6,7,8});
-        assertEquals("Viewed array was not changed!", expected, actual);
+        assertArrayEquals("Viewed array was not changed!", expected.toDoubleVector(), actual.toDoubleVector(), 1e-10);
     }
 
     /**
@@ -97,6 +98,6 @@ public class NonContiguous1DViewTest {
         view.assignTo(actual);
 
         final INDArray expected = Nd4j.create(new double[] {0,1,2,3,4,5,6,7,8,9,10,11, 17,18,19,20,21,22,23,24,25,26});
-        assertEquals("Viewed array was not changed!", expected, actual);
+        assertArrayEquals("Viewed array was not changed!", expected.toDoubleVector(), actual.toDoubleVector(), 1e-4);
     }
 }

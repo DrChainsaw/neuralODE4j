@@ -6,6 +6,7 @@ import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.DataSetPreProcessor;
 import org.nd4j.linalg.factory.Nd4j;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -37,7 +38,7 @@ public class ShiftDimTest {
 
         final DataSetPreProcessor shift = new ShiftDim(0, () -> 2);
         shift.preProcess(new DataSet(toShift, null));
-        assertEquals("Incorrect output!", expected, toShift);
+        assertArrayEquals("Incorrect output!", expected.toDoubleVector(), toShift.toDoubleVector(), 1e-10);
     }
 
     /**
@@ -50,7 +51,7 @@ public class ShiftDimTest {
 
         final DataSetPreProcessor shift = new ShiftDim(0, () -> -2);
         shift.preProcess(new DataSet(toShift, null));
-        assertEquals("Incorrect output!", expected, toShift);
+        assertArrayEquals("Incorrect output!", expected.toDoubleVector(), toShift.toDoubleVector(), 1e-10);
     }
 
     /**
@@ -59,7 +60,7 @@ public class ShiftDimTest {
     @Test
     public void shift2dLeft() {
         final INDArray toShift = Nd4j.arange(1,16).reshape(3, 5);
-        final INDArray expected = Nd4j.hstack(Nd4j.zeros(3, 3), toShift.getColumns(0, 1));
+        final INDArray expected = Nd4j.hstack(Nd4j.zeros(toShift.dataType(),3, 3), toShift.getColumns(0, 1));
 
         final DataSetPreProcessor shift = new ShiftDim(1, () -> 3);
         shift.preProcess(new DataSet(toShift, null));
@@ -72,7 +73,7 @@ public class ShiftDimTest {
     @Test
     public void shift2dRight() {
         final INDArray toShift = Nd4j.arange(1,16).reshape(3, 5);
-        final INDArray expected = Nd4j.hstack(toShift.getColumns(3, 4), Nd4j.zeros(3, 3));
+        final INDArray expected = Nd4j.hstack(toShift.getColumns(3, 4), Nd4j.zeros(toShift.dataType(), 3, 3));
 
         final DataSetPreProcessor shift = new ShiftDim(1, () -> -3);
         shift.preProcess(new DataSet(toShift, null));
@@ -85,7 +86,7 @@ public class ShiftDimTest {
     @Test
     public void shift2dDown() {
         final INDArray toShift = Nd4j.arange(1,16).reshape(3, 5);
-        final INDArray expected = Nd4j.vstack(Nd4j.zeros(1, 5), toShift.getRows(0, 1));
+        final INDArray expected = Nd4j.vstack(Nd4j.zeros(toShift.dataType(),1, 5), toShift.getRows(0, 1));
 
         final DataSetPreProcessor shift = new ShiftDim(0, () -> 1);
         shift.preProcess(new DataSet(toShift, null));
@@ -98,7 +99,7 @@ public class ShiftDimTest {
     @Test
     public void shift2dUp() {
         final INDArray toShift = Nd4j.arange(1,16).reshape(3, 5);
-        final INDArray expected = Nd4j.vstack(toShift.getRows(1, 2), Nd4j.zeros(1, 5));
+        final INDArray expected = Nd4j.vstack(toShift.getRows(1, 2), Nd4j.zeros(toShift.dataType(),1, 5));
 
         final DataSetPreProcessor shift = new ShiftDim(0, () -> -1);
         shift.preProcess(new DataSet(toShift, null));

@@ -53,10 +53,10 @@ public class MultiStepAdjoint implements OdeHelperBackward {
         assertSizeVsTime(zt);
         assertSizeVsTime(dL_dzt);
 
-        final INDArrayIndex[] timeIndexer = createIndexer(time);
-        timeIndexer[1] = NDArrayIndex.interval(time.length()-2, time.length());
-        final INDArrayIndex[] ztIndexer = createIndexer(input.getLastOutput());
-        final INDArrayIndex[] dL_dztIndexer= createIndexer(input.getLossGradient());
+        final INDArrayIndex[] timeIndexer = NDArrayIndex.allFor(time);
+        timeIndexer[0] = NDArrayIndex.interval(time.length()-2, time.length());
+        final INDArrayIndex[] ztIndexer = NDArrayIndex.allFor(input.getLastOutput());
+        final INDArrayIndex[] dL_dztIndexer= NDArrayIndex.allFor(input.getLossGradient());
 
         INDArray[] gradients = null;
         final MultiStepTimeGrad timeGrad = timeGradFactory.create();
@@ -76,7 +76,7 @@ public class MultiStepAdjoint implements OdeHelperBackward {
                     dL_dztStep,
                     input.getRealGradientView()
             );
-            timeIndexer[1] = NDArrayIndex.interval(step - 1, step+1);
+            timeIndexer[0] = NDArrayIndex.interval(step - 1, step+1);
 
             final OdeHelperBackward stepSolve = new SingleStepAdjoint(solver, time.get(timeIndexer), stepTimeGradFactory);
             gradients = stepSolve.solve(graph, stepInput, miscPars);
@@ -94,14 +94,6 @@ public class MultiStepAdjoint implements OdeHelperBackward {
             throw new IllegalArgumentException("Must have same number of in first dimension as there are time steps! Input: "
             + array.size(0) + ", time: " + time.length());
         }
-    }
-
-    private INDArrayIndex[] createIndexer(INDArray array) {
-        final INDArrayIndex[] indexer = new INDArrayIndex[array.rank()];
-        for(int dim = 0; dim < indexer.length; dim++) {
-            indexer[dim] = NDArrayIndex.all();
-        }
-        return indexer;
     }
 
     private INDArray getStep(INDArrayIndex[] indexer, INDArray array, int step) {

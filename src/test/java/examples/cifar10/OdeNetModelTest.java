@@ -90,10 +90,10 @@ public class OdeNetModelTest {
 
         final ComputationGraph model = factory.create(new DummyIteration(3));
         model.fit(new MultiDataSet(
-                new INDArray[] {Nd4j.randn(new long[]{1, 3, 32, 32}), Nd4j.arange(2)},
+                new INDArray[] {Nd4j.randn(1, 3, 32, 32), Nd4j.arange(2).reshape(1,2)},
                 new INDArray[] {Nd4j.randn(1,10)}));
         model.fit(new MultiDataSet(
-                new INDArray[] {Nd4j.randn(new long[]{1, 3, 32, 32}), Nd4j.arange(2)},
+                new INDArray[] {Nd4j.randn(1, 3, 32, 32), Nd4j.arange(2).reshape(1,2)},
                 new INDArray[] {Nd4j.randn(1,10)}));
         return factory;
     }

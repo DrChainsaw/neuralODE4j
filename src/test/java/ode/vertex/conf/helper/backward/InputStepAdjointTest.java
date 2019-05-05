@@ -18,6 +18,6 @@ public class InputStepAdjointTest extends AbstractHelperConfTest {
 
     @Override
     INDArray[] createInputs(INDArray input, int nrofTimeSteps) {
-        return new INDArray[]{input, Nd4j.linspace(0, 2, nrofTimeSteps)};
+        return new INDArray[]{input, Nd4j.linspace(0, 2, nrofTimeSteps, Nd4j.defaultFloatingPointType())};
     }
 }

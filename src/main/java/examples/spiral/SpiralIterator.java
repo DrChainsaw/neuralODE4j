@@ -63,7 +63,7 @@ public class SpiralIterator implements MultiDataSetIterator {
                     rng::nextBoolean);
 
             final INDArray trajFeature = Nd4j.createUninitialized( new long[] {batchSize, 2, nrofSamples}, 'f');
-            final INDArray tFeature = factory.baseTs().get(NDArrayIndex.all(), NDArrayIndex.interval(0, nrofSamples)).dup('f');
+            final INDArray tFeature = factory.baseTs().get(NDArrayIndex.interval(0, nrofSamples)).dup('f');
 
             for(int i = 0; i < batchSize; i++) {
                 trajFeature.tensorAlongDimension(i, 1,2).assign(spirals.get(i).trajectory());

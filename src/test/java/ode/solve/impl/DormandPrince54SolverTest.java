@@ -36,7 +36,7 @@ public class DormandPrince54SolverTest {
     public static void setDataType() {
         prevType = Nd4j.dataType();
         prevFloatType = Nd4j.defaultFloatingPointType();
-        Nd4j.setDefaultDataTypes(prevType, prevFloatType);
+        Nd4j.setDefaultDataTypes(DataType.DOUBLE, DataType.DOUBLE);
     }
 
     /**
@@ -61,7 +61,7 @@ public class DormandPrince54SolverTest {
      */
     @Test
     public void solveCircleBackward() {
-        final INDArray ts = Nd4j.create(new double[]{0.023, -0.0456});
+        final INDArray ts = Nd4j.create(new double[]{0.023f, -0.0456f});
         solveCircle(ts);
     }
 
